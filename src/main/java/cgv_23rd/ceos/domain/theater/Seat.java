@@ -12,6 +12,14 @@ import java.util.List;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@Table(
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_screen_row_col",
+                        columnNames = {"screen_id", "row_name", "col_num"}
+                )
+        }
+)
 public class Seat {
 
     @Id @GeneratedValue

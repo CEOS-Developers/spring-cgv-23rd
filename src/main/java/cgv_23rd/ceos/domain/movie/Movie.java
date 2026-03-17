@@ -31,7 +31,7 @@ public class Movie {
     @OneToMany(mappedBy = "movie")
     private List<MovieImage> movieImages = new ArrayList<>();
 
-    @OneToOne(mappedBy = "movie")
+    @OneToOne(mappedBy = "movie", cascade = CascadeType.ALL)
     private MovieStatistics movieStatistics;
 
     @OneToMany(mappedBy = "movie")
