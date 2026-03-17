@@ -1,6 +1,6 @@
 package cgv_23rd.ceos.domain.movie;
 
-import cgv_23rd.ceos.domain.Theater.Screen;
+import cgv_23rd.ceos.domain.theater.Screen;
 import cgv_23rd.ceos.domain.reservation.Reservation;
 import cgv_23rd.ceos.domain.reservation.ReservationSeat;
 import jakarta.persistence.*;

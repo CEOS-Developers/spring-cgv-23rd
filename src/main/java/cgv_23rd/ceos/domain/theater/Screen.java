@@ -1,4 +1,4 @@
-package cgv_23rd.ceos.domain.Theater;
+package cgv_23rd.ceos.domain.theater;
 
 import cgv_23rd.ceos.domain.movie.MovieScreen;
 import jakarta.persistence.*;

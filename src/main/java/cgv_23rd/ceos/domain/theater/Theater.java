@@ -1,4 +1,4 @@
-package cgv_23rd.ceos.domain.Theater;
+package cgv_23rd.ceos.domain.theater;
 
 import cgv_23rd.ceos.domain.food.FoodOrder;
 import cgv_23rd.ceos.domain.food.TheaterFood;

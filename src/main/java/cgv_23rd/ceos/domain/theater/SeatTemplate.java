@@ -1,4 +1,4 @@
-package cgv_23rd.ceos.domain.Theater;
+package cgv_23rd.ceos.domain.theater;
 
 import jakarta.persistence.*;
 import lombok.*;

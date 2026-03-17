@@ -1,6 +1,6 @@
 package cgv_23rd.ceos.domain.like;
 
-import cgv_23rd.ceos.domain.Theater.Theater;
+import cgv_23rd.ceos.domain.theater.Theater;
 import cgv_23rd.ceos.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;

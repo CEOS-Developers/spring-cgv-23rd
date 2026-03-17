@@ -1,6 +1,6 @@
 package cgv_23rd.ceos.domain.food;
 
-import cgv_23rd.ceos.domain.Theater.Theater;
+import cgv_23rd.ceos.domain.theater.Theater;
 import jakarta.persistence.*;
 import lombok.*;
 
