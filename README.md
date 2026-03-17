@@ -1,5 +1,6 @@
-# CGV 클론코딩 ERD 연관관계 및 제약조건 정리
 https://www.erdcloud.com/d/br5ZwPJDjX9WvPYXH
+<details>
+<summary><h1>CGV 클론코딩 ERD 연관관계 및 제약조건 정리</h1></summary>
 
 ## 1. 전체 엔티티 연관관계 정리
 
@@ -401,3 +402,4 @@ UNIQUE (movie_id, sort_order)
 
 이 정책을 서비스 로직에서 관리해야 함.
 
+</details>
