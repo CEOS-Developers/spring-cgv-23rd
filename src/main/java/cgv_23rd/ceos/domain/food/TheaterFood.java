@@ -1,0 +1,31 @@
+package cgv_23rd.ceos.domain.food;
+
+import cgv_23rd.ceos.domain.Theater.Theater;
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Table(
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_theater_food", columnNames = {"theater_id", "food_id"})
+        }
+)
+public class TheaterFood {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "theater_id", nullable = false)
+    private Theater theater;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "food_id", nullable = false)
+    private Food food;
+
+    private Integer amount;
+}

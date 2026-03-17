@@ -1,0 +1,30 @@
+package cgv_23rd.ceos.domain.Theater;
+
+import cgv_23rd.ceos.domain.reservation.ReservationSeat;
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+public class Seat {
+
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "screen_id", nullable = false)
+    private Screen screen;
+
+    private String rowName;
+    private Integer colNum;
+    private Boolean isActive;
+
+    @OneToMany(mappedBy = "seat")
+    private List<ReservationSeat> reservationSeats = new ArrayList<>();
+}
