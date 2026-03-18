@@ -38,11 +38,9 @@ public class MovieService {
                 .openDate(requestDto.openDate())
                 .closeDate(requestDto.closeDate())
                 .build();
-        MovieStatistics movieStatistics = MovieStatistics.builder()
-                .movie(movie)
-                .build();
+        movie.createDefaultStatistics();
+
         movieRepository.save(movie);
-        movieStatisticsRepository.save(movieStatistics);
 
         return ApiResponse.onSuccess("영화 생성 성공", movie.getId());
     }

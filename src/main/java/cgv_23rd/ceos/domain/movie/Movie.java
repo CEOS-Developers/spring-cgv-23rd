@@ -47,4 +47,14 @@ public class Movie {
 
     @OneToMany(mappedBy = "movie")
     private List<MovieActor> movieActors = new ArrayList<>();
+
+    public void createDefaultStatistics() {
+        this.movieStatistics = MovieStatistics.builder()
+                .movie(this)
+                .audienceCount(0)
+                .reservationRate(0.0)
+                .averageRating(0.0)
+                .reviewCount(0)
+                .build();
+    }
 }
