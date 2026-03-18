@@ -4,6 +4,8 @@ import com.cgv.spring_boot.domain.movie.dto.request.MovieCreateRequest;
 import com.cgv.spring_boot.domain.movie.dto.response.MovieResponse;
 import com.cgv.spring_boot.domain.movie.entity.Movie;
 import com.cgv.spring_boot.domain.movie.repository.MovieRepository;
+import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +18,7 @@ import java.util.List;
 public class MovieService {
 
     private final MovieRepository movieRepository;
-    
+
     @Transactional
     public Long saveMovie(MovieCreateRequest request) {
         Movie movie = request.toEntity();
@@ -31,7 +33,7 @@ public class MovieService {
 
     public MovieResponse findMovieById(Long id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 영화가 존재하지 않습니다. ID: " + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
         return MovieResponse.from(movie);
     }
 
