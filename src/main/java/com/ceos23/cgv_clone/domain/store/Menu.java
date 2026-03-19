@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.domain.movie;
+package com.ceos23.cgv_clone.domain.store;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -7,28 +7,29 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "movies")
+@Table(name = "menus")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Movie {
+public class Menu {
 
     @Id
-    @Column(name = "movie_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "menu_id")
     private Long id;
 
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
-    private int runningTime;
+    private int price;
 
-    @OneToOne(mappedBy = "movie", cascade = CascadeType.ALL)
-    private MovieStatistic movieStatistic;
+    @Enumerated(EnumType.STRING)
+    private MenuType menuType;
 
     @Builder
-    public Movie(String name, int runningTime) {
+    public Menu(String name, MenuType menuType, int price) {
         this.name = name;
-        this.runningTime = runningTime;
+        this.menuType = menuType;
+        this.price = price;
     }
 }

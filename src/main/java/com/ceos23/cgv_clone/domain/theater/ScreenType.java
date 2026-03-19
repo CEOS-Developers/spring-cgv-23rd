@@ -1,6 +1,5 @@
 package com.ceos23.cgv_clone.domain.theater;
 
-import com.ceos23.cgv_clone.domain.enums.ScreenTypeCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -19,23 +18,23 @@ public class ScreenType {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, name = "screen_type_name")
+    @Column(nullable = false)
     private ScreenTypeCode screenTypeCode;
 
-    @Column(nullable = false, name = "screen_type_price")
-    private double price;
+    @Column(nullable = false)
+    private int price;
 
-    @Column(nullable = false, name = "screen_type_max_row")
-    private char rowName;
+    @Column(nullable = false)
+    private char maxRow;
 
-    @Column(nullable = false, name = "screen_type_max_col")
-    private int colName;
+    @Column(nullable = false)
+    private int maxCol;
 
     @Builder
-    public ScreenType(ScreenTypeCode screenTypeCode, double price, char rowName, int colName) {
+    public ScreenType(ScreenTypeCode screenTypeCode, int price, char maxRow, int maxCol) {
         this.screenTypeCode = screenTypeCode;
         this.price = price;
-        this.rowName = rowName;
-        this.colName = colName;
+        this.maxRow = maxRow;
+        this.maxCol = maxCol;
     }
 }

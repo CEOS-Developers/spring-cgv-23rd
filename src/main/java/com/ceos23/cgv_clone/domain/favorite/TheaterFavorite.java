@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.domain.like;
+package com.ceos23.cgv_clone.domain.favorite;
 
 import com.ceos23.cgv_clone.domain.theater.Theater;
 import com.ceos23.cgv_clone.domain.user.User;
@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "theater_likes")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class TheaterLike {
+public class TheaterFavorite {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,7 +28,7 @@ public class TheaterLike {
     private Theater theater;
 
     @Builder
-    public TheaterLike(User user, Theater theater) {
+    public TheaterFavorite(User user, Theater theater) {
         this.user = user;
         this.theater = theater;
     }

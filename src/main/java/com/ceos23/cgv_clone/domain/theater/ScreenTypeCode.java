@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.domain.enums;
+package com.ceos23.cgv_clone.domain.theater;
 
 import lombok.Getter;
 

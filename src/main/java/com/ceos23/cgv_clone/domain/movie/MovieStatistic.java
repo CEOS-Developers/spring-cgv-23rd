@@ -21,20 +21,20 @@ public class MovieStatistic {
     @JoinColumn(name = "movie_id")
     private Movie movie;
 
-    @Column(name = "reservation_rate")
+    @Column(nullable = false)
     private double reservationRate;
 
-    @Column(name = "total_viewers")
-    private int total;
+    @Column(nullable = false)
+    private int totalViewers;
 
-    @Column(name = "egg_rate")
+    @Column(nullable = false)
     private double eggRate;
 
     @Builder
-    public MovieStatistic(Movie movie, double reservationRate, int total, double eggRate) {
+    public MovieStatistic(Movie movie, double reservationRate, int totalViewers, double eggRate) {
         this.movie = movie;
         this.reservationRate = reservationRate;
-        this.total = total;
+        this.totalViewers = totalViewers;
         this.eggRate = eggRate;
     }
 }

@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Screens")
+@Table(name = "screens")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Screen {
@@ -17,7 +17,7 @@ public class Screen {
     @Column(name = "screen_id")
     private Long id;
 
-    @Column(nullable = false, name = "screen_name")
+    @Column(nullable = false)
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)

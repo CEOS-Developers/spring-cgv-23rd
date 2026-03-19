@@ -18,7 +18,7 @@ public class Review {
     @Column(name = "review_id")
     private Long id;
 
-    @Column(name = "review_content")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)

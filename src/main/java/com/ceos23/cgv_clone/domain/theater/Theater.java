@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Theaters")
+@Table(name = "theaters")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class Theater {
@@ -17,10 +17,10 @@ public class Theater {
     @Column(name = "theater_id")
     private Long id;
 
-    @Column(name = "theater_name", nullable = false, length = 100)
+    @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false)
     private String region;
 
     @Column(nullable = false)

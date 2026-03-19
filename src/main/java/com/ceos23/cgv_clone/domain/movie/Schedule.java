@@ -20,10 +20,10 @@ public class Schedule {
     @Column(name = "schedule_id")
     private Long id;
 
-    @Column(nullable = false, name = "start_time")
+    @Column(nullable = false)
     private LocalDateTime startAt;
 
-    @Column(nullable = false, name = "end_time")
+    @Column(nullable = false)
     private LocalDateTime endAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
