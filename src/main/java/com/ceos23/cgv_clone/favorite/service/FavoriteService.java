@@ -71,7 +71,7 @@ public class FavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         // 이미 영화 찜이 되어 있으면 해제
-        if (MovieRepository.existsByUserAndMovie(user, movie)) {
+        if (movieRepository.existsByUserAndMovie(user, movie)) {
             movieFavoriteRepository.deleteByUserAndMovie(user, movie);
 
             return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
