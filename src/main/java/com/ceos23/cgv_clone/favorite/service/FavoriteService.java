@@ -44,7 +44,7 @@ public class FavoriteService {
                 throw new CustomException(ErrorCode.FAVORITE_THEATER_LIMIT_EXCEEDED);
             }
 
-            // 1-2-2. 아닐 경우
+            // 1-2-2. 아닐 경우 저장
             TheaterFavorite favorite = TheaterFavorite.builder()
                     .user(user)
                     .theater(theater)
