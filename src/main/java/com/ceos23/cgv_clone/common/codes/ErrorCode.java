@@ -45,13 +45,19 @@ public enum ErrorCode {
      */
 
     // 유저 데이터 미존재
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다"),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다."),
 
     // 영화관 데이터 미존재
-    THEATER_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "해당 영화관을 찾을 수 없습니다"),
+    THEATER_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "해당 영화관을 찾을 수 없습니다."),
+
+    // 영화관 찜 최대 5개 초과
+    FAVORITE_THEATER_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "T002", "자주 가는 CGV는 최대 5개까지만 등록 가능합니다."),
 
     // 영화 데이터 미존재
-    MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 영화를 찾을 수 없습니다")
+    MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 영화를 찾을 수 없습니다."),
+
+    // 이미 등록된 영화관
+    ALREADY_FAVORITE_MOVIE(HttpStatus.BAD_REQUEST, "M002", "이미 등록된 좋아하는 영화입니다."),
 
 
 
