@@ -23,12 +23,16 @@ public class Movie {
     @Column(nullable = false)
     private int runningTime;
 
+    @Column(nullable = false)
+    private int ageRestriction;
+
     @OneToOne(mappedBy = "movie", cascade = CascadeType.ALL)
     private MovieStatistic movieStatistic;
 
     @Builder
-    public Movie(String name, int runningTime) {
+    public Movie(String name, int runningTime, int ageRestriction) {
         this.name = name;
         this.runningTime = runningTime;
+        this.ageRestriction = ageRestriction;
     }
 }

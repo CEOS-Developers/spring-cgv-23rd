@@ -56,11 +56,20 @@ public enum ErrorCode {
     // 영화 데이터 미존재
     MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 영화를 찾을 수 없습니다."),
 
-    // 이미 등록된 영화관
-    ALREADY_FAVORITE_MOVIE(HttpStatus.BAD_REQUEST, "M002", "이미 등록된 좋아하는 영화입니다."),
+    // 해당 시간대 영화 미존재
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "해당 시간대 영화를 찾을 수 없습니다."),
 
+    // 관람 연령에 맞지 않음
+    AGE_RESTRICTED(HttpStatus.BAD_REQUEST, "R001", "관람 등급이 맞지 않습니다."),
 
+    // 해당 좌석 이미 예약됨
+    ALREADY_RESERVED_SEAT(HttpStatus.BAD_REQUEST, "R002", "해당 좌석은 이미 예약되어 있습니다."),
 
+    // 해당 예매 번호 미존재
+    RESERVATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "R003", "해당 예매 번호를 찾을 수 없습니다."),
+
+    // 이미 취소된 예약
+    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "해다 예매는 이미 취소되었습니다.")
     ;
 
     /**

@@ -14,6 +14,7 @@ public class MovieResponse {
     private Long id;
     private String name;
     private int runningTime;
+    private int ageRestriction;
 
     private double reservationRate;
     private int totalViewers;
@@ -24,6 +25,7 @@ public class MovieResponse {
                 .id(movie.getId())
                 .name(movie.getName())
                 .runningTime(movie.getRunningTime())
+                .ageRestriction(movie.getAgeRestriction())
                 .reservationRate(movie.getMovieStatistic().getReservationRate())
                 .totalViewers(movie.getMovieStatistic().getTotalViewers())
                 .eggRate(movie.getMovieStatistic().getEggRate())

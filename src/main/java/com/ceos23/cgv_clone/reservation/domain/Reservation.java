@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Entity
@@ -26,11 +28,14 @@ public class Reservation {
     private LocalDateTime reservedAt;
 
     @Column(nullable = false)
-    private int price;
+    private int totalPrice;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReservationStatus status;
+
+    @Column(nullable = false)
+    private String seatNames;
 
     @JoinColumn(name = "user_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,12 +45,25 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     private Schedule schedule;
 
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservationSeat> reservationSeats = new ArrayList<>();
+
     @Builder
-    public Reservation(LocalDateTime reservedAt, int price, ReservationStatus status, User user, Schedule schedule) {
+    public Reservation(LocalDateTime reservedAt, int totalPrice, ReservationStatus status, User user, Schedule schedule, String seatNames) {
         this.reservedAt = reservedAt;
-        this.price = price;
+        this.totalPrice = totalPrice;
         this.status = status;
         this.user = user;
         this.schedule = schedule;
+        this.seatNames = seatNames;
+    }
+
+    public void addReservationSeat(ReservationSeat seat) {
+        this.reservationSeats.add(seat);
+    }
+
+    public void cancel() {
+        this.status = ReservationStatus.CANCELED;
+        this.reservationSeats.clear();
     }
 }
