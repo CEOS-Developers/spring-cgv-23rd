@@ -19,7 +19,7 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
         log.error("BusinessException: {}", e.getErrorCode().getMessage());
         ErrorCode errorCode = e.getErrorCode();
-        ErrorResponse response = ErrorResponse.of(errorCode.getStatus(), errorCode.getCode(), errorCode.getMessage());
+        ErrorResponse response = ErrorResponse.of(errorCode.getStatus(), errorCode.getMessage());
         return new ResponseEntity<>(response, org.springframework.http.HttpStatus.valueOf(errorCode.getStatus()));
     }
 
@@ -29,7 +29,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Exception: ", e);
-        ErrorResponse response = ErrorResponse.of(500, "SERVER_ERROR", "서버 내부 오류가 발생했습니다.");
+        ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
+        ErrorResponse response = ErrorResponse.of(errorCode.getStatus(), errorCode.getMessage());
         return new ResponseEntity<>(response, org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
