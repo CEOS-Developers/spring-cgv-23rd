@@ -6,5 +6,5 @@ import lombok.Getter;
 public enum ReservationStatus {
     PENDING,
     RESERVED,
-    CANCELED;
+    CANCELED
 }

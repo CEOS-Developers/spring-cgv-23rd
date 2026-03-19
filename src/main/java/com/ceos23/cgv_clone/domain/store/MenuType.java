@@ -7,5 +7,5 @@ public enum MenuType {
     SINGLE,
     COMBO,
     PROMOTION,
-    OTHER;
+    OTHER
 }

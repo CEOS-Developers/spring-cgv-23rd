@@ -5,5 +5,5 @@ import lombok.Getter;
 @Getter
 public enum ScreenTypeCode {
     STD,
-    SPEC;
+    SPEC
 }
