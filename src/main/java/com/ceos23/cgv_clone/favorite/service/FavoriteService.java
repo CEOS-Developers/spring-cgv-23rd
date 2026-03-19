@@ -31,22 +31,25 @@ public class FavoriteService {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
 
-        // 자주가는 영화관 5개 초과일 경우
-        if (theaterFavoriteRepository.countByUser(user) >= 5) {
-            throw new CustomException(ErrorCode.FAVORITE_THEATER_LIMIT_EXCEEDED);
-        }
+        // 1-1. 이미 자주 가는 곳으로 되어 있을 경우에는 찜 해제
+        if (theaterRepository.existsByUserAndTheater(user, theater)) {
+            theaterFavoriteRepository.deleteByUserAndTheater(user, theater);
 
-        TheaterFavorite favorite = TheaterFavorite.builder()
-                .user(user)
-                .theater(theater)
-                .build();
-
-        // 이미 자주가는 곳으로 되어 있을 경우에는 삭제
-        if (theaterFavoriteRepository.existsByUserAndTheater(user, theater)) {
-            theaterFavoriteRepository.delete(favorite);
             return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
-        } else {
-            // 자주가는 곳이 아닐 경우에는 저장
+        }
+        // 1-2. 아닐 경우
+        else {
+            // 1-2-1. 자주가는 영화관 5개 초과일 경우 에러 반환
+            if (theaterFavoriteRepository.countByUser(user) >= 5) {
+                throw new CustomException(ErrorCode.FAVORITE_THEATER_LIMIT_EXCEEDED);
+            }
+
+            // 1-2-2. 아닐 경우
+            TheaterFavorite favorite = TheaterFavorite.builder()
+                    .user(user)
+                    .theater(theater)
+                    .build();
+
             theaterFavoriteRepository.save(favorite);
             return ApiResponse.ok(SuccessCode.INSERT_SUCCESS);
         }
