@@ -66,10 +66,10 @@ public enum ErrorCode {
     ALREADY_RESERVED_SEAT(HttpStatus.BAD_REQUEST, "R002", "해당 좌석은 이미 예약되어 있습니다."),
 
     // 해당 예매 번호 미존재
-    RESERVATION_NOT_FOUND(HttpStatus.BAD_REQUEST, "R003", "해당 예매 번호를 찾을 수 없습니다."),
+    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R003", "해당 예매 번호를 찾을 수 없습니다."),
 
     // 이미 취소된 예약
-    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "해다 예매는 이미 취소되었습니다.")
+    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "해당 예매는 이미 취소되었습니다.")
     ;
 
     /**
