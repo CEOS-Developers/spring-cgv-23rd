@@ -4,10 +4,9 @@ import com.ceos23.cgv_clone.common.ApiResponse;
 import com.ceos23.cgv_clone.theater.dto.response.TheaterResponse;
 import com.ceos23.cgv_clone.theater.service.TheaterService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,8 +15,18 @@ public class TheaterController {
 
     private final TheaterService theaterService;
 
-    @GetMapping("/{theatersId}")
-    public ApiResponse<TheaterResponse> getTheater(@PathVariable Long theaterId) {
+    @GetMapping("/{theaterId}")
+    public ApiResponse<TheaterResponse> getTheater(
+            @PathVariable Long theaterId
+    ) {
+        return theaterService.getTheater(theaterId);
+    }
 
+    // required = false -> 전체 조회
+    @GetMapping
+    public ApiResponse<List<TheaterResponse>> getTheaterByRegion(
+            @RequestParam(required = false) String region
+    ) {
+        return theaterService.getTheatersByRegion(region);
     }
 }
