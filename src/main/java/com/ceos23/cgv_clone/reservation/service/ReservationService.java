@@ -27,10 +27,10 @@ import java.time.Period;
 @RequiredArgsConstructor
 public class ReservationService {
 
-    final private UserRepository userRepository;
-    final private ScheduleRepository scheduleRepository;
-    final private ReservationRepository reservationRepository;
-    final private ReservationSeatRepository reservationSeatRepository;
+    private final UserRepository userRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final ReservationRepository reservationRepository;
+    private final ReservationSeatRepository reservationSeatRepository;
 
     // 영화 예매
     @Transactional

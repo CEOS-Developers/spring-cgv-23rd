@@ -22,11 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class FavoriteService {
 
-    final private UserRepository userRepository;
-    final private TheaterRepository theaterRepository;
-    final private MovieRepository movieRepository;
-    final private TheaterFavoriteRepository theaterFavoriteRepository;
-    final private MovieFavoriteRepository movieFavoriteRepository;
+    private final UserRepository userRepository;
+    private final TheaterRepository theaterRepository;
+    private final MovieRepository movieRepository;
+    private final TheaterFavoriteRepository theaterFavoriteRepository;
+    private final MovieFavoriteRepository movieFavoriteRepository;
 
     // 영화관 찜
     @Transactional

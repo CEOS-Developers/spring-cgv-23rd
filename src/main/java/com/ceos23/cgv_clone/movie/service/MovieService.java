@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MovieService {
 
-    final private MovieRepository movieRepository;
+    private final MovieRepository movieRepository;
 
     // 영화 상세 조회
     @Transactional(readOnly = true)
