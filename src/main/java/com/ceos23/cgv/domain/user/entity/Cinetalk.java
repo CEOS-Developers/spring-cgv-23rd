@@ -1,0 +1,40 @@
+package com.ceos23.cgv.domain.user.entity;
+
+import com.ceos23.cgv.domain.cinema.entity.Cinema;
+import com.ceos23.cgv.domain.movie.entity.Movie;
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "cinetalks")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class Cinetalk {
+
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cinetalk_id")
+    private Long id;
+
+    @Column(nullable = false, length = 20)
+    private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String content;
+
+    @Column(nullable = false)
+    private int likeCount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "movie_id")
+    private Movie movie;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cinema_id")
+    private Cinema cinema;
+}
