@@ -19,7 +19,7 @@ public class TheaterService {
 
     private final TheaterRepository theaterRepository;
 
-    // 1. 영화관 상세 조회
+    // 영화관 상세 조회
     @Transactional(readOnly = true)
     public ApiResponse<TheaterResponse> getTheater(Long theaterId) {
         Theater theater = theaterRepository.findById(theaterId)
@@ -29,7 +29,7 @@ public class TheaterService {
         return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, TheaterResponse.from(theater));
     }
 
-    // 2. 지역별 영화관 조회
+    // 지역별 영화관 조회
     @Transactional(readOnly = true)
     public ApiResponse<List<TheaterResponse>> getTheatersByRegion(String region) {
         List<Theater> theaters;
