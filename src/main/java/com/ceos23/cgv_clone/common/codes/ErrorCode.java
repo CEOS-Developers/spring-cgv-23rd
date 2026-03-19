@@ -44,7 +44,15 @@ public enum ErrorCode {
      ******************************** Custom Error CodeList ****************************************
      */
 
+    // 유저 데이터 미존재
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다"),
+
+    // 영화관 데이터 미존재
     THEATER_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "해당 영화관을 찾을 수 없습니다"),
+
+    // 영화 데이터 미존재
+    MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 영화를 찾을 수 없습니다")
+
 
 
     ;
