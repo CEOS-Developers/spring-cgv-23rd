@@ -5,5 +5,4 @@ import com.ceos23.cgv_clone.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MovieRepository extends JpaRepository<Movie, Long> {
-    boolean existsByUserAndMovie(User user, Movie movie);
 }

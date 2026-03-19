@@ -8,6 +8,4 @@ import java.util.List;
 
 public interface TheaterRepository extends JpaRepository<Theater, Long> {
     List<Theater> findAllByRegion(String region);
-
-    boolean existsByUserAndTheater(User user, Theater theater);
 }

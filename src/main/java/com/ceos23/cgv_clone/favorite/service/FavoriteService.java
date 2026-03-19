@@ -38,7 +38,7 @@ public class FavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
 
         // 1-1. 이미 자주 가는 곳으로 되어 있을 경우에는 찜 해제
-        if (theaterRepository.existsByUserAndTheater(user, theater)) {
+        if (theaterFavoriteRepository.existsByUserAndTheater(user, theater)) {
             theaterFavoriteRepository.deleteByUserAndTheater(user, theater);
 
             return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
@@ -71,7 +71,7 @@ public class FavoriteService {
                 .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         // 이미 영화 찜이 되어 있으면 해제
-        if (movieRepository.existsByUserAndMovie(user, movie)) {
+        if (movieFavoriteRepository.existsByUserAndMovie(user, movie)) {
             movieFavoriteRepository.deleteByUserAndMovie(user, movie);
 
             return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
