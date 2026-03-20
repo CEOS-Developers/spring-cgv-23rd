@@ -27,4 +27,12 @@ public class TheaterLike extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theater_id", nullable = false)
     private Theater theater;
+
+
+    public static TheaterLike createTheaterLike(User user, Theater theater) {
+        return TheaterLike.builder()
+                .user(user)
+                .theater(theater)
+                .build();
+    }
 }

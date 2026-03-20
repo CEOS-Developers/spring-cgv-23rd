@@ -22,6 +22,9 @@ public class Theater {
     @Column(name = "address", nullable = false, length = 100)
     private String address;
 
+    @Column(name = "description", nullable = false, columnDefinition = "TEXT")
+    private String description;
+
     @Builder.Default
     @Column(name = "is_opened", nullable = false)
     private boolean isOpened = true;
