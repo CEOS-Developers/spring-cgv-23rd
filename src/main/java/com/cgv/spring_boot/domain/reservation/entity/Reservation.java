@@ -3,6 +3,8 @@ package com.cgv.spring_boot.domain.reservation.entity;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.global.common.BaseEntity;
+import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.global.error.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,5 +37,15 @@ public class Reservation extends BaseEntity {
         this.status = status;
         this.user = user;
         this.schedule = schedule;
+    }
+
+    /**
+     * 예약 상태 변경 (RESERVED -> CANCELLED)
+     */
+    public void cancelStatus() {
+        if (this.status == ReservationStatus.CANCELLED) {
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED);
+        }
+        this.status = ReservationStatus.CANCELLED;
     }
 }
