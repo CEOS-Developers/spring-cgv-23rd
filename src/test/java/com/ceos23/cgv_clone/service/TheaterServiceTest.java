@@ -1,8 +1,6 @@
 package com.ceos23.cgv_clone.service;
 
 import com.ceos23.cgv_clone.common.ApiResponse;
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.config.exception.CustomException;
 import com.ceos23.cgv_clone.theater.domain.Theater;
 import com.ceos23.cgv_clone.theater.dto.response.TheaterResponse;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;
@@ -20,7 +18,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TheaterServiceTest {
