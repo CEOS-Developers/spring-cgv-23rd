@@ -4,6 +4,8 @@ import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.enums.Genre;
 import com.ceos23.cgv.domain.movie.enums.MovieRating;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,7 +50,7 @@ public class MovieService {
      */
     public Movie getMovieDetails(Long movieId) {
         return movieRepository.findById(movieId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 
     /**

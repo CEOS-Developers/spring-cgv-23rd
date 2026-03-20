@@ -38,4 +38,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	// Java 21+ Mockito Agent 경고 숨기기
+	jvmArgs("-XX:+EnableDynamicAgentLoading")
 }
