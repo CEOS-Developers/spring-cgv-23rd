@@ -26,9 +26,10 @@ public class MovieResponse {
                 .name(movie.getName())
                 .runningTime(movie.getRunningTime())
                 .ageRestriction(movie.getAgeRestriction())
-                .reservationRate(movie.getMovieStatistic().getReservationRate())
-                .totalViewers(movie.getMovieStatistic().getTotalViewers())
-                .eggRate(movie.getMovieStatistic().getEggRate())
+                // 영화 상세 내역 없을 경우 0으로 처리.
+                .reservationRate(movie.getMovieStatistic() != null ? movie.getMovieStatistic().getReservationRate() : 0)
+                .totalViewers(movie.getMovieStatistic() != null ? movie.getMovieStatistic().getTotalViewers() : 0)
+                .eggRate(movie.getMovieStatistic() != null ? movie.getMovieStatistic().getEggRate() : 0)
                 .build();
     }
 }

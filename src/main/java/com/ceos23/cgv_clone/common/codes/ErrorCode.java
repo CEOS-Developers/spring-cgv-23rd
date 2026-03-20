@@ -47,6 +47,9 @@ public enum ErrorCode {
     // 유저 데이터 미존재
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "해당 유저를 찾을 수 없습니다."),
 
+    // 유저 생년월일 데이터 미존재
+    USER_BIRTHDATE_NOT_FOUND(HttpStatus.NOT_FOUND, "U002", "해당 유저의 생년월일 내용이 없습니다"),
+
     // 영화관 데이터 미존재
     THEATER_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "해당 영화관을 찾을 수 없습니다."),
 
@@ -59,6 +62,9 @@ public enum ErrorCode {
     // 해당 시간대 영화 미존재
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "해당 시간대 영화를 찾을 수 없습니다."),
 
+    // 해당 좌석 문자열 이상
+    INVALID_SEAT(HttpStatus.BAD_REQUEST, "S002", "해당 좌석은 존재하지 않습니다."),
+
     // 관람 연령에 맞지 않음
     AGE_RESTRICTED(HttpStatus.BAD_REQUEST, "R001", "관람 등급이 맞지 않습니다."),
 
@@ -69,7 +75,9 @@ public enum ErrorCode {
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R003", "해당 예매 번호를 찾을 수 없습니다."),
 
     // 이미 취소된 예약
-    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "해당 예매는 이미 취소되었습니다.")
+    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "해당 예매는 이미 취소되었습니다."),
+
+
     ;
 
     /**

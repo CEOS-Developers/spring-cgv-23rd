@@ -42,6 +42,10 @@ public class ReservationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
         // 1. 나이 검사
+        if (user.getBirthdate() == null) {
+            // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
+            throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
+        }
         int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
 
         if (userAge < schedule.getMovie().getAgeRestriction()) {
@@ -53,6 +57,17 @@ public class ReservationService {
             char row = seatStr.charAt(0);
             int col = Integer.parseInt(seatStr.substring(1));
 
+            // 2-1. 좌석 문자열 검사
+            if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
+                throw new CustomException(ErrorCode.INVALID_SEAT);
+            }
+
+            // 2-2. 좌석 범위 검사
+            if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
+                throw new CustomException(ErrorCode.INVALID_SEAT);
+            }
+
+            // 2-3. 좌석 중복 검사
             if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol(schedule, row, col)) {
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }
