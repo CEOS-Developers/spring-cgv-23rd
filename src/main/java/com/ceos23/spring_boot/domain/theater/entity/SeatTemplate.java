@@ -21,12 +21,12 @@ public class SeatTemplate {
     private ScreenType screenType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_grade_id", nullable = false)
+    @JoinColumn(name = "seat_grade_id")
     private SeatGrade seatGrade;
 
-    @Column(name = "seat_row", nullable = false, length = 50)
-    private String seatRow;
+    @Column(name = "row_name", nullable = false, length = 50)
+    private String rowName;
 
-    @Column(name = "seat_col", nullable = false)
-    private Integer seatCol;
+    @Column(name = "col_number", nullable = false)
+    private Integer colNumber;
 }

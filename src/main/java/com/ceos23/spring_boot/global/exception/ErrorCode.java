@@ -12,6 +12,17 @@ public enum ErrorCode {
 
     MOVIE_NOT_FOUND(HttpStatus.BAD_REQUEST, "M001", "존재하지 않는 영화입니다."),
 
+    USER_NOT_FOUND(HttpStatus.BAD_REQUEST, "U001", "존재하지 않는 회원입니다."),
+
+    SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SC001", "존재하지 않는 상영 일정입니다."),
+
+    SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "ST001", "존재하지 않는 좌석입니다."),
+
+    SEAT_ALREADY_RESERVED(HttpStatus.CONFLICT, "R001", "이미 예매가 완료된 좌석입니다."),
+    RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R002", "존재하지 않는 예매 내역입니다."),
+    UNAUTHORIZED_RESERVATION_ACCESS(HttpStatus.FORBIDDEN, "R003", "본인의 예매 내역만 접근할 수 있습니다."),
+    ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "이미 취소된 예매입니다."),
+
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "잘못된 입력값입니다."),
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S001", "서버 내부에 오류가 발생했습니다.");

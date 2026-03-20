@@ -1,8 +1,11 @@
 package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.user.entity.User;
+import com.ceos23.spring_boot.global.exception.BusinessException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -25,12 +28,29 @@ public class Reservation {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, length = 50)
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ReservationStatus status;
 
-    @Column(name = "reservation_date", nullable = false)
-    private LocalDateTime reservationDate = LocalDateTime.now();
+    @Column(name = "reserve_date", nullable = false)
+    private LocalDateTime reserveDate = LocalDateTime.now();
 
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
+    @Column(name = "total_price", precision = 10, scale = 2)
     private BigDecimal totalPrice;
+
+    @Builder
+    public Reservation(User user, Schedule schedule, ReservationStatus status, BigDecimal totalPrice) {
+        this.user = user;
+        this.schedule = schedule;
+        this.reserveDate = LocalDateTime.now();
+        this.status = status;
+        this.totalPrice = totalPrice;
+    }
+
+    public void cancel() {
+        if (ReservationStatus.CANCELED == this.status)
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+
+        this.status = ReservationStatus.CANCELED;
+    }
 }

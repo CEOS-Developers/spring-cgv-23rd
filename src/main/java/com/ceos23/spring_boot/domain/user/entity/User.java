@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -31,4 +32,13 @@ public class User {
 
     @Column(nullable = false, length = 50)
     private String email;
+
+    @Builder
+    public User(String name, String loginId, String password, String phoneNumber, String email) {
+        this.name = name;
+        this.loginId = loginId;
+        this.password = password;
+        this.phoneNumber = phoneNumber;
+        this.email = email;
+    }
 }

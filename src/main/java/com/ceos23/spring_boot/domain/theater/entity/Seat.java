@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.theater.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -17,16 +18,24 @@ public class Seat {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_grade_id", nullable = false)
+    @JoinColumn(name = "seat_grade_id")
     private SeatGrade seatGrade;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screen_id", nullable = false)
     private Screen screen;
 
-    @Column(name = "seat_row", nullable = false, length = 50)
-    private String seatRow;
+    @Column(name = "row_name", nullable = false, length = 50)
+    private String rowName;
 
-    @Column(name = "seat_col", nullable = false)
-    private Integer seatCol;
+    @Column(name = "col_number", nullable = false)
+    private Integer colNumber;
+
+    @Builder
+    public Seat(SeatGrade seatGrade, Screen screen, String rowName, Integer colNumber) {
+        this.seatGrade = seatGrade;
+        this.screen = screen;
+        this.rowName = rowName;
+        this.colNumber = colNumber;
+    }
 }
