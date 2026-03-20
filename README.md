@@ -17,13 +17,14 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
 사용자 ||--o{ 예매내역
 
-### 3️⃣CGV의 4가지 HTTP Method API 만들어요
+
+### 3️⃣ CGV의 4가지 HTTP Method API 만들어요
 <img src="/images/1_postman.png" alt="postman 연결">
 
-### 5️⃣Global Exception를 만들어봐요
+### 5️⃣ Global Exception를 만들어봐요
 <img src="/images/2_exception.png" alt="없는 아이템 not found로 나오게">
 
-### 6️⃣Swagger 연동 후 Controller 통합 테스트를 해봐요
+### 6️⃣ Swagger 연동 후 Controller 통합 테스트를 해봐요
 <img src="/images/3_swagger.png" alt="swagger">
 연동 성공
 
@@ -37,9 +38,10 @@ Get 한 개
 <img src="/images/3-3_get_item.png" alt="Get 한 개">
 
 Delete
-<img src="/images/3-4_delete.png" alt="Delete">료
+<img src="/images/3-4_delete.png" alt="Delete">
+
 다시 Get 해보면
 <img src="/images/3-5_get.png" alt="Get 다시">
 
-### 7️⃣Service 계층의 단위 테스트를 진행해요
+### 7️⃣ Service 계층의 단위 테스트를 진행해요
 <img src="/images/4_test.png" alt="테스트 완료">
