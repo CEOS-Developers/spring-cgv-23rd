@@ -34,12 +34,20 @@ public class ScheduleService {
     private final ScreenRepository screenRepository;
 
     // 1. 극장별 상영 시간표 등록
-    public ApiResponse<Void> createSchedule(ScheduleCreateRequestDto requestDto) {
+    public ApiResponse<Void> createSchedule(Long theaterId, ScheduleCreateRequestDto requestDto) {
+        Theater theater = theaterRepository.findById(theaterId)
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
+
         Movie movie = movieRepository.findById(requestDto.movieId())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
         Screen screen = screenRepository.findById(requestDto.screenId())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.SCREEN_NOT_FOUND));
+
+        // 해당 상영관이 극장 내에 있는지 확인
+        if (!screen.getTheater().getId().equals(theaterId)) {
+            throw new GeneralException(GeneralErrorCode.SCREEN_THEATER_MISMATCH);
+        }
 
         // 종료 시간이 시작 시간보다 빨라서는 안 됨
         if (requestDto.endAt().isBefore(requestDto.startAt())) {

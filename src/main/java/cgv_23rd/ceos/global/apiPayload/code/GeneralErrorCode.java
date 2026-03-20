@@ -39,9 +39,10 @@ public enum GeneralErrorCode implements BaseErrorCode {
     MOVIESCREEN_NOT_FOUND(HttpStatus.NOT_FOUND,"MOVIESCREEN_4041","상영 회차를 찾을 수 없습니다."),
     SCREEN_NOT_FOUND(HttpStatus.NOT_FOUND,"SCREEN_4041","상영관을 찾을 수 없습니다."),
 
-    // 상영 시간표(스케줄) 에러
+    // 상영 시간표 에러
     INVALID_SCHEDULE_TIME(HttpStatus.BAD_REQUEST, "SCHEDULE_4001", "종료 시간이 시작 시간보다 빠를 수 없습니다."),
     SCHEDULE_OVERLAPPED(HttpStatus.BAD_REQUEST, "SCHEDULE_4002", "해당 상영관에 시간이 겹치는 상영 일정이 존재합니다."),
+    SCREEN_THEATER_MISMATCH(HttpStatus.BAD_REQUEST,"SCHEDULE_4003", "해당 극장에 속한 상영관이 아닙니다."),
 
     //예매 에러
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_4041", "예매를 찾을 수 없습니다."),

@@ -22,19 +22,19 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
 
     // 1. 극장별 상영 시간표 등록
-    @PostMapping("")
+    @PostMapping("/{theaterId}")
     @Operation(summary = "상영 시간표 등록 API", description = "특정 상영관에 영화 상영 일정을 등록함")
-    public ApiResponse<Void> createSchedule(
+    public ApiResponse<Void> createSchedule(@PathVariable Long theaterId,
             @Valid @RequestBody ScheduleCreateRequestDto requestDto) {
 
-        return scheduleService.createSchedule(requestDto);
+        return scheduleService.createSchedule(theaterId, requestDto);
     }
 
     // 2. 극장별 상영 시간표 조회
-    @GetMapping("")
+    @GetMapping("/{theaterId}")
     @Operation(summary = "극장 상영 시간표 조회 API", description = "특정 극장과 날짜를 기준으로 상영 시간표를 조회함")
     public ApiResponse<List<ScheduleResponseDto>> getSchedules(
-            @RequestParam(name = "theaterId") Long theaterId,
+            @PathVariable Long theaterId,
             @RequestParam(name = "targetDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate targetDate) {
 
         return scheduleService.getSchedules(theaterId, targetDate);
