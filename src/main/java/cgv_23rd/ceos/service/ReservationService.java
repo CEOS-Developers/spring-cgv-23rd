@@ -75,7 +75,7 @@ public class ReservationService {
                     movieScreen.getId(), seatId, ReservationStatus.완료
             );
             if (isAlreadyReserved) {
-                throw new GeneralException(GeneralErrorCode.INVALID_PARAMETER, "이미 예매가 완료된 좌석입니다.");
+                throw new GeneralException(GeneralErrorCode.RESERVATION_SEAT_DUPLICATION);
             }
 
             Seat seat = seatRepository.findById(seatId)
