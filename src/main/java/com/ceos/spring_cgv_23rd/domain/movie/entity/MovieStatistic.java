@@ -30,7 +30,7 @@ public class MovieStatistic {
 
     @Builder.Default
     @Column(name = "view_count", nullable = false)
-    private Integer viewCount = 0;
+    private Long viewCount = 0L;
 
     @Builder.Default
     @Column(name = "egg_count", nullable = false)

@@ -3,7 +3,6 @@ package com.ceos.spring_cgv_23rd.domain.movie.entity;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.AgeRating;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.Genre;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.MovieStatus;
-import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
