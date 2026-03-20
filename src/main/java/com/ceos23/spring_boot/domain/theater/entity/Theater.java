@@ -1,15 +1,11 @@
 package com.ceos23.spring_boot.domain.theater.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
 public class Theater {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "theater_id")
@@ -20,4 +16,16 @@ public class Theater {
 
     @Column(length = 50)
     private String location;
+
+    @Builder
+    public Theater(String name, String location) {
+        this.name = name;
+        this.location = location;
+    }
+
+    public void update(String name, String location) {
+        this.name = name;
+        this.location = location;
+    }
 }
+
