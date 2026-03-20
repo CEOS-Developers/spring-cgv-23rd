@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public interface ScreeningRepository extends JpaRepository<Screening, Long> {
 
@@ -28,5 +29,12 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
             "AND CAST(s.startAt AS date) = :date " +
             "ORDER BY m.id, s.startAt")
     List<Screening> findByTheaterAndDate(Long theaterId, LocalDate date);
+
+    @Query("SELECT s FROM Screening s " +
+            "JOIN FETCH s.movie " +
+            "JOIN FETCH  s.hall h " +
+            "JOIN FETCH h.theater " +
+            "WHERE s.id = :screeningId")
+    Optional<Screening> findWithDetailsById(Long screeningId);
 
 }

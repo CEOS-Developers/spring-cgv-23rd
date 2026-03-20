@@ -7,6 +7,8 @@ import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "reservation")
 @Getter
@@ -37,4 +39,20 @@ public class Reservation extends BaseEntity {
 
     @Column(name = "total_price", nullable = false)
     private Integer totalPrice;
+
+
+    public static Reservation createReservation(User user, Screening screening, int seatSize) {
+        return Reservation.builder()
+                .user(user)
+                .screening(screening)
+                .reservationNumber(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .status(ReservationStatus.COMPLETED)
+                .totalPrice(screening.getPrice() * seatSize)
+                .build();
+    }
+
+
+    public void cancel() {
+        this.status = ReservationStatus.CANCELLED;
+    }
 }

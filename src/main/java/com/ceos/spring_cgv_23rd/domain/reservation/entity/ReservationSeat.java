@@ -24,4 +24,12 @@ public class ReservationSeat {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)
     private Seat seat;
+
+
+    public static ReservationSeat createReservationSeat(Reservation reservation, Seat seat) {
+        return ReservationSeat.builder()
+                .reservation(reservation)
+                .seat(seat)
+                .build();
+    }
 }

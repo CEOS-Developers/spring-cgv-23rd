@@ -1,7 +1,9 @@
 package com.ceos.spring_cgv_23rd.domain.screening.entity;
 
 import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
+import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Hall;
+import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -42,4 +44,20 @@ public class Screening {
 
     @Column(name = "price", nullable = false)
     private Integer price;
+
+
+    public void decreaseRemainingSeats(int count) {
+        if (this.remainingSeats < count) {
+            throw new GeneralException(ScreeningErrorCode.NO_REMAINING_SEATS);
+        }
+
+        this.remainingSeats -= count;
+    }
+
+    public void increaseRemainingSeats(int count) {
+        if (this.remainingSeats + count > this.totalSeats) {
+            throw new GeneralException(ScreeningErrorCode.INVALID_SEAT_COUNT);
+        }
+        this.remainingSeats += count;
+    }
 }
