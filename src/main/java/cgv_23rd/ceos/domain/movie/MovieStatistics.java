@@ -26,4 +26,15 @@ public class MovieStatistics {
     private Integer reviewCount;
     private Double eggRate;
 
+    public void addReviewRating(double newRating) {
+        // 총점 계산
+        double totalRating = this.averageRating * this.reviewCount;
+
+        // 리뷰 수 증가 및 새로운 평균 계산
+        this.reviewCount += 1;
+        this.averageRating = (totalRating + newRating) / this.reviewCount;
+
+        this.averageRating = Math.round(this.averageRating * 10.0) / 10.0;
+    }
+
 }

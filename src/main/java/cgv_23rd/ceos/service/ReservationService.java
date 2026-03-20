@@ -125,7 +125,7 @@ public class ReservationService {
             throw new GeneralException(GeneralErrorCode.MOVIE_ALREADY_STARTED);
         }
 
-        reservation.updateStatus(ReservationStatus.취소);
+        reservation.cancel();
 
         return ApiResponse.onSuccess("예매 취소 성공");
     }

@@ -1,6 +1,7 @@
 package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.domain.movie.Movie;
+import cgv_23rd.ceos.domain.movie.MovieStatistics;
 import cgv_23rd.ceos.domain.movie.Review;
 import cgv_23rd.ceos.domain.user.User;
 import cgv_23rd.ceos.dto.review.request.ReviewRequestDto;
@@ -46,6 +47,10 @@ public class ReviewService {
                 .build();
 
         reviewRepository.save(review);
+
+        MovieStatistics statistics = movie.getMovieStatistics();
+        statistics.addReviewRating(requestDto.rate());
+
         return ApiResponse.onSuccess("리뷰 작성 성공");
     }
 

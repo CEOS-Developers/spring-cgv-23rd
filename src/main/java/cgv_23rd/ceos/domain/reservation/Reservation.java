@@ -44,4 +44,10 @@ public class Reservation {
     public void updateStatus(ReservationStatus status){
         this.status = status;
     }
+
+    // 예매 취소 편의 메서드
+    public void cancel() {
+        this.status = ReservationStatus.취소;
+        this.reservationSeats.clear();
+    }
 }
