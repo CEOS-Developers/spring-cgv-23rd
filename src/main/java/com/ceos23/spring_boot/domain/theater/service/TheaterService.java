@@ -6,6 +6,8 @@ import com.ceos23.spring_boot.domain.theater.dto.TheaterSearchCommand;
 import com.ceos23.spring_boot.domain.theater.dto.TheaterUpdateCommand;
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
+import com.ceos23.spring_boot.global.exception.BusinessException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +37,7 @@ public class TheaterService {
 
     public TheaterInfo findTheater(Long id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 영화관입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         return TheaterInfo.from(theater);
     }
@@ -43,7 +45,7 @@ public class TheaterService {
     @Transactional
     public TheaterInfo createTheater(TheaterCreateCommand command) {
         if (theaterRepository.existsByName(command.name()))
-            throw new IllegalArgumentException("이미 존재하는 영화관 지점명입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
 
         Theater theater = Theater.builder()
                 .name(command.name())
@@ -58,10 +60,10 @@ public class TheaterService {
     @Transactional
     public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(()-> new IllegalArgumentException("존재하지 않는 영화관입니다."));
+                .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         if (!theater.getName().equals(command.name()) && theaterRepository.existsByName(command.name()))
-            throw new IllegalArgumentException("이미 존재하는 영화관 지점명입니다.");
+            throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
 
         theater.update(command.name(), command.location());
 
@@ -71,7 +73,7 @@ public class TheaterService {
     @Transactional
     public void deleteTheater(Long id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(()-> new IllegalArgumentException("존재하지 않는 영화관입니다."));
+                .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         theaterRepository.delete(theater);
     }

@@ -12,6 +12,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.ceos23.spring_boot.global.exception.BusinessException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -122,8 +124,8 @@ class TheaterServiceTest {
 
         //when, then
         assertThatThrownBy(()-> theaterService.findTheater(invalidId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("존재하지 않는 영화관입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.THEATER_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -150,8 +152,8 @@ class TheaterServiceTest {
 
         //when, then
         assertThatThrownBy(()-> theaterService.createTheater(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("이미 존재하는 영화관 지점명입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.DUPLICATE_THEATER_NAME.getMessage());
     }
 
     @Test
@@ -189,8 +191,8 @@ class TheaterServiceTest {
 
         //when, then
         assertThatThrownBy(()-> theaterService.updateTheater(invalidId, command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("존재하지 않는 영화관입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.THEATER_NOT_FOUND.getMessage());
 
     }
 
@@ -212,8 +214,8 @@ class TheaterServiceTest {
 
         //when, then
         assertThatThrownBy(()-> theaterService.updateTheater(validId, command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("이미 존재하는 영화관 지점명입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.DUPLICATE_THEATER_NAME.getMessage());
     }
 
     @Test
@@ -246,7 +248,7 @@ class TheaterServiceTest {
 
         //when, then
         assertThatThrownBy(()-> theaterService.deleteTheater(invalidId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("존재하지 않는 영화관입니다.");
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(ErrorCode.THEATER_NOT_FOUND.getMessage());
     }
 }
