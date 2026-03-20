@@ -25,6 +25,6 @@ public class FavoriteController {
             @RequestParam Long userId,
             @PathVariable Long movieId
     ) {
-        return favoriteService.toggleFavoriteTheater(userId, movieId);
+        return favoriteService.toggleFavoriteMovie(userId, movieId);
     }
 }
