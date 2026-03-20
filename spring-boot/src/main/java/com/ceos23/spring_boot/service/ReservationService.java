@@ -4,6 +4,8 @@ import com.ceos23.spring_boot.domain.*;
 import com.ceos23.spring_boot.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +38,11 @@ public class ReservationService {
     }
 
     // ❌ 예매 취소
+    @Transactional
     public void cancel(Long reservationId) {
+        if (!reservationRepository.existsById(reservationId)) {
+            throw new RuntimeException("예약 없음");
+        }
         reservationRepository.deleteById(reservationId);
     }
 }
