@@ -1,7 +1,8 @@
-package com.cgv.spring_boot.global.error.exception;
+package com.cgv.spring_boot.global.error;
 
 import com.cgv.spring_boot.global.common.code.ErrorCode;
 import com.cgv.spring_boot.global.common.response.ErrorResponse;
+import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 

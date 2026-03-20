@@ -2,7 +2,7 @@ package com.cgv.spring_boot.domain.reservation.entity;
 
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.user.entity.User;
-import com.cgv.spring_boot.global.common.BaseEntity;
+import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import com.cgv.spring_boot.global.common.code.ErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import jakarta.persistence.*;

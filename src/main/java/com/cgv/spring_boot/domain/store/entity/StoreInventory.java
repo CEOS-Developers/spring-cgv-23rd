@@ -1,7 +1,7 @@
 package com.cgv.spring_boot.domain.store.entity;
 
 import com.cgv.spring_boot.domain.theater.entity.Theater;
-import com.cgv.spring_boot.global.common.BaseEntity;
+import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

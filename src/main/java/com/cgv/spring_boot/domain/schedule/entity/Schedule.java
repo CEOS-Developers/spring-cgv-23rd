@@ -2,7 +2,7 @@ package com.cgv.spring_boot.domain.schedule.entity;
 
 import com.cgv.spring_boot.domain.movie.entity.Movie;
 import com.cgv.spring_boot.domain.theater.entity.Hall;
-import com.cgv.spring_boot.global.common.BaseEntity;
+import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
