@@ -136,13 +136,3 @@
 
 **🔗 연관 관계**
 - `1 (Order)` : `N (OrderItem)`
-
----
-
-### 13. 주문 상세 항목 (`OrderItem`)
-주문 내 포함된 개별 상품 수량 상세 정보입니다.
-- **`id`** `PK` : 주문 상세 고유 ID (`order_item_id`)
-- **`order_id`** `FK` : 매핑된 주문 건 ID (`Order`)
-- **`inventory_id`** `FK` : 실제 주문된 매장 재고/메뉴 ID (`Inventory`)
-- **`quantity`** : 구매 수량
-- **`unitPrice`** : 구매 시점의 단가 (과거 추적용)
