@@ -160,3 +160,159 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
         - `IN` 절을 사용해서 데이터를 한 번에 미리 설정값만큼 가져옴
             - `SELECT * FROM MEMBER WHERE TEAM_ID IN (1, 2, 3, ..., 100)`
         - N+1 문제가 발생하지 않고, `1 + 1` 수준으로 최적화 가능
+---
+## CGV 서비스
+
+- **ERD 모델링**
+    - [CGV ERD](https://www.erdcloud.com/d/QvfvdQeEdWbPWid9b)
+
+### 1. 즐겨찾기 (영화관 / 영화)
+![](images/ERD1.png)
+- **도메인**
+    
+    ```jsx
+    user
+    favorite_movie
+    favorite_theater
+    ```
+    
+    - `user`: CGV 회원
+    - `favorite_movie`, `favorite_theater`: 즐겨찾기(찜) 기능
+- **관계**
+    
+    ```jsx
+    User 1:N FavoriteMovie
+    User 1:N FavoriteTheater
+    ```
+    
+    - 회원은 여러개의 영화와 영화관을 찜할 수 있음
+
+### 2. 영화 등장인물 조회 및 리뷰 작성
+![](images/ERD2.png)
+- **도메인**
+    
+    ```jsx
+    movie
+    review
+    actor
+    director
+    person
+    ```
+    
+    - `movie`: 영화
+    - `review`: 사용자 리뷰
+    - `person`: 배우/감독 공통 엔티티
+    - `actor`, `director`: 역할 분리
+- **관계**
+    
+    ```jsx
+    Person 1:N Actor/Director
+    Actor/Director N:1 Movie
+    Movie 1:N Review
+    ```
+    
+    - `person`와 `movie`의 **다대다 관계**를 `actor`와 `director`를 통해 **일대다, 다대일 관계로 매핑**
+        - 배우/감독 역할 구분
+        - 배우이자 감독으로 영화에 참여하는 사람 고려
+    - 영화에 여러개의 리뷰가 달릴 수 있음
+
+### 3. 영화 조회 및 상영관에 따른 상영시간 확인
+![](images/ERD3.png)
+- **도메인**
+    
+    ```jsx
+    theater
+    screen
+    screen_type
+    schedule
+    ```
+    
+    - `theater`: 영화관
+    - `screen`: 상영관
+    - `screen_type`: 특별관(IMAX, 4DX 등), 일반관
+    - `schedule`: 상영 영화
+- **관계**
+    
+    ```jsx
+    Theater 1:N Screen
+    Screen N:1 Screen_type
+    Screen 1:N Schedule
+    ```
+    
+    - 영화관에 여러 상영관 존재
+    - 상영관은 특별관과 일반관으로 구성
+    - 상영관에는 여러 영화가 상영
+
+### 4. 좌석
+![](images/ERD4.png)
+- **도메인**
+    
+    ```jsx
+    seat
+    seat_grade
+    seat_template
+    ```
+    
+    - `seat`: 실제 좌석
+    - `seat_grade`: 일반석 / 특별석
+    - `seat_template`: 좌석 템플릿
+- **관계**
+    
+    ```jsx
+    SeatGrade 1:N Seat/Seat_template
+    ```
+    
+    - 좌석에 여러 등급 존재
+        - 좌석별 가격 차등 가능
+    - 특별관, 일반관 종류가 같다면 좌석 동일하다는 조건
+        - 좌석 템플릿을 통해 좌석 재사용하기 위함
+
+### 5. 상영 영화 및 좌석 선택 후 예매 (혹은 취소)
+![](images/ERD5.png)
+- **도메인**
+    
+    ```jsx
+    reservation
+    reservation_seat
+    ```
+    
+    - `reservation`: 예매
+        - 상영영화 및 좌석 예매
+    - `reservation_seat`: 예매 좌석
+- **관계**
+    
+    ```jsx
+    Reservation 1:N ReservationSeat
+    Seat 1:N ReservationSeat
+    Schedule 1:N Reservation
+    ```
+    
+    - 한 번에 여러 좌석 예매 가능
+        - `reservation`과 `seat`의 **다대다 관계**를 `reservation_seat`을 통해 **일대다, 다대일 관계로 매핑**
+
+### 6. 매점 상품 주문
+![](images/ERD6.png)
+- **도메인**
+    
+    ```jsx
+    menu
+    inventory
+    orders
+    order_item
+    ```
+    
+    - `menu`: 매점 상품
+    - `inventory`: 지점별 재고
+    - `orders`: 주문
+    - `order_item`: 주문 상세
+- **관계**
+    
+    ```jsx
+    Orders 1:N OrderItem
+    OrderItem N:1 Inventory
+    Menu 1:N Inventory
+    ```
+    
+    - 영화관별 재고 관리
+    - 한 번에 여러 상품 주문 가능
+        - `orders`와 `inventory`의 **다대다 관계**를 `order_item`을 통해 **일대다, 다대일 관계로 매핑**
