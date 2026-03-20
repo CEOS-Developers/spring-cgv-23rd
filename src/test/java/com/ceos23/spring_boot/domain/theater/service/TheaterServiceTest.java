@@ -182,7 +182,7 @@ class TheaterServiceTest {
 
     @Test
     @DisplayName("영화관 수정 실패: 존재하지 않는 ID면 예외가 발생된다.")
-    void updateTheater_Fail_InvaildId() {
+    void updateTheater_Fail_InvalidId() {
         //given
         Long invalidId = 1L;
         given(theaterRepository.findById(invalidId)).willReturn(Optional.empty());
