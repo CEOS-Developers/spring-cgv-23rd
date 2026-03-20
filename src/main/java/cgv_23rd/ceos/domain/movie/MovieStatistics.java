@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 public class MovieStatistics {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)

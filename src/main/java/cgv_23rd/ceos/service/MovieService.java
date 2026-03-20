@@ -76,6 +76,7 @@ public class MovieService {
                             .orElse(null);
 
                     return MovieResponseDto.builder()
+                            .movieId(movie.getId())
                             .title(movie.getTitle())
                             .movieImageUrl(thumbnail)
                             .build();
@@ -88,7 +89,7 @@ public class MovieService {
     @Transactional(readOnly = true)
     public ApiResponse<MovieDetailResponseDto> getMovieDetail(Long movieId){
         Movie movie = movieRepository.findDetailById(movieId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND,"영화 조회 불가"));
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
         String thumbnail = movie.getMovieImages().stream()
                 .filter(MovieImage::getIsThumbnail)
@@ -119,7 +120,7 @@ public class MovieService {
     @Transactional(readOnly = true)
     public ApiResponse<List<ActorResponseDto>> getMovieActors(Long movieId){
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND,"영화 조회 불가"));
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
         List<MovieActor> movieActorcs = movieActorRepository.findAllByMovieWithActor(movie);
 
@@ -139,11 +140,11 @@ public class MovieService {
     @Transactional
     public ApiResponse<Void> toggleMovieLike(Long userId, Long movieId){
         User user = userRepository.findById(userId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.USER_NOT_FOUND,"유저 조회 불가"));
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
 
 
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND,"영화 조회 불가"));
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
         MovieLike movieLike = movieLikeRepository.findMovieLikeByUserAndMovie(user,movie);
 

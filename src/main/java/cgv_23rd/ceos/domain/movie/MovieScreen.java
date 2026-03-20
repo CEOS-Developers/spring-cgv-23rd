@@ -17,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MovieScreen {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

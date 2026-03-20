@@ -17,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 public class FoodOrder {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private Integer totalPrice;

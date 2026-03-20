@@ -4,6 +4,7 @@ import cgv_23rd.ceos.domain.enums.FoodOrderStatus;
 import cgv_23rd.ceos.domain.food.*;
 import cgv_23rd.ceos.domain.theater.Theater;
 import cgv_23rd.ceos.domain.user.User;
+import cgv_23rd.ceos.dto.food.request.FoodCreateRequestDto;
 import cgv_23rd.ceos.dto.food.request.FoodOrderItemRequestDto;
 import cgv_23rd.ceos.dto.food.request.FoodOrderRequestDto;
 import cgv_23rd.ceos.dto.food.response.FoodOrderItemResponseDto;
@@ -107,5 +108,29 @@ public class FoodOrderService {
                 .collect(Collectors.toList());
 
         return ApiResponse.onSuccess("음식 주문 내역 조회 성공", responseDtos);
+    }
+
+    public ApiResponse<Void> createFood(FoodCreateRequestDto requestDto) {
+
+        Food food = Food.builder()
+                .name(requestDto.name())
+                .price(requestDto.price())
+                .build();
+
+        foodRepository.save(food);
+
+        List<Theater> allTheaters = theaterRepository.findAll();
+
+        List<TheaterFood> theaterFoods = allTheaters.stream()
+                .map(theater -> TheaterFood.builder()
+                        .theater(theater)
+                        .food(food)
+                        .amount(100)
+                        .build())
+                .collect(Collectors.toList());
+
+        theaterFoodRepository.saveAll(theaterFoods);
+
+        return ApiResponse.onSuccess("신규 음식 등록 및 전 지점 반영 성공");
     }
 }

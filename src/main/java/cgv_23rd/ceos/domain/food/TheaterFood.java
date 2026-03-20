@@ -16,7 +16,7 @@ import lombok.*;
 )
 public class TheaterFood {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

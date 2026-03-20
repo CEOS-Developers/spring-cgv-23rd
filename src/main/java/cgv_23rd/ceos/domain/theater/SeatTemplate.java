@@ -10,7 +10,7 @@ import lombok.*;
 @AllArgsConstructor
 public class SeatTemplate {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
