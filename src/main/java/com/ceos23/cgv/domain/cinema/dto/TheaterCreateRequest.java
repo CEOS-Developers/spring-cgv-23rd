@@ -7,7 +7,8 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 public class TheaterCreateRequest {
-    private String name;        // 예: "1관", "IMAX관"
-    private TheaterType type;   // 예: NORMAL, IMAX 등
-    private int seatCount;      // 예: 120
+    private String name;
+    private TheaterType type;
+    private String maxRow;
+    private int maxCol;
 }

@@ -8,5 +8,4 @@ import lombok.NoArgsConstructor;
 public class CinemaCreateRequest {
     private String name;
     private String region;
-    private boolean isSpecial;
 }

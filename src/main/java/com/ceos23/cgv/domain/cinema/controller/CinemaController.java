@@ -56,8 +56,7 @@ public class CinemaController {
     public ResponseEntity<CinemaResponse> createCinema(@RequestBody CinemaCreateRequest request) {
         Cinema createdCinema = cinemaService.createCinema(
                 request.getName(),
-                request.getRegion(),
-                request.isSpecial()
+                request.getRegion()
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CinemaResponse.from(createdCinema));

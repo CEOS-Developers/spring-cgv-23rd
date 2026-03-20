@@ -49,11 +49,10 @@ public class CinemaService {
      * [POST] 새로운 영화관(지점) 생성
      */
     @Transactional
-    public Cinema createCinema(String name, String region, boolean isSpecial) {
+    public Cinema createCinema(String name, String region) {
         Cinema cinema = Cinema.builder()
                 .name(name)
                 .region(region)
-                .isSpecial(isSpecial)
                 .build();
 
         return cinemaRepository.save(cinema);
@@ -63,7 +62,7 @@ public class CinemaService {
      * [POST] 특정 영화관 내에 새로운 상영관 생성
      */
     @Transactional
-    public Theater createTheater(Long cinemaId, String name, TheaterType type, int seatCount) {
+    public Theater createTheater(Long cinemaId, String name, TheaterType type, String maxRow, int maxCol) {
         // 1. 어느 지점(Cinema)에 만들지 먼저 조회
         Cinema cinema = cinemaRepository.findById(cinemaId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 영화관을 찾을 수 없습니다."));
@@ -73,7 +72,8 @@ public class CinemaService {
                 .cinema(cinema) // 어느 영화관 소속인지 세팅
                 .name(name)
                 .type(type)
-                .seatCount(seatCount)
+                .maxRow(maxRow)
+                .maxCol(maxCol)
                 .build();
 
         // 3. DB에 저장

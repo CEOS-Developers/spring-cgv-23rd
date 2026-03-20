@@ -11,14 +11,16 @@ public class TheaterResponse {
     private Long id;
     private String name;
     private TheaterType type;
-    private int seatCount;
+    private String maxRow;
+    private int maxCol;
 
     public static TheaterResponse from(Theater theater) {
         return TheaterResponse.builder()
                 .id(theater.getId())
                 .name(theater.getName())
                 .type(theater.getType())
-                .seatCount(theater.getSeatCount())
+                .maxRow(theater.getMaxRow())
+                .maxCol(theater.getMaxCol())
                 .build();
     }
 }

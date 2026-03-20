@@ -21,7 +21,4 @@ public class Cinema extends BaseTimeEntity {
 
     @Column(nullable = false, length = 50)
     private String region;
-
-    @Column(nullable = false)
-    private boolean isSpecial;
 }
