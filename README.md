@@ -1,7 +1,7 @@
 # spring-cgv-23rd
-CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
+## CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
---- 
+
 ## 1. 서비스 개요
    본 프로젝트는 다음과 같은 핵심 기능을 지원합니다.
 
@@ -18,13 +18,11 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 ## 2. ERD
 
 <img width="1101" height="598" alt="Image" src="https://github.com/user-attachments/assets/d505ca6a-bcad-434c-93e6-bc2cf955fe3c" />
-
---- 
+ 
 
 ## 3. 상세 모델링 설명
    데이터 모델은 크게 영화 예매 도메인, 사용자 활동 도메인, 스토어 도메인의 세 파트로 구분됩니다.
 
----
 
 🎥 영화 및 예매 
 
