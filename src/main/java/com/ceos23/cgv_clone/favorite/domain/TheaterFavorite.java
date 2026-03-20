@@ -9,7 +9,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "theater_likes")
+// Unique 제약 걸어서 중복 찜 방지
+@Table(
+        name = "theater_likes",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "theater_id"})
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class TheaterFavorite {
