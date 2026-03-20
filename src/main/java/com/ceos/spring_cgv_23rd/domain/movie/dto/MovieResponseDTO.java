@@ -102,6 +102,20 @@ public class MovieResponseDTO {
     }
 
     @Builder
+    public record MovieLikeResponseDTO(
+            Long id,
+            Boolean isLiked
+    ) {
+        public static MovieLikeResponseDTO of(Long movieId, Boolean isLiked) {
+            return MovieLikeResponseDTO.builder()
+                    .id(movieId)
+                    .isLiked(isLiked)
+                    .build();
+        }
+    }
+
+
+    @Builder
     private record MovieStatisticDTO(
             Double reservationRate,
             Integer reservationRank,

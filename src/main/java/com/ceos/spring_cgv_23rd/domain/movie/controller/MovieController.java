@@ -6,10 +6,7 @@ import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -64,6 +61,15 @@ public class MovieController {
             @PathVariable Long movieId) {
         List<MovieResponseDTO.MovieMediaResponseDTO> response = movieService.getMovieMedias(movieId);
         return ApiResponse.onSuccess("영화 미디어 조회 성공", response);
+    }
+
+    @Operation(summary = "영화 찜 토글")
+    @PostMapping("/{movieId}/like")
+    public ApiResponse<MovieResponseDTO.MovieLikeResponseDTO> toggleMovieLike(
+            @PathVariable Long movieId) {
+        MovieResponseDTO.MovieLikeResponseDTO response = movieService.toggleMovieLike(1L, movieId);
+        String message = response.isLiked() ? "영화 찜 등록 성공" : "영화 찜 취소 성공";
+        return ApiResponse.onSuccess(message, response);
     }
 
 }

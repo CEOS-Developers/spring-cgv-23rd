@@ -17,4 +17,7 @@ public interface MovieService {
     List<MovieResponseDTO.MovieCreditResponseDTO> getMovieCredits(Long movieId);
 
     List<MovieResponseDTO.MovieMediaResponseDTO> getMovieMedias(Long movieId);
+
+    // 영화 찜
+    MovieResponseDTO.MovieLikeResponseDTO toggleMovieLike(Long userId, Long movieId);
 }

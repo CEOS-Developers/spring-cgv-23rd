@@ -27,4 +27,12 @@ public class MovieLike extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
+
+    
+    public static MovieLike createMovieLike(User user, Movie movie) {
+        return MovieLike.builder()
+                .user(user)
+                .movie(movie)
+                .build();
+    }
 }
