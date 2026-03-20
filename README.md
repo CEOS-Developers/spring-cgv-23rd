@@ -192,6 +192,8 @@ JOIN m.team t  -- Member 엔티티 내부의 team 필드(연관관계) 기준
 
 ### ERD
 https://www.erdcloud.com/d/br5ZwPJDjX9WvPYXH
+<img width="1044" height="451" alt="image" src="https://github.com/user-attachments/assets/d1361fe0-e23c-4bdb-9f1b-1823a2ef6360" />
+
 
 <details>
 <summary><h1>CGV 클론코딩 ERD 연관관계 및 제약조건 정리</h1></summary>
