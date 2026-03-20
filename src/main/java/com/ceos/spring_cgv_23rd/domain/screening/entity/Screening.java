@@ -34,6 +34,12 @@ public class Screening {
     @Column(name = "end_at", nullable = false)
     private LocalDateTime endAt;
 
+    @Column(name = "total_seats", nullable = false)
+    private Integer totalSeats;
+
+    @Column(name = "remaining_seats", nullable = false)
+    private Integer remainingSeats;
+
     @Column(name = "price", nullable = false)
     private Integer price;
 }
