@@ -14,7 +14,7 @@ public class FavoriteController {
 
     @PostMapping("/theaters/{theaterId}")
     public ApiResponse<Void> toggleFavoriteTheater(
-            @RequestParam Long userId,
+            @RequestHeader Long userId,
             @PathVariable Long theaterId
     ) {
         return favoriteService.toggleFavoriteTheater(userId, theaterId);
@@ -22,7 +22,7 @@ public class FavoriteController {
 
     @PostMapping("/movie/{movieId}")
     public ApiResponse<Void> toggleFavoriteMovie(
-            @RequestParam Long userId,
+            @RequestHeader Long userId,
             @PathVariable Long movieId
     ) {
         return favoriteService.toggleFavoriteMovie(userId, movieId);
