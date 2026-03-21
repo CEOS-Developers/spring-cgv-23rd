@@ -61,6 +61,7 @@ https://www.erdcloud.com/d/vXew5ExzkDE48pxDi
 ### 예약취소
 - 예약 취소하기: DELETE /api/reservation/{reservationId}
 
+
 ---
 
 # 개선점
