@@ -7,6 +7,8 @@ import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "product_order")
 @Getter
@@ -37,4 +39,19 @@ public class ProductOrder extends BaseEntity {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
+
+
+    public static ProductOrder createOrder(User user, Theater theater, int totalPrice) {
+        return ProductOrder.builder()
+                .user(user)
+                .theater(theater)
+                .orderNumber(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .totalPrice(totalPrice)
+                .status(OrderStatus.COMPLETED)
+                .build();
+    }
+
+    public void cancel() {
+        this.status = OrderStatus.CANCELLED;
+    }
 }

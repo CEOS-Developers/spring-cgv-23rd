@@ -31,4 +31,14 @@ public class OrderItem {
 
     @Column(name = "price", nullable = false)
     private Integer price;
+
+
+    public static OrderItem createOrderItem(ProductOrder order, Product product, int quantity) {
+        return OrderItem.builder()
+                .productOrder(order)
+                .product(product)
+                .quantity(quantity)
+                .price(product.getPrice())
+                .build();
+    }
 }

@@ -1,6 +1,8 @@
 package com.ceos.spring_cgv_23rd.domain.product.entity;
 
+import com.ceos.spring_cgv_23rd.domain.product.exception.ProductErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
+import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,4 +31,17 @@ public class Inventory {
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
+
+
+    public void decreaseQuantity(int count) {
+        if (this.quantity < count) {
+            throw new GeneralException(ProductErrorCode.INSUFFICIENT_STOCK);
+        }
+
+        this.quantity -= count;
+    }
+
+    public void increaseQuantity(int count) {
+        this.quantity += count;
+    }
 }
