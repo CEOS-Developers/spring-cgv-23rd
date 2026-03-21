@@ -12,7 +12,7 @@
 ### ERD 설계
 
 ![erd.png](docs/images/erd.png)
-https://www.erdcloud.com/d/A8T2DWPNN348xugsP  
+[ERD](https://www.erdcloud.com/d/A8T2DWPNN348xugsP) (각 테이블의 상세 정보는 erd의 comment에 명시했습니다.)  
 (미션의 제약 조건은 따르면서, 최대한 CGV와 비슷하게 구현하려 노력했습니다...)
 
 | 도메인         | 엔티티                                                                    |
