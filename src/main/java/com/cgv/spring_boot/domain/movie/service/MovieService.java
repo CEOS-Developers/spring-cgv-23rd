@@ -39,6 +39,8 @@ public class MovieService {
 
     @Transactional
     public void deleteMovieById(Long id) {
-        movieRepository.deleteById(id);
+        Movie movie = movieRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+        movieRepository.delete(movie);
     }
 }

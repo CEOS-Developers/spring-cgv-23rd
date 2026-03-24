@@ -3,6 +3,7 @@ package com.cgv.spring_boot.domain.store.entity;
 import com.cgv.spring_boot.domain.theater.entity.Theater;
 import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class StoreInventory extends BaseEntity {
     @JoinColumn(name = "item_id")
     private Item item;
 
+    @Min(value = 1, message = "재고는 최소 1개 이상이어야 합니다.")
     @Column(nullable = false)
     private int stock; // 재고 수량
 

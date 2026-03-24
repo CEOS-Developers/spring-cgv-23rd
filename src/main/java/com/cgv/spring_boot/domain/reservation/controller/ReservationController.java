@@ -2,6 +2,7 @@ package com.cgv.spring_boot.domain.reservation.controller;
 
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.service.ReservationService;
+import com.cgv.spring_boot.global.common.code.SuccessCode;
 import com.cgv.spring_boot.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,8 +30,13 @@ public class ReservationController {
 
     @Operation(summary = "영화 예매 취소", description = "영화 예매를 취소합니다.")
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<ApiResponse<String>> cancel(@PathVariable("id") Long id) {
-        reservationService.cancel(id);
-        return ResponseEntity.ok(ApiResponse.success("예매가 성공적으로 취소되었습니다."));
+    public ResponseEntity<ApiResponse<String>> cancel(
+            @RequestHeader("X-USER-ID") Long userId,
+            @PathVariable("id") Long id
+    ) {
+
+        reservationService.cancel(userId, id);
+
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.DELETE_SUCCESS, "예매가 성공적으로 취소되었습니다."));
     }
 }
