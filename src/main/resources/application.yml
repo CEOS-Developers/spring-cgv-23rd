@@ -18,10 +18,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 100
 
-logging:
-  level:
-    org.hibernate.SQL: debug
-
 swagger:
   server-url: http://localhost:8080
   server-description: Local Server
