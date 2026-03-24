@@ -1,0 +1,28 @@
+package com.ceos23.spring_boot.cgv.dto.reservation;
+
+import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
+import com.ceos23.spring_boot.cgv.domain.reservation.ReservationSeat;
+import java.time.LocalDateTime;
+import java.util.List;
+
+public record ReservationResponse(
+        Long reservationId,
+        Long userId,
+        Long screeningId,
+        String status,
+        LocalDateTime reservedAt,
+        List<Long> seatTemplateIds
+) {
+    public static ReservationResponse of(Reservation reservation, List<ReservationSeat> reservationSeats) {
+        return new ReservationResponse(
+                reservation.getId(),
+                reservation.getUser().getId(),
+                reservation.getScreening().getId(),
+                reservation.getStatus().name(),
+                reservation.getReservedAt(),
+                reservationSeats.stream()
+                        .map(reservationSeat -> reservationSeat.getSeatTemplate().getId())
+                        .toList()
+        );
+    }
+}
