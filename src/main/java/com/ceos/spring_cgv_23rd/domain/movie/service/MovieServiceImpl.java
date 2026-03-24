@@ -3,7 +3,6 @@ package com.ceos.spring_cgv_23rd.domain.movie.service;
 import com.ceos.spring_cgv_23rd.domain.movie.dto.MovieResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
 import com.ceos.spring_cgv_23rd.domain.movie.entity.MovieLike;
-import com.ceos.spring_cgv_23rd.domain.movie.entity.MovieStatistic;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.MovieStatus;
 import com.ceos.spring_cgv_23rd.domain.movie.exception.MovieErrorCode;
 import com.ceos.spring_cgv_23rd.domain.movie.repository.*;
@@ -31,11 +30,11 @@ public class MovieServiceImpl implements MovieService {
     public List<MovieResponseDTO.MovieListResponseDTO> getMovieChart() {
 
         // 상영중/상영예정 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatusIn(
+        List<Movie> movies = movieRepository.findWithStatisticByStatusIn(
                 List.of(MovieStatus.RUNNING, MovieStatus.UPCOMING));
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -43,10 +42,10 @@ public class MovieServiceImpl implements MovieService {
     public List<MovieResponseDTO.MovieListResponseDTO> getRunningMovie() {
 
         // 상영 중인 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatus(MovieStatus.RUNNING);
+        List<Movie> movies = movieRepository.findWithStatisticByStatus(MovieStatus.RUNNING);
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -54,10 +53,10 @@ public class MovieServiceImpl implements MovieService {
     public List<MovieResponseDTO.MovieListResponseDTO> getUpcomingMovie() {
 
         // 상영 예정 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatus(MovieStatus.UPCOMING);
+        List<Movie> movies = movieRepository.findWithStatisticByStatus(MovieStatus.UPCOMING);
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -68,12 +67,8 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new GeneralException(MovieErrorCode.MOVIE_NOT_FOUND));
 
-        // 영화 통계 조회
-        MovieStatistic statistic = movieStatisticRepository.findByMovieId(movieId)
-                .orElseThrow(() -> new GeneralException(MovieErrorCode.MOVIE_STAT_NOT_FOUND));
 
-
-        return MovieResponseDTO.MovieDetailResponseDTO.of(movie, statistic);
+        return MovieResponseDTO.MovieDetailResponseDTO.of(movie, movie.getMovieStatistic());
     }
 
     @Override

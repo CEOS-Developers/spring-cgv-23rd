@@ -49,4 +49,7 @@ public class Movie {
     @Column(name = "poster_url", nullable = false)
     private String posterUrl;
 
+    @OneToOne(mappedBy = "movie", fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
+    private MovieStatistic movieStatistic;
+
 }

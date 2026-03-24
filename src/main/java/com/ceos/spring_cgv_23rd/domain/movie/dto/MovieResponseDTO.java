@@ -116,7 +116,7 @@ public class MovieResponseDTO {
 
 
     @Builder
-    private record MovieStatisticDTO(
+    public record MovieStatisticDTO(
             Double reservationRate,
             Integer reservationRank,
             Long viewCount,
@@ -125,7 +125,7 @@ public class MovieResponseDTO {
             Double femaleReservationRate,
             AgeRateDTO ageRates
     ) {
-        private static MovieStatisticDTO from(MovieStatistic statistic) {
+        public static MovieStatisticDTO from(MovieStatistic statistic) {
 
             return MovieStatisticDTO.builder()
                     .reservationRate(statistic.getReservationRate())
@@ -140,14 +140,14 @@ public class MovieResponseDTO {
     }
 
     @Builder
-    private record AgeRateDTO(
+    public record AgeRateDTO(
             Double age10sRate,
             Double age20sRate,
             Double age30sRate,
             Double age40sRate,
             Double age50sRate
     ) {
-        private static AgeRateDTO from(MovieStatistic statistic) {
+        public static AgeRateDTO from(MovieStatistic statistic) {
 
             return AgeRateDTO.builder()
                     .age10sRate(statistic.getAge10sRate())
