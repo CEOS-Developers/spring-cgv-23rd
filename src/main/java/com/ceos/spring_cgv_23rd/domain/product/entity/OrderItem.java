@@ -33,12 +33,15 @@ public class OrderItem {
     private Integer price;
 
 
-    public static OrderItem createOrderItem(ProductOrder order, Product product, int quantity) {
+    public static OrderItem createOrderItem(Product product, int quantity) {
         return OrderItem.builder()
-                .productOrder(order)
                 .product(product)
                 .quantity(quantity)
                 .price(product.getPrice())
                 .build();
+    }
+
+    public void assignOrder(ProductOrder order) {
+        this.productOrder = order;
     }
 }

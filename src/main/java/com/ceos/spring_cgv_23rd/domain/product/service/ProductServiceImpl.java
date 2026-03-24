@@ -9,7 +9,6 @@ import com.ceos.spring_cgv_23rd.domain.product.entity.ProductOrder;
 import com.ceos.spring_cgv_23rd.domain.product.enums.OrderStatus;
 import com.ceos.spring_cgv_23rd.domain.product.exception.ProductErrorCode;
 import com.ceos.spring_cgv_23rd.domain.product.repository.InventoryRepository;
-import com.ceos.spring_cgv_23rd.domain.product.repository.OrderItemRepository;
 import com.ceos.spring_cgv_23rd.domain.product.repository.ProductOrderRepository;
 import com.ceos.spring_cgv_23rd.domain.product.repository.ProductRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
@@ -31,7 +30,6 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductOrderRepository productOrderRepository;
-    private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final TheaterRepository theaterRepository;
@@ -73,29 +71,22 @@ public class ProductServiceImpl implements ProductService {
             throw new GeneralException(ProductErrorCode.INVENTORY_NOT_FOUND);
         }
 
-        // 가격 계산 + 재고 차감
-        int totalPrice = 0;
+        // 재고 차감
         for (ProductRequestDTO.OrderItemRequestDTO item : request.items()) {
-
-            Product product = productMap.get(item.productId());
             Inventory inventory = inventoryMap.get(item.productId());
-
             inventory.decreaseQuantity(item.quantity());
-            totalPrice += product.getPrice() * item.quantity();
         }
-
-        // 주문 생성
-        ProductOrder order = ProductOrder.createOrder(user, theater, totalPrice);
-        productOrderRepository.save(order);
-
 
         // 주문 아이템 생성
         List<OrderItem> orderItems = request.items().stream()
-                .map(item -> OrderItem.createOrderItem(order, productMap.get(item.productId()), item.quantity()))
+                .map(item -> OrderItem.createOrderItem(productMap.get(item.productId()), item.quantity()))
                 .toList();
-        orderItemRepository.saveAll(orderItems);
 
-        return ProductResponseDTO.OrderDetailResponseDTO.of(order, orderItems);
+        // 주문 생성
+        ProductOrder order = ProductOrder.createOrder(user, theater, orderItems);
+        productOrderRepository.save(order);
+
+        return ProductResponseDTO.OrderDetailResponseDTO.of(order);
     }
 
     @Override
@@ -111,7 +102,7 @@ public class ProductServiceImpl implements ProductService {
                 .build();
 
         // 주문 조회
-        ProductOrder order = productOrderRepository.findById(orderId)
+        ProductOrder order = productOrderRepository.findWithOrderItemsById(orderId)
                 .orElseThrow(() -> new GeneralException(ProductErrorCode.ORDER_NOT_FOUND));
 
         // TODO: 주석 제거
@@ -125,10 +116,8 @@ public class ProductServiceImpl implements ProductService {
             throw new GeneralException(ProductErrorCode.ALREADY_CANCELLED);
         }
 
-        // 주문 아이템 조회
-        List<OrderItem> orderItems = orderItemRepository.findByProductOrderId(orderId);
-
         // 상품 조회
+        List<OrderItem> orderItems = order.getOrderItems();
         List<Long> productIds = orderItems.stream()
                 .map(item -> item.getProduct().getId())
                 .toList();
