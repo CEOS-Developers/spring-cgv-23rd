@@ -30,6 +30,9 @@ public class User extends BaseEntity {
     private String email;
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
+
     @OneToMany(mappedBy = "user")
     private List<Reservation> reservations = new ArrayList<>();
 

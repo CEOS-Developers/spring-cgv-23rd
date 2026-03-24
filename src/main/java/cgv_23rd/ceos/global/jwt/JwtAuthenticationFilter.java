@@ -17,7 +17,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
-// OncePerRequestFilter: 모든 요청에 대해 한 번만 실행되는 필터
+// OncePerRequestFilter
 @Slf4j(topic = "JWT 검증 및 인가")
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -33,24 +33,24 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String tokenValue = request.getHeader(JwtUtil.AUTHORIZATION_HEADER);
 
         if (StringUtils.hasText(tokenValue) && tokenValue.startsWith(JwtUtil.BEARER_PREFIX)) {
-            // 2. "Bearer " 접두사 제거
+            // 2. Bearer 접두사 제거
             String token = jwtUtil.substringToken(tokenValue);
 
             // 3. 토큰 검증
             if (jwtUtil.validateToken(token)) {
-                // 4. 토큰에서 사용자 정보(Claims) 가져오기
+                // 4. 토큰에서 사용자 정보 가져오기
                 Claims claims = jwtUtil.getClaimsFromToken(token);
 
-                // a. 토큰에서 email을 가져옵니다.
+                // a. 토큰에서 email
                 String email = jwtUtil.getEmailFromToken(claims);
 
-                // b. email로 UserDetails 객체를 조회합니다.
+                // b. email로 UserDetails 객체를 조회
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                // c. userId 대신 UserDetails 객체로 인증 토큰을 생성합니다. (권한 정보 포함)
+                // c. userId 대신 UserDetails 객체로 인증 토큰을 생성 (권한 정보 포함)
                 Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                // d. SecurityContext에 인증 정보 저장 (이전 수정 사항 반영)
+                // d. SecurityContext에 인증 정보 저장
                 SecurityContext context = SecurityContextHolder.getContext();
                 context.setAuthentication(authentication);
                 SecurityContextHolder.setContext(context);

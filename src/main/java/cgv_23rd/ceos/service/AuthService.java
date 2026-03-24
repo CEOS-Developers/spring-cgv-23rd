@@ -7,6 +7,7 @@ import cgv_23rd.ceos.dto.user.response.LoginResponseDto;
 import cgv_23rd.ceos.dto.user.response.ReissueResponseDto;
 import cgv_23rd.ceos.entity.RefreshToken;
 import cgv_23rd.ceos.entity.user.User;
+import cgv_23rd.ceos.entity.user.UserRole;
 import cgv_23rd.ceos.global.apiPayload.ApiResponse;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
@@ -46,6 +47,7 @@ public class AuthService {
                 .name(requestDto.name())
                 .birth(requestDto.birth())
                 .phone(requestDto.phone())
+                .role(UserRole.USER)
                 .build();
         userRepository.save(user);
     }

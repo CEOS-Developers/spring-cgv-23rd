@@ -5,6 +5,7 @@ import cgv_23rd.ceos.global.apiPayload.exception.handler.CustomAuthenticationEnt
 import cgv_23rd.ceos.global.jwt.JwtAuthenticationFilter;
 import cgv_23rd.ceos.global.jwt.JwtUtil;
 import cgv_23rd.ceos.global.security.UserDetailsServiceImpl;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -65,6 +66,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/health-check").permitAll()
                 .requestMatchers("/").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/movies/").hasRole("ADMIN")
                 .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
         );
 
