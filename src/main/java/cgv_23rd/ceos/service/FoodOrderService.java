@@ -44,7 +44,6 @@ public class FoodOrderService {
                 .user(user)
                 .theater(theater)
                 .status(FoodOrderStatus.완료)
-                .createdAt(LocalDateTime.now())
                 .foodOrderItems(new ArrayList<>())
                 .build();
 
@@ -125,12 +124,21 @@ public class FoodOrderService {
                 .map(theater -> TheaterFood.builder()
                         .theater(theater)
                         .food(food)
-                        .amount(100)
+                        .amount(0)
                         .build())
                 .collect(Collectors.toList());
 
         theaterFoodRepository.saveAll(theaterFoods);
 
         return ApiResponse.onSuccess("신규 음식 등록 및 전 지점 반영 성공");
+    }
+
+    public ApiResponse<Void> updateFoodStock(Long theaterFoodId, int stock){
+        TheaterFood theaterFood = theaterFoodRepository.findById(theaterFoodId)
+                .orElseThrow(()-> new GeneralException(GeneralErrorCode.FOOD_NOT_FOUND));
+
+        theaterFood.updateFoodStock(stock);
+
+        return ApiResponse.onSuccess("재고 갱신 성공");
     }
 }

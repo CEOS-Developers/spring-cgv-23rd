@@ -34,4 +34,8 @@ public class TheaterFood {
             this.amount--;
         }
     }
+
+    public void updateFoodStock(int stock){
+        this.amount = stock;
+    }
 }

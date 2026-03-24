@@ -1,5 +1,6 @@
 package cgv_23rd.ceos.entity.user;
 
+import cgv_23rd.ceos.entity.BaseEntity;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.entity.like.MovieLike;
 import cgv_23rd.ceos.entity.like.TheaterLike;
@@ -18,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "users")
-public class User {
+public class User extends BaseEntity {
 
     @Id @GeneratedValue
     private Long id;
@@ -26,7 +27,7 @@ public class User {
     private String name;
     private String phone;
     private LocalDate birth;
-    private String username;
+    private String email;
     private String password;
 
     @OneToMany(mappedBy = "user")

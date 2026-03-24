@@ -42,4 +42,10 @@ public class FoodOrderController {
             @RequestBody FoodCreateRequestDto requestDto) {
         return foodOrderService.createFood(requestDto);
     }
+
+    @PatchMapping("/{theaterFoodId}")
+    @Operation(summary = "음식 재고 수정 API", description = "음식 재고를 수정합니다.")
+    public ApiResponse<Void> updateFoodStock(@PathVariable Long theaterFoodId, @RequestParam int stock){
+        return foodOrderService.updateFoodStock(theaterFoodId, stock);
+    }
 }
