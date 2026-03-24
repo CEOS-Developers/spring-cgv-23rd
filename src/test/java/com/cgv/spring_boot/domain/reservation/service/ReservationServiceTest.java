@@ -2,6 +2,7 @@ package com.cgv.spring_boot.domain.reservation.service;
 
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.entity.Reservation;
+import com.cgv.spring_boot.domain.reservation.entity.ReservedSeat;
 import com.cgv.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.cgv.spring_boot.domain.reservation.repository.ReservedSeatRepository;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
@@ -51,8 +52,8 @@ class ReservationServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(scheduleRepository.findById(request.scheduleId())).willReturn(Optional.of(schedule));
-        given(reservedSeatRepository.existsByScheduleAndRowAndCol(anyLong(), anyString(), anyInt()))
-                .willReturn(false);
+        given(reservedSeatRepository.findAllByScheduleAndRowsAndCols(anyLong(), anyList(), anyList()))
+                .willReturn(List.of());
         given(reservationRepository.save(any(Reservation.class))).willReturn(reservation);
 
         // when
@@ -73,8 +74,8 @@ class ReservationServiceTest {
         given(userRepository.findById(userId)).willReturn(Optional.of(mock(User.class)));
         given(scheduleRepository.findById(anyLong())).willReturn(Optional.of(mock(Schedule.class)));
 
-        given(reservedSeatRepository.existsByScheduleAndRowAndCol(anyLong(), anyString(), anyInt()))
-                .willReturn(true);
+        given(reservedSeatRepository.findAllByScheduleAndRowsAndCols(anyLong(), anyList(), anyList()))
+                .willReturn(List.of(mock(ReservedSeat.class)));
 
         // when(then)
         assertThatThrownBy(() -> reservationService.reserve(userId, request))

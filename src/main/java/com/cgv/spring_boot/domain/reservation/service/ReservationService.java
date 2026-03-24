@@ -33,6 +33,7 @@ public class ReservationService {
     /**
      * 영화 예매 메서드
      */
+    @Transactional
     public Long reserve(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -40,14 +41,11 @@ public class ReservationService {
         Schedule schedule = scheduleRepository.findById(request.scheduleId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        for (SeatRequest seat : request.seats()) {
-            boolean isAlreadyTaken = reservedSeatRepository.existsByScheduleAndRowAndCol(
-                    schedule.getId(), seat.seatRow(), seat.seatCol()
-            );
+        List<String> rows = request.seats().stream().map(SeatRequest::seatRow).toList();
+        List<Integer> cols = request.seats().stream().map(SeatRequest::seatCol).toList();
 
-            if (isAlreadyTaken) {
-                throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT);
-            }
+        if (!reservedSeatRepository.findAllByScheduleAndRowsAndCols(schedule.getId(), rows, cols).isEmpty()) {
+            throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT);
         }
 
         Reservation reservation = Reservation.builder()
@@ -62,6 +60,7 @@ public class ReservationService {
                 .map(seatRequest -> ReservedSeat.builder()
                         .seatRow(seatRequest.seatRow())
                         .seatCol(seatRequest.seatCol())
+                        .schedule(schedule) // 유니크 제약 조건을 위해 반드시 추가!
                         .reservation(savedReservation)
                         .build())
                 .toList();
@@ -74,12 +73,13 @@ public class ReservationService {
     /**
      * 예매 취소 메서드
      */
-    public void cancel(Long reservationId) {
+    @Transactional
+    public void cancel(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new BusinessException(ErrorCode.ALREADY_CANCELED);
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
         reservation.cancelStatus();
