@@ -10,7 +10,9 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "reservation")
+@Table(name = "reservation", indexes = {
+        @Index(name = "idx_reservation_screening_status", columnList = "screening_id, status")
+})
 @Getter
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
