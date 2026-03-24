@@ -3,6 +3,7 @@ package com.cgv.spring_boot.domain.movie.controller;
 import com.cgv.spring_boot.domain.movie.dto.request.MovieCreateRequest;
 import com.cgv.spring_boot.domain.movie.dto.response.MovieResponse;
 import com.cgv.spring_boot.domain.movie.service.MovieService;
+import com.cgv.spring_boot.global.common.code.SuccessCode;
 import com.cgv.spring_boot.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,15 +22,16 @@ public class MovieController {
     private final MovieService movieService;
 
     @Operation(summary = "영화 등록", description = "새로운 영화 정보를 시스템에 등록합니다.")
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<Long> createMovie(@RequestBody MovieCreateRequest request) {
         return ResponseEntity.ok(movieService.saveMovie(request));
     }
 
     @Operation(summary = "전체 영화 목록 조회", description = "현재 등록된 모든 영화의 리스트를 반환합니다.")
-    @GetMapping("/")
-    public ResponseEntity<List<MovieResponse>> getAllMovies() {
-        return ResponseEntity.ok(movieService.findAllMovies());
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<MovieResponse>>> getAllMovies() {
+        List<MovieResponse> movies = movieService.findAllMovies();
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.SELECT_SUCCESS, movies));
     }
 
     @Operation(summary = "영화 상세 조회", description = "영화 ID(PK)를 이용하여 특정 영화의 상세 정보를 조회합니다.")
