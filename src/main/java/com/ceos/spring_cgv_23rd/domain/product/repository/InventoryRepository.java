@@ -3,9 +3,9 @@ package com.ceos.spring_cgv_23rd.domain.product.repository;
 import com.ceos.spring_cgv_23rd.domain.product.entity.Inventory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
-    Optional<Inventory> findByTheaterIdAndProductId(Long theaterId, Long productId);
+    List<Inventory> findAllByTheaterIdAndProductIdIn(Long theaterId, List<Long> productIds);
 }
