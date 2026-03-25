@@ -44,13 +44,10 @@ public class InventoryService {
                 throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
             }
 
-            Inventory updatedInventory = Inventory.builder()
-                    .id(inventory.getId())
-                    .cinema(cinema)
-                    .product(product)
-                    .stockQuantity(newStock)
-                    .build();
-            return inventoryRepository.save(updatedInventory);
+            // 상태만 변경하면 트랜잭션 종료 시 UPDATE 쿼리 자동 발생
+            inventory.updateStock(newStock);
+
+            return inventory;
         } else {
             // 처음 입고되는 상품일 경우
             if (request.quantity() < 1) {

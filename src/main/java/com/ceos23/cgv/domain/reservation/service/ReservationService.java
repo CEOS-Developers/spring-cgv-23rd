@@ -7,6 +7,7 @@ import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.enums.Payment;
 import com.ceos23.cgv.domain.reservation.enums.ReservationStatus;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
+import com.ceos23.cgv.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.global.exception.CustomException;
@@ -25,6 +26,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final ScreeningRepository screeningRepository;
+    private final ReservedSeatRepository reservedSeatRepository;
 
     /**
      * 영화 예매 로직
@@ -117,7 +119,10 @@ public class ReservationService {
             throw new IllegalStateException("이미 취소 처리된 예매입니다.");
         }
 
-        // 4. 취소 상태로 변경 (이후 @Transactional에 의해 DB에 자동 반영됨 - Dirty Checking)
+        // 4. 예매를 취소하면 점유했던 좌석 데이터도 모두 삭제하여 빈자리로 만듭니다!
+        reservedSeatRepository.deleteAllByReservationId(reservationId);
+
+        // 5. 취소 상태로 변경 (이후 @Transactional에 의해 DB에 자동 반영됨 - Dirty Checking)
         reservation.cancel();
     }
 }

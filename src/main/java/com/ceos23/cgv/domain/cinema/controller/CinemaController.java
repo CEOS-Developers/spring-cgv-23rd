@@ -64,14 +64,13 @@ public class CinemaController {
     // 5. 상영관 생성 (POST)
     @PostMapping("/{cinemaId}/theaters")
     @Operation(summary = "상영관 생성", description = "특정 영화관 지점에 새로운 상영관(예: 1관, IMAX관)을 등록합니다.")
-    public ResponseEntity<TheaterResponse> createTheater(@RequestBody TheaterCreateRequest request) {
-        Theater createdTheater = cinemaService.createTheater(
-                request.cinemaId(),
-                request.name(),
-                request.type(),
-                request.maxRow(),
-                request.maxCol()
-        );
+    public ResponseEntity<TheaterResponse> createTheater(
+            @PathVariable Long cinemaId,
+            @RequestBody TheaterCreateRequest request) {
+
+        // 파라미터를 낱개로 풀지 않고, 객체 통째로 Service에 전달!
+        Theater createdTheater = cinemaService.createTheater(cinemaId, request);
+
         return ResponseEntity.status(HttpStatus.CREATED).body(TheaterResponse.from(createdTheater));
     }
 }

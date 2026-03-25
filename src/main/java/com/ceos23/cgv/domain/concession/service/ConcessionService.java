@@ -4,10 +4,12 @@ import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.concession.dto.FoodOrderRequest;
 import com.ceos23.cgv.domain.concession.entity.FoodOrder;
+import com.ceos23.cgv.domain.concession.entity.Inventory;
 import com.ceos23.cgv.domain.concession.entity.OrderItem;
 import com.ceos23.cgv.domain.concession.entity.Product;
 import com.ceos23.cgv.domain.concession.enums.ProductCategory;
 import com.ceos23.cgv.domain.concession.repository.FoodOrderRepository;
+import com.ceos23.cgv.domain.concession.repository.InventoryRepository;
 import com.ceos23.cgv.domain.concession.repository.OrderItemRepository;
 import com.ceos23.cgv.domain.concession.repository.ProductRepository;
 import com.ceos23.cgv.domain.user.entity.User;
@@ -30,6 +32,7 @@ public class ConcessionService {
     private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
     private final CinemaRepository cinemaRepository;
+    private final InventoryRepository inventoryRepository;
 
     /**
      * [GET] 매점의 모든 상품 목록 조회
@@ -62,6 +65,12 @@ public class ConcessionService {
             Product product = productRepository.findById(itemReq.productId())
                     .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
+            // 상품과 극장 정보로 재고를 조회한 뒤, 차감(removeStock)
+            Inventory inventory = inventoryRepository.findByCinemaIdAndProductId(cinema.getId(), product.getId())
+                    .orElseThrow(() -> new CustomException(ErrorCode.INVENTORY_SHORTAGE));
+
+            inventory.removeStock(itemReq.quantity()); // 재고 차감
+
             calculatedTotalPrice += (product.getPrice() * itemReq.quantity());
 
             OrderItem orderItem = OrderItem.builder()
@@ -72,14 +81,9 @@ public class ConcessionService {
             orderItemRepository.save(orderItem);
         }
 
-        FoodOrder finalOrder = FoodOrder.builder()
-                .id(foodOrder.getId())
-                .user(user)
-                .cinema(cinema)
-                .totalPrice(calculatedTotalPrice)
-                .build();
+        foodOrder.updateTotalPrice(calculatedTotalPrice);
 
-        return foodOrderRepository.save(finalOrder);
+        return foodOrder;
     }
 
     /**

@@ -54,16 +54,11 @@ class InventoryServiceTest {
         given(productRepository.findById(1L)).willReturn(Optional.of(product));
         given(inventoryRepository.findByCinemaIdAndProductId(1L, 1L)).willReturn(Optional.of(existingInventory));
 
-        // save 될 때 들어온 엔티티를 그대로 반환하도록 설정
-        given(inventoryRepository.save(any(Inventory.class))).willAnswer(invocation -> invocation.getArgument(0));
-
         // When (실행)
         Inventory updatedInventory = inventoryService.updateInventory(request);
 
         // Then (검증)
-        // 10개에서 5개를 뺐으니 남은 재고는 5개여야 함!
         assertThat(updatedInventory.getStockQuantity()).isEqualTo(5);
-        verify(inventoryRepository).save(any(Inventory.class));
     }
 
     @Test
