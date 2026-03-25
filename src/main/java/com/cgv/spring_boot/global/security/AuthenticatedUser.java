@@ -9,7 +9,7 @@ import java.util.Collection;
 
 @Getter
 @RequiredArgsConstructor
-public class UserPrincipal implements UserDetails {
+public class AuthenticatedUser implements UserDetails {
 
     private final Long userId;
     private final String loginId;

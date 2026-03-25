@@ -2,7 +2,7 @@ package com.cgv.spring_boot.domain.user.service;
 
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.security.UserPrincipal;
+import com.cgv.spring_boot.global.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
 
-        return new UserPrincipal(
+        return new AuthenticatedUser(
                 user.getId(),
                 user.getLoginId(),
                 user.getPassword(),
