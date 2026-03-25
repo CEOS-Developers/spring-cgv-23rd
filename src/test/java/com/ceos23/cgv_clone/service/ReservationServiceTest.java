@@ -1,9 +1,8 @@
 package com.ceos23.cgv_clone.service;
 
-import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.movie.domain.Movie;
-import com.ceos23.cgv_clone.movie.domain.Schedule;
-import com.ceos23.cgv_clone.movie.repository.ScheduleRepository;
+import com.ceos23.cgv_clone.theater.domain.Schedule;
+import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.reservation.domain.Reservation;
 import com.ceos23.cgv_clone.reservation.domain.ReservationStatus;
 import com.ceos23.cgv_clone.reservation.dto.request.ReservationRequest;
@@ -101,8 +100,8 @@ class ReservationServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol_StatusNot(schedule, 'A', 1, ReservationStatus.CANCELED)).willReturn(false);
-        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol_StatusNot(schedule, 'A', 2, ReservationStatus.CANCELED)).willReturn(false);
+        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, 'A', 1, ReservationStatus.CANCELED)).willReturn(false);
+        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, 'A', 2, ReservationStatus.CANCELED)).willReturn(false);
 
         // when
         ReservationResponse response = reservationService.createReservation(userId, request);
