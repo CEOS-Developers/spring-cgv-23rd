@@ -2,8 +2,8 @@ package com.ceos23.cgv_clone.reservation.service;
 
 import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.global.exception.CustomException;
-import com.ceos23.cgv_clone.movie.domain.Schedule;
-import com.ceos23.cgv_clone.movie.repository.ScheduleRepository;
+import com.ceos23.cgv_clone.theater.domain.Schedule;
+import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.reservation.domain.Reservation;
 import com.ceos23.cgv_clone.reservation.domain.ReservationSeat;
 import com.ceos23.cgv_clone.reservation.domain.ReservationStatus;
@@ -76,7 +76,7 @@ public class ReservationService {
 
             // 2-4. 좌석 중복 검사
             // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
-            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
+            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }
         }
