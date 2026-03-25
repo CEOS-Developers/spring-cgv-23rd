@@ -43,19 +43,13 @@ class TheaterServiceTest {
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
 
         // when
-        ApiResponse<TheaterResponse> response = theaterService.getTheater(theaterId);
+        TheaterResponse response = theaterService.getTheater(theaterId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals("SELECT SUCCESS", response.getResultMsg());
-        assertNotNull(response.getResult());
-
-        TheaterResponse result = response.getResult();
-        assertEquals(theaterId, result.getId());
-        assertEquals("CGV 강남", result.getName());
-        assertEquals("서울", result.getRegion());
-        assertEquals("서울시 강남구", result.getAddress());
+        assertEquals(theaterId, response.getId());
+        assertEquals("CGV 강남", response.getName());
+        assertEquals("서울", response.getRegion());
+        assertEquals("서울시 강남구", response.getAddress());
     }
 
     @Test
@@ -81,13 +75,11 @@ class TheaterServiceTest {
         given(theaterRepository.findAllByRegion(region)).willReturn(List.of(t1, t2));
 
         // when
-        ApiResponse<List<TheaterResponse>> response = theaterService.getTheatersByRegion(region);
+        List<TheaterResponse> response = theaterService.getTheatersByRegion(region);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals(2, response.getResult().size());
-        assertEquals("CGV 강남", response.getResult().get(0).getName());
-        assertEquals("CGV 용산", response.getResult().get(1).getName());
+        assertEquals(2, response.size());
+        assertEquals("CGV 강남", response.get(0).getName());
+        assertEquals("CGV 용산", response.get(1).getName());
     }
 }

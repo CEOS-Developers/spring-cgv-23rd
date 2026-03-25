@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.service;
 
+import com.ceos23.cgv_clone.favorite.dto.response.FavoriteResponse;
 import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.favorite.repository.MovieFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.repository.TheaterFavoriteRepository;
@@ -64,12 +65,10 @@ class FavoriteServiceTest {
         given(theaterFavoriteRepository.existsByUserAndTheater(user, theater)).willReturn(true);
 
         // when
-        ApiResponse<Void> response = favoriteService.toggleFavoriteTheater(userId, theaterId);
+        FavoriteResponse response = favoriteService.toggleFavoriteTheater(userId, theaterId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals("DELETE SUCCESS", response.getResultMsg());
+        assertFalse(response.isFavorite());
     }
 
     @Test
@@ -97,12 +96,10 @@ class FavoriteServiceTest {
         given(theaterFavoriteRepository.countByUser(user)).willReturn(3);
 
         // when
-        ApiResponse<Void> response = favoriteService.toggleFavoriteTheater(userId, theaterId);
+        FavoriteResponse response = favoriteService.toggleFavoriteTheater(userId, theaterId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(201, response.getResultCode());
-        assertEquals("INSERT SUCCESS", response.getResultMsg());
+        assertTrue(response.isFavorite());
     }
 
     @Test
@@ -129,12 +126,10 @@ class FavoriteServiceTest {
         given(movieFavoriteRepository.existsByUserAndMovie(user, movie)).willReturn(true);
 
         // when
-        ApiResponse<Void> response = favoriteService.toggleFavoriteMovie(userId, movieId);
+        FavoriteResponse response = favoriteService.toggleFavoriteMovie(userId, movieId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals("DELETE SUCCESS", response.getResultMsg());
+        assertFalse(response.isFavorite());
     }
 
     @Test
@@ -160,11 +155,9 @@ class FavoriteServiceTest {
         given(movieFavoriteRepository.existsByUserAndMovie(user, movie)).willReturn(false);
 
         // when
-        ApiResponse<Void> response = favoriteService.toggleFavoriteMovie(userId, movieId);
+        FavoriteResponse response = favoriteService.toggleFavoriteMovie(userId, movieId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(201, response.getResultCode());
-        assertEquals("INSERT SUCCESS", response.getResultMsg());
+        assertTrue(response.isFavorite());
     }
 }

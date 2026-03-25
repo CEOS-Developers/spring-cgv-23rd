@@ -101,25 +101,19 @@ class ReservationServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol(schedule, 'A', 1)).willReturn(false);
-        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol(schedule, 'A', 2)).willReturn(false);
+        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol_StatusNot(schedule, 'A', 1, ReservationStatus.CANCELED)).willReturn(false);
+        given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol_StatusNot(schedule, 'A', 2, ReservationStatus.CANCELED)).willReturn(false);
 
         // when
-        ApiResponse<ReservationResponse> response = reservationService.createReservation(userId, request);
+        ReservationResponse response = reservationService.createReservation(userId, request);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(201, response.getResultCode());
-        assertEquals("INSERT SUCCESS", response.getResultMsg());
-        assertNotNull(response.getResult());
-
-        ReservationResponse result = response.getResult();
-        assertEquals(30000, result.getTotalPrice());
-        assertEquals(ReservationStatus.RESERVED, result.getReservationStatus());
-        assertEquals("프로젝트 헤일메리", result.getMovieName());
-        assertEquals("CGV 강남", result.getTheaterName());
-        assertEquals("1관", result.getScreenName());
-        assertEquals(List.of("A1", "A2"), result.getReservedSeats());
+        assertEquals(30000, response.getTotalPrice());
+        assertEquals(ReservationStatus.RESERVED, response.getReservationStatus());
+        assertEquals("프로젝트 헤일메리", response.getMovieName());
+        assertEquals("CGV 강남", response.getTheaterName());
+        assertEquals("1관", response.getScreenName());
+        assertEquals(List.of("A1", "A2"), response.getReservedSeats());
     }
 
     @Test
@@ -142,19 +136,15 @@ class ReservationServiceTest {
                 .status(ReservationStatus.RESERVED)
                 .user(user)
                 .schedule(null)
-                .seatNames("A1")
                 .build();
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));
 
         // when
-        ApiResponse<Void> response = reservationService.cancelReservation(userId, reservationId);
+        reservationService.cancelReservation(userId, reservationId);
 
         // then
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals("DELETE SUCCESS", response.getResultMsg());
         assertEquals(ReservationStatus.CANCELED, reservation.getStatus());
     }
 }
