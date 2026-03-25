@@ -14,6 +14,10 @@ public enum ErrorCode {
     FORBIDDEN_ACCESS(403, "해당 자원에 대한 권한이 없습니다."),
     // USER
     USER_NOT_FOUND(404, "해당 사용자를 찾을 수 없습니다."),
+    LOGIN_ID_ALREADY_EXISTS(400, "이미 사용 중인 아이디입니다."),
+    INVALID_LOGIN(401, "아이디 또는 비밀번호가 올바르지 않습니다."),
+    INVALID_TOKEN(401, "유효하지 않은 토큰입니다."),
+    EXPIRED_TOKEN(401, "만료된 토큰입니다."),
     // MOVIE
     MOVIE_NOT_FOUND(404, "해당 영화를 찾을 수 없습니다."),
     // THEATER
