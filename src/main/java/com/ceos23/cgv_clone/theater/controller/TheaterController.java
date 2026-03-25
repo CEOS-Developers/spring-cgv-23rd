@@ -1,6 +1,7 @@
 package com.ceos23.cgv_clone.theater.controller;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
+import com.ceos23.cgv_clone.global.response.SuccessCode;
 import com.ceos23.cgv_clone.theater.dto.response.TheaterResponse;
 import com.ceos23.cgv_clone.theater.service.TheaterService;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class TheaterController {
     public ApiResponse<TheaterResponse> getTheater(
             @PathVariable Long theaterId
     ) {
-        return theaterService.getTheater(theaterId);
+        return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, theaterService.getTheater(theaterId));
     }
 
     // required = false -> 전체 조회
@@ -27,6 +28,6 @@ public class TheaterController {
     public ApiResponse<List<TheaterResponse>> getTheaterByRegion(
             @RequestParam(required = false) String region
     ) {
-        return theaterService.getTheatersByRegion(region);
+        return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, theaterService.getTheatersByRegion(region));
     }
 }

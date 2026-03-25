@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.reservation.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import com.ceos23.cgv_clone.movie.domain.Schedule;
 import com.ceos23.cgv_clone.user.domain.User;
 import jakarta.persistence.*;
@@ -17,7 +18,7 @@ import java.util.List;
 @Table(name = "reservations")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Reservation {
+public class Reservation extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,8 +35,6 @@ public class Reservation {
     @Column(nullable = false)
     private ReservationStatus status;
 
-    @Column(nullable = false)
-    private String seatNames;
 
     @JoinColumn(name = "user_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -49,13 +48,12 @@ public class Reservation {
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
     @Builder
-    public Reservation(LocalDateTime reservedAt, int totalPrice, ReservationStatus status, User user, Schedule schedule, String seatNames) {
+    public Reservation(LocalDateTime reservedAt, int totalPrice, ReservationStatus status, User user, Schedule schedule) {
         this.reservedAt = reservedAt;
         this.totalPrice = totalPrice;
         this.status = status;
         this.user = user;
         this.schedule = schedule;
-        this.seatNames = seatNames;
     }
 
     public void addReservationSeat(ReservationSeat seat) {
@@ -64,6 +62,5 @@ public class Reservation {
 
     public void cancel() {
         this.status = ReservationStatus.CANCELED;
-        this.reservationSeats.clear();
     }
 }

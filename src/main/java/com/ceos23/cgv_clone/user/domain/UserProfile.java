@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.user.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "user_profiles")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserProfile {
+public class UserProfile extends BaseEntity {
 
     @Id
     @Column(name = "user_id")

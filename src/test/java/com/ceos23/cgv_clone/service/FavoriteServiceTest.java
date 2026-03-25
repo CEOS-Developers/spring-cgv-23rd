@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.favorite.repository.MovieFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.repository.TheaterFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.service.FavoriteService;

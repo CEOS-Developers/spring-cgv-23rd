@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.movie.domain.Movie;
 import com.ceos23.cgv_clone.movie.domain.Schedule;
 import com.ceos23.cgv_clone.movie.repository.ScheduleRepository;

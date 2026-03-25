@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.config;
+package com.ceos23.cgv_clone.global.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;

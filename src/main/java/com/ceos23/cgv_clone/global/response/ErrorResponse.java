@@ -1,6 +1,5 @@
-package com.ceos23.cgv_clone.common;
+package com.ceos23.cgv_clone.global.response;
 
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

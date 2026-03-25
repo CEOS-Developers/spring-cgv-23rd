@@ -1,6 +1,7 @@
 package com.ceos23.cgv_clone.reservation.controller;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
+import com.ceos23.cgv_clone.global.response.SuccessCode;
 import com.ceos23.cgv_clone.reservation.dto.request.ReservationRequest;
 import com.ceos23.cgv_clone.reservation.dto.response.ReservationResponse;
 import com.ceos23.cgv_clone.reservation.service.ReservationService;
@@ -20,7 +21,7 @@ public class ReservationController {
             @RequestHeader Long userId,
             @Valid @RequestBody ReservationRequest request
     ) {
-        return reservationService.createReservation(userId, request);
+        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, reservationService.createReservation(userId, request));
     }
 
     @DeleteMapping("/{reservationId}")
@@ -28,6 +29,7 @@ public class ReservationController {
             @RequestHeader Long userId,
             @PathVariable Long reservationId
     ) {
-        return reservationService.cancelReservation(userId, reservationId);
+        reservationService.cancelReservation(userId, reservationId);
+        return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
     }
 }

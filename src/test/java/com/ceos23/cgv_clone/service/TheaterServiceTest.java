@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.theater.domain.Theater;
 import com.ceos23.cgv_clone.theater.dto.response.TheaterResponse;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;

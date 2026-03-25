@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.store.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import com.ceos23.cgv_clone.user.domain.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "orders")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Order {
+public class Order extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,8 +1,7 @@
-package com.ceos23.cgv_clone.config;
+package com.ceos23.cgv_clone.global.exception;
 
-import com.ceos23.cgv_clone.common.ErrorResponse;
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.config.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ErrorResponse;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +18,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException e) {
-        log.error("CustomException", e.getErrorCode().getMessage());
+        log.error("CustomException: {}", e.getErrorCode().getMessage());
         final ErrorCode errorCode = e.getErrorCode();
 
         return ResponseEntity

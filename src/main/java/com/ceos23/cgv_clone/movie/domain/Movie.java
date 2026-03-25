@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.movie.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "movies")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Movie {
+public class Movie extends BaseEntity {
 
     @Id
     @Column(name = "movie_id")

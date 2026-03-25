@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.common.codes;
+package com.ceos23.cgv_clone.global.response;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

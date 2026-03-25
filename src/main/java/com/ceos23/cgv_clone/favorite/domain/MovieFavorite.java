@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.favorite.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import com.ceos23.cgv_clone.movie.domain.Movie;
 import com.ceos23.cgv_clone.user.domain.User;
 import jakarta.persistence.*;
@@ -16,7 +17,7 @@ import lombok.NoArgsConstructor;
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class MovieFavorite {
+public class MovieFavorite extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

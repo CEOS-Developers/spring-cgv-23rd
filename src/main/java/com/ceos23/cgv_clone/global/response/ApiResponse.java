@@ -1,7 +1,6 @@
-package com.ceos23.cgv_clone.common;
+package com.ceos23.cgv_clone.global.response;
 
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.common.codes.SuccessCode;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -21,6 +20,8 @@ public class ApiResponse<T> {
     // API 응답 코드 Message
     private String resultMsg;
 
+    // JSON 직렬화에서 is가 제거되므로 명시
+    @JsonProperty("isSuccess")
     private boolean isSuccess;
 
     private Object error;
