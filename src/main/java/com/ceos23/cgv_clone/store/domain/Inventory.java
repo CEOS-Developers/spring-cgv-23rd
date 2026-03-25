@@ -1,6 +1,8 @@
 package com.ceos23.cgv_clone.store.domain;
 
 import com.ceos23.cgv_clone.global.domain.BaseEntity;
+import com.ceos23.cgv_clone.global.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -34,5 +36,13 @@ public class Inventory extends BaseEntity {
         this.quantity = quantity;
         this.store = store;
         this.menu = menu;
+    }
+
+    public void decrease(int quantity) {
+        if (this.quantity < quantity) {
+            throw new CustomException(ErrorCode.INSUFFICIENT_STOCK);
+        }
+
+        this.quantity -= quantity;
     }
 }

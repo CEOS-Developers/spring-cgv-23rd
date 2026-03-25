@@ -8,7 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -28,9 +29,6 @@ public class Order extends BaseEntity {
     @Column(nullable = false)
     private int totalPrice;
 
-    @Column(nullable = false)
-    private LocalDateTime orderedAt;
-
     @JoinColumn(name = "user_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     private User user;
@@ -39,13 +37,18 @@ public class Order extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     private Store store;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = false)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
     @Builder
-    public Order(OrderStatus orderStatus, int totalPrice, LocalDateTime orderedAt, User user, Store store) {
+    public Order(OrderStatus orderStatus, int totalPrice, User user, Store store) {
         this.orderStatus = orderStatus;
         this.totalPrice = totalPrice;
-        this.orderedAt = orderedAt;
         this.user = user;
         this.store = store;
+    }
 
+    public void addOrderItem(OrderItem item) {
+        this.orderItems.add(item);
     }
 }
