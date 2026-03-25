@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface MovieWishRepository extends JpaRepository<MovieWish, Long> {
+    boolean existsByUserIdAndMovieId(Long userId, Long movieId);
 }

@@ -5,10 +5,12 @@ import com.cgv.spring_boot.domain.movie.dto.response.MovieResponse;
 import com.cgv.spring_boot.domain.movie.service.MovieService;
 import com.cgv.spring_boot.global.common.code.SuccessCode;
 import com.cgv.spring_boot.global.common.response.ApiResponse;
+import com.cgv.spring_boot.global.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,5 +48,14 @@ public class MovieController {
     public ResponseEntity<Void> deleteMovie(@PathVariable("id") Long id) {
         movieService.deleteMovieById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "영화 찜", description = "로그인한 사용자가 특정 영화를 찜합니다.")
+    @PostMapping("/{id}/wish")
+    public ResponseEntity<ApiResponse<Long>> wishMovie(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable("id") Long id
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(movieService.wishMovie(authenticatedUser.getUserId(), id)));
     }
 }

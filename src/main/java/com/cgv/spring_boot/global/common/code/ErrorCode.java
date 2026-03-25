@@ -20,8 +20,10 @@ public enum ErrorCode {
     EXPIRED_TOKEN(401, "만료된 토큰입니다."),
     // MOVIE
     MOVIE_NOT_FOUND(404, "해당 영화를 찾을 수 없습니다."),
+    MOVIE_ALREADY_WISHED(400, "이미 찜한 영화입니다."),
     // THEATER
     THEATER_NOT_FOUND(404, "해당 영화관을 찾을 수 없습니다."),
+    THEATER_ALREADY_WISHED(400, "이미 찜한 영화관입니다."),
     // SCHEDULE
     SCHEDULE_NOT_FOUND(404, "해당 영화 스케줄을 찾을 수 없습니다."),
     // RESERVATION
