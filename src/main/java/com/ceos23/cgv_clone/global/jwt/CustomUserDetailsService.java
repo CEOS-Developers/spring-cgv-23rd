@@ -1,7 +1,5 @@
 package com.ceos23.cgv_clone.global.jwt;
 
-import com.ceos23.cgv_clone.global.exception.CustomException;
-import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
