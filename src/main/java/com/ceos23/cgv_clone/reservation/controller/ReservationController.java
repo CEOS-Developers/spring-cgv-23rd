@@ -5,8 +5,10 @@ import com.ceos23.cgv_clone.global.response.SuccessCode;
 import com.ceos23.cgv_clone.reservation.dto.request.ReservationRequest;
 import com.ceos23.cgv_clone.reservation.dto.response.ReservationResponse;
 import com.ceos23.cgv_clone.reservation.service.ReservationService;
+import com.ceos23.cgv_clone.global.jwt.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,18 +20,18 @@ public class ReservationController {
 
     @PostMapping
     public ApiResponse<ReservationResponse> createReservation(
-            @RequestHeader Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ReservationRequest request
     ) {
-        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, reservationService.createReservation(userId, request));
+        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, reservationService.createReservation(userDetails.getUserId(), request));
     }
 
     @DeleteMapping("/{reservationId}")
     public ApiResponse<Void> cancelReservation(
-            @RequestHeader Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long reservationId
     ) {
-        reservationService.cancelReservation(userId, reservationId);
+        reservationService.cancelReservation(userDetails.getUserId(), reservationId);
         return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
     }
 }
