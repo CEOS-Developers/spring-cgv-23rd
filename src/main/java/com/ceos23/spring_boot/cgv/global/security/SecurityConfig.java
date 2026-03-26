@@ -37,7 +37,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(
-                                "/api/cinemas/*/likes"
+                                "/api/cinemas/*/likes",
+                                "/api/movies/*/likes"
                         ).authenticated()
                         .anyRequest().permitAll()
                 )
