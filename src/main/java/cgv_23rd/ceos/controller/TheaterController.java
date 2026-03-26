@@ -47,12 +47,4 @@ public class TheaterController {
         Long userId = userDetails.getUser().getId();
         return ApiResponse.onSuccess("영화관 찜 성공",theaterService.toggleTheaterLike(userId, theaterId));
     }
-
-    // 4. 극장 생성
-    @PostMapping("")
-    @Operation(summary = "극장 생성 API", description = "새로운 극장 정보를 등록함")
-    public ApiResponse<Void> createTheater(@Valid @RequestBody TheaterRequestDto requestDto) {
-        theaterService.createTheater(requestDto);
-        return ApiResponse.onSuccess("극장 생성 성공");
-    }
 }

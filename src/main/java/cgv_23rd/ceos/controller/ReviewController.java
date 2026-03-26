@@ -35,7 +35,7 @@ public class ReviewController {
     @GetMapping("/movie/{movieId}")
     @Operation(summary = "특정 영화 리뷰 조회 API", description = "해당 영화에 작성된 모든 리뷰를 조회합니다.")
     public ApiResponse<List<ReviewResponseDto>> getMovieReviews(
-            @PathVariable(name = "movieId") Long movieId) {
+            @PathVariable Long movieId) {
         return ApiResponse.onSuccess("리뷰 조회 성공",reviewService.getMovieReviews(movieId));
     }
 }

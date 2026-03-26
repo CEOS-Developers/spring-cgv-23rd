@@ -105,32 +105,4 @@ public class FoodOrderService {
         return responseDtos;
     }
 
-    public void createFood(FoodCreateRequestDto requestDto) {
-
-        Food food = Food.builder()
-                .name(requestDto.name())
-                .price(requestDto.price())
-                .build();
-
-        foodRepository.save(food);
-
-        List<Theater> allTheaters = theaterRepository.findAll();
-
-        List<TheaterFood> theaterFoods = allTheaters.stream()
-                .map(theater -> TheaterFood.builder()
-                        .theater(theater)
-                        .food(food)
-                        .amount(0)
-                        .build())
-                .collect(Collectors.toList());
-
-        theaterFoodRepository.saveAll(theaterFoods);
-    }
-
-    public void updateFoodStock(Long theaterFoodId, int stock){
-        TheaterFood theaterFood = theaterFoodRepository.findById(theaterFoodId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.FOOD_NOT_FOUND));
-
-        theaterFood.updateFoodStock(stock);
-    }
 }

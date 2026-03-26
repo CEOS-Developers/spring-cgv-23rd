@@ -26,41 +26,6 @@ public class MovieService {
     private final MovieActorRepository movieActorRepository;
     private final MovieLikeRepository movieLikeRepository;
     private final UserRepository userRepository;
-    private final MovieStatisticsRepository movieStatisticsRepository;
-
-    // 1. 영화 생성
-    @Transactional
-    public Long createMovie(MovieRequestDto requestDto){
-
-        if (requestDto.closeDate().isBefore(requestDto.openDate())) {
-            throw new GeneralException(GeneralErrorCode.INVALID_MOVIE_DATE);
-        }
-
-        LocalDate today = LocalDate.now();
-        MovieStatus calculatedStatus;
-
-        if (today.isBefore(requestDto.openDate())) {
-            calculatedStatus = MovieStatus.예정;
-        } else if (today.isAfter(requestDto.closeDate())) {
-            calculatedStatus = MovieStatus.종료;
-        } else {
-            calculatedStatus = MovieStatus.상영중;
-        }
-
-        Movie movie = Movie.builder()
-                .title(requestDto.title())
-                .description(requestDto.description())
-                .status(calculatedStatus)
-                .openDate(requestDto.openDate())
-                .closeDate(requestDto.closeDate())
-                .build();
-
-        movie.createDefaultStatistics();
-
-        movieRepository.save(movie);
-
-        return movie.getId();
-    }
 
     // 2. 현재 상영중인 영화 목록 조회 (제목, 썸네일)
     @Transactional(readOnly = true)

@@ -84,18 +84,4 @@ public class TheaterService {
         }
     }
 
-    // 4. 극장 생성
-    @Transactional
-    public void createTheater(TheaterRequestDto requestDto){
-        Theater theater = Theater.builder()
-                .name(requestDto.name())
-                .address(requestDto.address())
-                .region(requestDto.region())
-                .isAvailable(true)
-                .description(requestDto.description())
-                .imageUrl(requestDto.imageUrl())
-                .build();
-
-        theaterRepository.save(theater);
-    }
 }

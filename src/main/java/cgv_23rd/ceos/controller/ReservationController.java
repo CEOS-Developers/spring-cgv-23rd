@@ -40,7 +40,7 @@ public class ReservationController {
     @Operation(summary = "영화 예매 취소 API", description = "예매 상태를 취소로 변경함")
     public ApiResponse<Void> cancelReservation(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @PathVariable(name = "reservationId") Long reservationId) {
+            @PathVariable Long reservationId) {
 
         Long userId = userDetails.getUser().getId();
         reservationService.cancelReservation(userId, reservationId);
