@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -64,6 +65,17 @@ public class TokenProvider implements InitializingBean {
                 .getBody();
 
         return claims.getSubject();
+    }
+
+    public Authentication getAuthentication(String token) {
+        CustomUserDetails userDetails =
+                (CustomUserDetails) userDetailsService.loadUserByUsername(getTokenUserId(token));
+
+        return new UsernamePasswordAuthenticationToken(
+                userDetails,
+                token,
+                userDetails.getAuthorities()
+        );
     }
 
     public boolean validateAccessToken(String token) {
