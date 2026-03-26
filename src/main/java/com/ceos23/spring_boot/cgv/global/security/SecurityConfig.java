@@ -36,6 +36,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/cinemas/*/likes"
+                        ).authenticated()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(

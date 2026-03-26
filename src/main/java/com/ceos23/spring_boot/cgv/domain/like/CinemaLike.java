@@ -1,4 +1,3 @@
-// CinemaLike.java
 package com.ceos23.spring_boot.cgv.domain.like;
 
 import com.ceos23.spring_boot.cgv.domain.BaseEntity;
