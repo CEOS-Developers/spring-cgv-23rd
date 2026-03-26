@@ -13,6 +13,8 @@ public enum ErrorCode {
     MOVIE_NOT_FOUND(HttpStatus.BAD_REQUEST, "M001", "존재하지 않는 영화입니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
+    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U002", "이미 사용 중인 이메일입니다."),
+    INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "U003", "비밀번호가 틀렸습니다."),
 
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SC001", "존재하지 않는 상영 일정입니다."),
     SCHEDULE_ALREADY_STARTED(HttpStatus.BAD_REQUEST, "S002", "이미 상영이 시작되었거나 종료된 일정입니다."),
@@ -31,6 +33,9 @@ public enum ErrorCode {
     OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "ST001", "재고는 항상 1 이상이어야 합니다."),
 
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "잘못된 입력값입니다."),
+
+    UNAUTHORIZED_USER(HttpStatus.UNAUTHORIZED, "SC001", "인증이 필요합니다."),
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "SC002", "해당 요청에 권한이 없습니다."),
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S001", "서버 내부에 오류가 발생했습니다.");
 

@@ -22,24 +22,25 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "login_id", nullable = false, length = 50)
-    private String loginId;
+    @Column(name = "email", unique = true, nullable = false, length = 50)
+    private String email;
 
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column(name = "phone_number", nullable = false, length = 50)
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    @Column(name = "phone_number", length = 50)
     private String phoneNumber;
 
-    @Column(nullable = false, length = 50)
-    private String email;
-
     @Builder
-    public User(String name, String loginId, String password, String phoneNumber, String email) {
+    public User(String name, String email, String password, Role role, String phoneNumber) {
         this.name = name;
-        this.loginId = loginId;
-        this.password = password;
-        this.phoneNumber = phoneNumber;
         this.email = email;
+        this.password = password;
+        this.role = role;
+        this.phoneNumber = phoneNumber;
     }
 }

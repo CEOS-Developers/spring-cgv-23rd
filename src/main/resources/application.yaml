@@ -13,6 +13,11 @@ spring:
       hibernate:
         format_sql: true
 
+jwt:
+  secret: ${secret_key}
+  access-token-validity-in-milliseconds: 1800000
+  refresh-token-validity-in-milliseconds: 1209600000
+
 logging:
   level:
     org.hibernate.SQL: debug
