@@ -3,6 +3,8 @@ package com.ceos23.spring_boot.domain.reservation.entity;
 import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.domain.theater.entity.Screen;
 import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.exception.BusinessException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -44,5 +46,11 @@ public class Schedule extends BaseEntity {
         this.startTime = startTime;
         this.endTime = endTime;
         this.basePrice = basePrice;
+    }
+
+    public void validateReservableTime(LocalDateTime now) {
+        if (now.isAfter(this.startTime)) {
+            throw new BusinessException(ErrorCode.SCHEDULE_ALREADY_STARTED);
+        }
     }
 }

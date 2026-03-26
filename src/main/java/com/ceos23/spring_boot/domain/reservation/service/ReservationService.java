@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -39,7 +40,9 @@ public class ReservationService {
         Schedule schedule = scheduleRepository.findById(command.scheduleId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        List<Seat> seats = seatRepository.findAllById(command.seatIds());
+        schedule.validateReservableTime(LocalDateTime.now());
+
+        List<Seat> seats = seatRepository.findAllByIdWithLock(command.seatIds());
         if (seats.size() != command.seatIds().size()) {
             throw new BusinessException(ErrorCode.SEAT_NOT_FOUND);
         }
@@ -71,7 +74,6 @@ public class ReservationService {
         reservedSeatRepository.saveAll(reservedSeats);
 
         return ReservationInfo.from(reservation, reservedSeats);
-
     }
 
     @Transactional

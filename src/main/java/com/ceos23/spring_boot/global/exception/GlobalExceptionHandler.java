@@ -28,9 +28,9 @@ public class GlobalExceptionHandler {
         log.warn("Validation Exception: {}", errorMessage);
 
         return ResponseEntity
-                .status(400)
+                .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
                 .body(new ErrorResponse(
-                        400, ErrorCode.INVALID_INPUT_VALUE.getCode(), errorMessage
+                        ErrorCode.INVALID_INPUT_VALUE.getStatus().value(), ErrorCode.INVALID_INPUT_VALUE.getCode(), errorMessage
                 ));
     }
 

@@ -36,8 +36,7 @@ public class MovieService {
     }
 
     public MovieInfo findMovie(Long id) {
-        Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+        Movie movie = findMovieById(id);
 
         return MovieInfo.from(movie);
     }
@@ -60,8 +59,7 @@ public class MovieService {
 
     @Transactional
     public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
-        Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+        Movie movie = findMovieById(id);
 
         movie.update(
                 command.title(),
@@ -77,11 +75,13 @@ public class MovieService {
 
     @Transactional
     public void deleteMovie(Long id) {
-        Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+        Movie movie = findMovieById(id);
 
         movieRepository.delete(movie);
     }
 
-
+    private Movie findMovieById(Long id) {
+        return movieRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+    }
 }
