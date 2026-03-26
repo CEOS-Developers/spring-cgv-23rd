@@ -38,11 +38,10 @@ public class ReservedSeat extends BaseEntity {
     @JoinColumn(name = "schedule_id", nullable = false)
     private Schedule schedule;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal price;
+    private Integer price;
 
     @Builder
-    public ReservedSeat(Reservation reservation, Seat seat, Schedule schedule, BigDecimal price) {
+    public ReservedSeat(Reservation reservation, Seat seat, Schedule schedule, Integer price) {
         this.reservation = reservation;
         this.seat = seat;
         this.schedule = schedule;

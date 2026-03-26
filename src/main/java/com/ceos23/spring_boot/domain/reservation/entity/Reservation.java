@@ -35,11 +35,11 @@ public class Reservation extends BaseEntity {
     @Column(nullable = false, length = 20)
     private ReservationStatus status;
 
-    @Column(name = "total_price", precision = 10, scale = 2)
-    private BigDecimal totalPrice;
+    @Column(name = "total_price")
+    private Integer totalPrice;
 
     @Builder
-    public Reservation(User user, Schedule schedule, ReservationStatus status, BigDecimal totalPrice) {
+    public Reservation(User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
         this.user = user;
         this.schedule = schedule;
         this.status = status;

@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(uniqueConstraints = {
-        @UniqueConstraint(name = "UQ_SEAT_COORD", columnNames = {"screen_id", "seat_row", "seat_col"})
+        @UniqueConstraint(name = "UQ_SEAT_COORD", columnNames = {"screen_id", "row_name", "col_number"})
 })
 public class Seat extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -3,6 +3,7 @@ package com.ceos23.spring_boot.domain.theater.entity;
 import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,4 +25,11 @@ public class Screen extends BaseEntity {
 
     @Column(nullable = false, length = 50)
     private String name;
+
+    @Builder
+    public Screen(Theater theater, ScreenType screenType, String name) {
+        this.theater = theater;
+        this.screenType = screenType;
+        this.name = name;
+    }
 }

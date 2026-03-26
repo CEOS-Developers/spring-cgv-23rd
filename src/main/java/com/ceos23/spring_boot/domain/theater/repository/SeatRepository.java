@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.theater.repository;
 
 import com.ceos23.spring_boot.domain.theater.entity.Seat;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +12,7 @@ import java.util.List;
 
 public interface SeatRepository extends JpaRepository<Seat, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = "seatGrade")
     @Query("select s from Seat s where s.id in :seatIds")
     List<Seat> findAllByIdWithLock(@Param("seatIds")  List<Long> seatIds);
 }

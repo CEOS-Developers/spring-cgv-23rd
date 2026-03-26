@@ -36,11 +36,11 @@ public class Schedule extends BaseEntity {
     @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
 
-    @Column(name = "base_price", precision = 10, scale = 2)
-    private BigDecimal basePrice;
+    @Column(name = "base_price")
+    private Integer basePrice;
 
     @Builder
-    public Schedule(Screen screen, Movie movie, LocalDateTime startTime, LocalDateTime endTime, BigDecimal basePrice) {
+    public Schedule(Screen screen, Movie movie, LocalDateTime startTime, LocalDateTime endTime, Integer basePrice) {
         this.screen = screen;
         this.movie = movie;
         this.startTime = startTime;

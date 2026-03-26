@@ -3,6 +3,7 @@ package com.ceos23.spring_boot.domain.theater.entity;
 import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -19,6 +20,12 @@ public class SeatGrade extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "surcharge_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal surchargePrice;
+    @Column(name = "surcharge_price", nullable = false)
+    private Integer surchargePrice;
+
+    @Builder
+    public SeatGrade(String name, Integer surchargePrice) {
+        this.name = name;
+        this.surchargePrice = surchargePrice;
+    }
 }

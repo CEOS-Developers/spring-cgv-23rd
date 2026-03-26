@@ -11,6 +11,7 @@ public record ReservationInfo(
         Long reservationId,
         Long scheduleId,
         ReservationStatus status,
+        Integer totalPrice,
         List<Long> reservedSeatIds
 ) {
     public static ReservationInfo from(Reservation reservation, List<ReservedSeat> reservedSeats) {
@@ -23,6 +24,7 @@ public record ReservationInfo(
                 reservation.getId(),
                 reservation.getSchedule().getId(),
                 reservation.getStatus(),
+                reservation.getTotalPrice(),
                 seatIds
         );
     }

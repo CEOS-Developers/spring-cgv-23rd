@@ -8,7 +8,10 @@ import com.ceos23.spring_boot.domain.reservation.entity.Schedule;
 import com.ceos23.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.ceos23.spring_boot.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.spring_boot.domain.reservation.repository.ScheduleRepository;
+import com.ceos23.spring_boot.domain.theater.entity.Screen;
+import com.ceos23.spring_boot.domain.theater.entity.ScreenType;
 import com.ceos23.spring_boot.domain.theater.entity.Seat;
+import com.ceos23.spring_boot.domain.theater.entity.SeatGrade;
 import com.ceos23.spring_boot.domain.theater.repository.SeatRepository;
 import com.ceos23.spring_boot.domain.user.entity.User;
 import com.ceos23.spring_boot.domain.user.repository.UserRepository;
@@ -71,35 +74,60 @@ class ReservationServiceTest {
         User user = User.builder()
                 .build();
 
+        ScreenType screenType = ScreenType.builder()
+                .name("4DX")
+                .surchargePrice(3000)
+                .build();
+
+        Screen screen = Screen.builder()
+                .screenType(screenType)
+                .build();
+
         Schedule schedule = Schedule.builder()
-                .startTime(LocalDateTime.now())
-                .endTime(LocalDateTime.now().plusHours(2))
+                .screen(screen)
+                .startTime(LocalDateTime.now().plusDays(1))
+                .endTime(LocalDateTime.now().plusDays(1).plusHours(2))
+                .basePrice(10000)
                 .build();
         ReflectionTestUtils.setField(schedule, "id", scheduleId);
 
+        SeatGrade seatGrade1 = SeatGrade.builder()
+                .surchargePrice(2000)
+                .build();
+
+        SeatGrade seatGrade2 = SeatGrade.builder()
+                .surchargePrice(0)
+                .build();
+
         Seat seat1 = Seat.builder()
+                .seatGrade(seatGrade1)
+                .screen(screen)
                 .rowName("A")
                 .colNumber(1)
                 .build();
 
         Seat seat2 = Seat.builder()
+                .seatGrade(seatGrade2)
+                .screen(screen)
                 .rowName("A")
                 .colNumber(2)
                 .build();
-
         ReflectionTestUtils.setField(seat1, "id", 10L);
         ReflectionTestUtils.setField(seat2, "id", 11L);
+
         List<Seat> seats = List.of(seat1, seat2);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(seatRepository.findAllById(seatIds)).willReturn(seats);
+        given(seatRepository.findAllByIdWithLock(seatIds)).willReturn(seats);
         given(reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(scheduleId, seatIds, ReservationStatus.RESERVED)).willReturn(false);
 
         // When
         ReservationInfo result = reservationService.createReservation(command);
 
         // Then
+        assertThat(result.totalPrice()).isEqualTo(28000);
+
         assertThat(result.status()).isEqualTo(ReservationStatus.RESERVED);
         assertThat(result.scheduleId()).isEqualTo(scheduleId);
         assertThat(result.reservedSeatIds()).containsExactly(10L, 11L);
