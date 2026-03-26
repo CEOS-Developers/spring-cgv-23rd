@@ -62,8 +62,9 @@ public class ReservationService {
 
         for (SeatTemplate seatTemplate : seatTemplates) {
             validateSeatBelongsToScreening(screeningSeatLayoutId, seatTemplate);
-            validateAlreadyReserved(screening, seatTemplate);
         }
+
+        validateAlreadyReserved(screening, seatTemplates);
 
         Reservation reservation = new Reservation(user, screening);
         Reservation savedReservation = reservationRepository.save(reservation);
@@ -147,17 +148,18 @@ public class ReservationService {
         }
     }
 
-    private void validateAlreadyReserved(Screening screening, SeatTemplate seatTemplate) {
-        boolean alreadyReserved = reservationSeatRepository.existsByScreeningAndSeatTemplateAndReservation_Status(
-                screening,
-                seatTemplate,
-                ReservationStatus.RESERVED
-        );
+    private void validateAlreadyReserved(Screening screening, List<SeatTemplate> seatTemplates) {
+        List<Long> reservedSeatTemplateIds =
+                reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
+                        screening,
+                        seatTemplates,
+                        ReservationStatus.RESERVED
+                );
 
-        if (alreadyReserved) {
+        if (!reservedSeatTemplateIds.isEmpty()) {
             throw new ConflictException(
                     ErrorCode.ALREADY_RESERVED_SEAT,
-                    "이미 예매된 좌석입니다. seatTemplateId=" + seatTemplate.getId()
+                    "이미 예매된 좌석입니다. seatTemplateIds=" + reservedSeatTemplateIds
             );
         }
     }
