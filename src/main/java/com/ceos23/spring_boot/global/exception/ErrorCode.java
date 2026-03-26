@@ -24,6 +24,10 @@ public enum ErrorCode {
     UNAUTHORIZED_RESERVATION_ACCESS(HttpStatus.FORBIDDEN, "R003", "본인의 예매 내역만 접근할 수 있습니다."),
     ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "이미 취소된 예매입니다."),
 
+    MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "ME001", "존재하지 않는 메뉴입니다."),
+
+    INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "I001", "존재하지 않는 재고입니다."),
+
     OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "ST001", "재고는 항상 1 이상이어야 합니다."),
 
     INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "잘못된 입력값입니다."),

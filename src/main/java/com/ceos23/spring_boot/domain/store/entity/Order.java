@@ -5,6 +5,7 @@ import com.ceos23.spring_boot.domain.user.entity.User;
 import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "orders") // order는 SQL 예약어이므로 테이블명 명시 필수
+@Table(name = "orders")
 public class Order extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orders_id")
@@ -28,12 +29,17 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "theater_id", nullable = false)
     private Theater theater;
 
-    @Column(name = "order_date", nullable = false)
-    private LocalDateTime orderDate = LocalDateTime.now();
-
-    @Column(name = "total_price", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalPrice;
+    @Column(name = "total_price", nullable = false)
+    private Integer totalPrice;
 
     @Column(nullable = false)
     private Boolean refundable = false;
+
+    @Builder
+    public Order(User user, Theater theater, Integer totalPrice, Boolean refundable) {
+        this.user = user;
+        this.theater = theater;
+        this.totalPrice = totalPrice;
+        this.refundable = refundable;
+    }
 }

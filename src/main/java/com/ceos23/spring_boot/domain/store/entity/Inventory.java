@@ -7,6 +7,7 @@ import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -30,9 +31,17 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private Integer stock;
 
-    private void validateStock(int stock) {
-        if (stock < 1) {
+    @Builder
+    public Inventory(Theater theater, Menu menu, Integer stock) {
+        this.theater = theater;
+        this.menu = menu;
+        this.stock = stock;
+    }
+
+    public void decreaseStock(int quantity) {
+        if (this.stock - quantity < 1) {
             throw new BusinessException(ErrorCode.OUT_OF_STOCK);
         }
+        this.stock -= quantity;
     }
 }

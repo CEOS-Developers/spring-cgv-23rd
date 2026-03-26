@@ -3,6 +3,7 @@ package com.ceos23.spring_boot.domain.store.entity;
 import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -19,4 +20,10 @@ public class Menu extends BaseEntity {
 
     @Column(nullable = false)
     private Integer price;
+
+    @Builder
+    public Menu(String name, Integer price) {
+        this.name = name;
+        this.price = price;
+    }
 }
