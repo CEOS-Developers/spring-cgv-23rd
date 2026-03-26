@@ -4,6 +4,7 @@ import com.ceos23.cgv.domain.reservation.dto.ReservationCreateRequest;
 import com.ceos23.cgv.domain.reservation.dto.ReservationResponse;
 import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.service.ReservationService;
+import com.ceos23.cgv.global.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class ReservationController {
 
     @PostMapping
     @Operation(summary = "영화 예매하기", description = "유저, 상영 일정, 인원수, 결제 수단 등을 입력받아 예매를 진행합니다.")
-    public ResponseEntity<ReservationResponse> createReservation(@RequestBody ReservationCreateRequest request) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(@RequestBody ReservationCreateRequest request) {
 
         Reservation reservation = reservationService.createReservation(
                 request.userId(),
@@ -32,17 +33,17 @@ public class ReservationController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ReservationResponse.from(reservation));
+                .body(ApiResponse.created(ReservationResponse.from(reservation)));
     }
 
     @PatchMapping("/{reservationId}/cancel")
     @Operation(summary = "영화 예매 취소", description = "예매 ID와 유저 ID를 받아 본인의 예매 내역을 취소(CANCELED) 상태로 변경합니다.")
-    public ResponseEntity<String> cancelReservation(
+    public ResponseEntity<ApiResponse<String>> cancelReservation(
             @PathVariable Long reservationId,
-            @RequestParam Long userId) { // 임시로 쿼리 파라미터로 userId를 받음
+            @RequestParam Long userId) {
 
         reservationService.cancelReservation(userId, reservationId);
 
-        return ResponseEntity.ok("예매가 성공적으로 취소되었습니다.");
+        return ResponseEntity.ok(ApiResponse.success("예매가 성공적으로 취소되었습니다."));
     }
 }

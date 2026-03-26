@@ -3,6 +3,7 @@ package com.ceos23.cgv.domain.cinema.service;
 import com.ceos23.cgv.domain.cinema.dto.TheaterCreateRequest;
 import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.cinema.entity.Theater;
+import com.ceos23.cgv.domain.cinema.enums.Region;
 import com.ceos23.cgv.domain.cinema.enums.TheaterType;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.cinema.repository.TheaterRepository;
@@ -52,7 +53,7 @@ public class CinemaService {
      * [POST] 새로운 영화관(지점) 생성
      */
     @Transactional
-    public Cinema createCinema(String name, String region) {
+    public Cinema createCinema(String name, Region region) {
         Cinema cinema = Cinema.builder()
                 .name(name)
                 .region(region)

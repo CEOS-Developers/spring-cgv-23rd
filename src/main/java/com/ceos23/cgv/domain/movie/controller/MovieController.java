@@ -4,6 +4,7 @@ import com.ceos23.cgv.domain.movie.dto.MovieCreateRequest;
 import com.ceos23.cgv.domain.movie.dto.MovieResponse;
 import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.service.MovieService;
+import com.ceos23.cgv.global.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/movies")
@@ -22,10 +22,9 @@ public class MovieController {
 
     private final MovieService movieService;
 
-    // 1. 새로운 데이터를 Create (POST)
     @PostMapping
     @Operation(summary = "새로운 영화 등록", description = "영화 정보를 입력받아 DB에 생성합니다.")
-    public ResponseEntity<MovieResponse> createMovie(@RequestBody MovieCreateRequest request) {
+    public ResponseEntity<ApiResponse<MovieResponse>> createMovie(@RequestBody MovieCreateRequest request) {
         Movie createdMovie = movieService.createMovie(
                 request.title(),
                 request.runningTime(),
@@ -36,32 +35,27 @@ public class MovieController {
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(MovieResponse.from(createdMovie));
+                .body(ApiResponse.created(MovieResponse.from(createdMovie)));
     }
 
-    // 모든 데이터를 가져오기 (GET)
     @GetMapping
     @Operation(summary = "전체 영화 조회", description = "DB에 저장된 모든 영화 목록을 가져옵니다.")
-    public ResponseEntity<List<MovieResponse>> getAllMovies() {
-        List<MovieResponse> responses= movieService.getAllMovies().stream()
-                .map(MovieResponse::from)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(responses);
+    public ResponseEntity<ApiResponse<List<MovieResponse>>> getAllMovies() {
+        List<Movie> movies = movieService.getAllMovies();
+        return ResponseEntity.ok(ApiResponse.success(movies, MovieResponse::from));
     }
 
-    // 3. 특정 데이터를 가져오기 (GET)
     @GetMapping("/{movieId}")
     @Operation(summary = "특정 영화 단건 조회", description = "영화 ID(PK)를 통해 영화 하나의 상세 정보를 가져옵니다.")
-    public ResponseEntity<MovieResponse> getMovieById(@PathVariable Long movieId) {
+    public ResponseEntity<ApiResponse<MovieResponse>> getMovieById(@PathVariable Long movieId) {
         Movie movie = movieService.getMovieDetails(movieId);
-        return ResponseEntity.ok(MovieResponse.from(movie));
+        return ResponseEntity.ok(ApiResponse.success(MovieResponse.from(movie)));
     }
 
-    // 4. 특정 데이터를 삭제하기 (DELETE)
     @DeleteMapping("/{movieId}")
     @Operation(summary = "특정 영화 삭제", description = "영화 ID를 통해 특정 영화를 DB에서 삭제합니다.")
-    public ResponseEntity<String> deleteMovie(@PathVariable Long movieId) {
+    public ResponseEntity<ApiResponse<String>> deleteMovie(@PathVariable Long movieId) {
         movieService.deleteMovie(movieId);
-        return ResponseEntity.ok("영화가 성공적으로 삭제되었습니다.");
+        return ResponseEntity.ok(ApiResponse.success("영화가 성공적으로 삭제되었습니다."));
     }
 }

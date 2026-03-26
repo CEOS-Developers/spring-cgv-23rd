@@ -1,5 +1,6 @@
 package com.ceos23.cgv.domain.cinema.entity;
 
+import com.ceos23.cgv.domain.cinema.enums.Region;
 import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,6 +20,7 @@ public class Cinema extends BaseTimeEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String region;
+    private Region region;
 }
