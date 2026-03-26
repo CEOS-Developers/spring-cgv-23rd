@@ -38,7 +38,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 "/api/cinemas/*/likes",
-                                "/api/movies/*/likes"
+                                "/api/movies/*/likes",
+                                "/api/store/purchases"
                         ).authenticated()
                         .anyRequest().permitAll()
                 )
