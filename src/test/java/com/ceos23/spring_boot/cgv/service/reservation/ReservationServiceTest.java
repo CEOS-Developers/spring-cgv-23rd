@@ -18,6 +18,7 @@ import com.ceos23.spring_boot.cgv.repository.movie.ScreeningRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationSeatRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
+import com.ceos23.spring_boot.cgv.domain.user.UserRole;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,6 +31,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.BDDMockito.*;
@@ -62,7 +64,7 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = new User("오지송", "jisong@example.com");
+        user = new User("오지송", "jisong@example.com", "encoded-password", UserRole.USER);
         ReflectionTestUtils.setField(user, "id", 1L);
 
         Cinema cinema = new Cinema("CGV 신촌", "서울 서대문구 신촌로");

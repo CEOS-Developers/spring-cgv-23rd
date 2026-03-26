@@ -25,4 +25,6 @@ public interface ReservationSeatRepository extends JpaRepository<ReservationSeat
     );
 
     List<ReservationSeat> findAllByReservation(Reservation reservation);
+
+    boolean existsByScreeningAndSeatTemplate(Screening screening, SeatTemplate seatTemplate);
 }
