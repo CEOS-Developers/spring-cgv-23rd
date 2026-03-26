@@ -735,4 +735,112 @@ UNIQUE (movie_id, sort_order)
 - **낙관적 락(Optimistic Lock)**: 데이터 충돌이 드물 것이라고 가정하는 방식임. 엔티티에 `@Version` 필드를 추가하여 수정 시점에 버전이 일치하는지 확인하며, DB 락 대신 애플리케이션 레벨에서 충돌을 감지하므로 성능상 유리
 - **분산 락(Distributed Lock)**: Redis를 활용하여 DB 외부에서 락을 관리하는 방식임. DB의 부하를 줄일 수 있고, 여러 서버로 구성된 분산 환경에서 특정 자원(상영관, 재고 등)에 대한 동기화를 효율적으로 처리할 수 있음
 - **원자적 쿼리(Atomic Query)**: "UPDATE ... SET amount = amount - 1"과 같이 DB 자체의 원자적 연산을 활용하여 별도의 명시적 락 없이도 재고를 안전하게 차감하는 방식을 고려
+
+### 5. 비관적 락 사용 시 주의사항: '존재하지 않는 데이터'에 대한 잠금 한계
+
+비관적 락(`SELECT ... FOR UPDATE`)은 데이터베이스가 락을 거는 대상과 메커니즘의 특성상 다음과 같은 주의가 필요함.
+
+- **락의 대상은 실제 존재하는 레코드임**: 
+    - **레코드 기반 잠금**: 비관적 락은 쿼리 결과로 조회된 실제 데이터 행에 물리적인 잠금을 거는 방식
+    - **잠금 대상 부재**: `WHERE` 절 조건에 맞는 데이터가 테이블에 없어 아무런 행도 반환되지 않는다면, DB 엔진은 잠금을 설정할 실체를 찾지 못함
+    - **결과**: 잠글 대상이 없으므로 락이 걸리지 않으며, 트랜잭션은 아무런 보호 장치 없이 다음 로직을 수행
+
+
+- **작동 방식의 이해와 레이스 컨디션**: 
+    - **잠금 시도 과정**: 쿼리 실행 시 행을 스캔하고, 행이 존재할 때만 배타적 잠금을 건 뒤 데이터를 반환
+    - **후속 작업의 위험성**: 행이 없어 락이 안 걸린 상태라면, 다른 트랜잭션이 동시에 같은 조건으로 데이터를 `INSERT` 하더라도 이를 물리적으로 막을 수 없음
+
+- **발생 가능한 문제점**: 
+    - **동시성 제어 실패**: 특정 데이터가 없는 것을 확인하고(락이 안 걸린 상태) 새로운 데이터를 삽입(`INSERT`)하려 할 때, 그 사이 다른 트랜잭션이 먼저 데이터를 저장해버리면 **중복 데이터 오류**나 **데이터 불일치**가 발생할 수 있음.
+
+- **해결 방안 및 보완책**: 
+    - **상위 객체 잠금**: 실제 저장하려는 데이터(예: 예약 좌석)가 아직 없다면, 이미 DB에 존재하는 **부모 엔티티(예: 상영관, 상품 마스터)**에 비관적 락을 걸어 하위 로직 전체를 보호함.
+    - **네임드 락(Named Lock)**: DB 레코드가 아닌 가상의 문자열 키를 기반으로 잠금을 획득하여 데이터 존재 여부와 상관없이 동기화를 제어함.
+    - **원자적 구문 활용**: `Insert Ignore` 또는 `Upsert(ON DUPLICATE KEY UPDATE)` 구문을 사용하여 삽입 시점의 원자성을 보장함.
+
+현재 프로젝트에서 `ScreenRepository`와 `TheaterFoodRepository`에 적용된 비관적 락은 이미 존재하는 상영관 정보나 재고 데이터를 수정할 때는 효과적이나 만약 새로운 데이터를 생성하는 로직에서 중복 여부를 체크하며 락을 걸고자 한다면, 위와 같은 메커니즘의 한계를 인지하고 부모 객체 잠금이나 분산 락 등의 대안을 병행
+</details>
+
+<details><summary><h1>JWT 토큰 및 권한 테스트</h1></summary>
+
+현재 내 Security Config에 설정된 권한은 다음과 같다
+```java
+ http.authorizeHttpRequests((authorize) -> authorize
+                .requestMatchers("/api/v1/auth/**").permitAll() // /api/v1/auth/ 하위 경로는 모두 허용
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger 허용
+                .requestMatchers("/", "/health-check").permitAll()
+                .requestMatchers("/").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin 경로 권한설정
+                .requestMatchers(HttpMethod.GET,"/api/reviews/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/movies/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/reviews/movie/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/schedules/").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/theaters/").permitAll()
+                .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
+```
+
+- 회원가입 API
+  
+  <img width="702" height="508" alt="image" src="https://github.com/user-attachments/assets/bc389b1e-ba5e-4bb3-9d5b-cac88dcd8b57" />
+  
+- 로그인 API
+ <img width="1332" height="502" alt="image" src="https://github.com/user-attachments/assets/da1a39ba-5dad-42f3-a654-656fa226ef59" />
+
+Access token과 refresh token을 발급
+
+- JWT 토큰 적용
+  
+  <img width="685" height="292" alt="image" src="https://github.com/user-attachments/assets/c29ae10d-89ee-4ac7-9aee-f76b225c711b" />
+
+- 리프레쉬 토큰으로 재발급
+
+  <img width="1096" height="354" alt="image" src="https://github.com/user-attachments/assets/63a14577-3460-496f-be61-f2ead2690cc2" />
+
+  
+- 로그인된 사용자만 사용할 수 있는 API
+  
+  <img width="1102" height="343" alt="image" src="https://github.com/user-attachments/assets/0fd9480d-7edb-4681-b67b-5f4f34b2187b" />
+  
+- 로그인된 사용자만 사용할 수 있는 API에 로그인 안 한 유저 접근하려 할 때
+  
+  <img width="686" height="398" alt="image" src="https://github.com/user-attachments/assets/cd50baf4-2f4e-435f-8879-cab58efc41da" />
+
+  401 에러를 반환
+  
+- 관리자만 사용할 수 있는 API (/api/admin/**)
+  
+  <img width="952" height="452" alt="image" src="https://github.com/user-attachments/assets/9abb9869-9c8c-43be-b173-a90268432129" />
+
+- 관리자만 사용할 수 있는 API에 일반 유저가 접근하려 할 때
+  
+  <img width="812" height="459" alt="image" src="https://github.com/user-attachments/assets/1912f40e-74a6-4aed-9b9f-291edf5feef8" />
+
+  JWT 토큰을 가지고 있지만 role이 user 이므로 403 에러 발생
+
+
+</details>
+
+<details><summary><h1>401, 403 에러의 공통 응답 미적용 이유와 해결 방안</h1></summary>
+
+### 1. 공통 응답 형식이 적용되지 않는 이유: 발생 시점의 차이
+* **필터와 인터셉터의 위치 차이**: Spring Security는 서블릿 필터 기반으로 동작하며, 이는 스프링 MVC의 `DispatcherServlet`보다 앞단에 위치
+* **@RestControllerAdvice의 한계**: 현재 프로젝트에서 사용 중인 `ExceptionAdvice`는 `@RestControllerAdvice`를 사용함. 이는 Controller 이후 영역(Interceptor, Controller, Service 등)에서 발생하는 예외만 가로챌 수 있음
+* **보안 필터의 예외 발생**: 401(인증 실패)과 403(권한 부족) 에러는 `DispatcherServlet`에 도달하기 전인 보안 필터 체인(Security Filter Chain)에서 발생함. 따라서 `ExceptionAdvice`가 이를 인지하지 못하고 서블릿의 기본 에러 응답이 출력되는 것
+
+### 2. 프로젝트에서의 해결 방식: 커스텀 핸들러 도입
+스프링 시큐리티의 진입점과 권한 핸들러를 직접 구현하여 이 문제를 해결함
+
+#### ① 401 에러 해결: CustomAuthenticationEntryPoint
+* **인증되지 않은 접근 제어**: 로그인이 필요한 API에 토큰 없이 접근할 때 발생하는 예외를 처리
+* **직접 응답 바디 작성**: `commence` 메서드 내에서 `ObjectMapper`를 사용하여 `ApiResponse` 객체를 직접 JSON 문자열로 변환한 뒤, `HttpServletResponse`의 출력 스트림에 직접 써주는 방식
+* **응답 규격 통일**: 이를 통해 인증 실패 시에도 `isSuccess`, `code`, `message` 등을 포함한 공통 포맷이 반환되도록 보장
+
+#### ② 403 에러 해결: CustomAccessDeniedHandler
+* **권한 부족 접근 제어**: 인증은 되었으나 관리자 페이지에 일반 유저가 접근하는 경우 등을 처리
+* **핸들러 구현**: `AccessDeniedHandler` 인터페이스를 구현하여 `ApiResponse.onFailure`를 통해 에러 응답을 생성하고, 403 상태 코드와 함께 JSON을 반환
+
+#### ③ SecurityConfig 등록
+* **필터 체인 적용**: 구현한 두 커스텀 객체를 `SecurityConfig`의 `exceptionHandling` 설정에 등록하여 보안 필터 과정에서 해당 핸들러들이 동작하도록 지정
+
 </details>
