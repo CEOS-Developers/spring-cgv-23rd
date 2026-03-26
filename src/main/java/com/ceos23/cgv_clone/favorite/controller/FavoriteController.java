@@ -1,10 +1,12 @@
 package com.ceos23.cgv_clone.favorite.controller;
 
+import com.ceos23.cgv_clone.global.jwt.CustomUserDetails;
 import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.global.response.SuccessCode;
 import com.ceos23.cgv_clone.favorite.dto.response.FavoriteResponse;
 import com.ceos23.cgv_clone.favorite.service.FavoriteService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,18 +18,18 @@ public class FavoriteController {
 
     @PostMapping("/theaters/{theaterId}")
     public ApiResponse<FavoriteResponse> toggleFavoriteTheater(
-            @RequestHeader Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long theaterId
     ) {
-        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, favoriteService.toggleFavoriteTheater(userId, theaterId));
+        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, favoriteService.toggleFavoriteTheater(userDetails.getUserId(), theaterId));
     }
 
     @PostMapping("/movies/{movieId}")
     public ApiResponse<FavoriteResponse> toggleFavoriteMovie(
-            @RequestHeader Long userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long movieId
     ) {
-        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, favoriteService.toggleFavoriteMovie(userId, movieId));
+        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, favoriteService.toggleFavoriteMovie(userDetails.getUserId(), movieId));
     }
 
 }
