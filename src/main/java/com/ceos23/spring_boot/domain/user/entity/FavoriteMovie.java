@@ -4,6 +4,7 @@ import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -25,4 +26,10 @@ public class FavoriteMovie extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
+
+    @Builder
+    public FavoriteMovie(User user, Movie movie) {
+        this.user = user;
+        this.movie = movie;
+    }
 }
