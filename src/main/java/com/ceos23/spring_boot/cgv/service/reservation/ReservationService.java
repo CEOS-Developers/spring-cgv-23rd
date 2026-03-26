@@ -78,17 +78,34 @@ public class ReservationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Reservation> getReservations() {
-        return reservationRepository.findAll();
+    public List<Reservation> getReservations(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(
+                        ErrorCode.USER_NOT_FOUND,
+                        "해당 사용자가 존재하지 않습니다. id=" + userId
+                ));
+
+        return reservationRepository.findAll().stream()
+                .filter(reservation -> reservation.getUser().getId().equals(user.getId()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
-    public Reservation getReservation(Long reservationId) {
-        return reservationRepository.findById(reservationId)
+    public Reservation getReservation(Long reservationId, Long userId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new NotFoundException(
                         ErrorCode.RESERVATION_NOT_FOUND,
                         "해당 예매가 존재하지 않습니다. id=" + reservationId
                 ));
+
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new NotFoundException(
+                    ErrorCode.RESERVATION_NOT_FOUND,
+                    "해당 예매가 존재하지 않습니다. id=" + reservationId
+            );
+        }
+
+        return reservation;
     }
 
     public void cancelReservation(Long reservationId) {

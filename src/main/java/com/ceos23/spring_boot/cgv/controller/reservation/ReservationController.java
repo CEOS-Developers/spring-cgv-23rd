@@ -33,8 +33,8 @@ public class ReservationController {
     }
 
     @GetMapping
-    public List<ReservationResponse> getReservations() {
-        return reservationService.getReservations().stream()
+    public List<ReservationResponse> getReservations(@RequestParam Long userId) {
+        return reservationService.getReservations(userId).stream()
                 .map(reservation -> ReservationResponse.of(
                         reservation,
                         reservationService.getReservationSeats(reservation)
@@ -43,8 +43,11 @@ public class ReservationController {
     }
 
     @GetMapping("/{reservationId}")
-    public ReservationResponse getReservation(@PathVariable Long reservationId) {
-        Reservation reservation = reservationService.getReservation(reservationId);
+    public ReservationResponse getReservation(
+            @PathVariable Long reservationId,
+            @RequestParam Long userId
+    ) {
+        Reservation reservation = reservationService.getReservation(reservationId, userId);
 
         return ReservationResponse.of(
                 reservation,
