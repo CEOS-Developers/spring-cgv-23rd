@@ -4,6 +4,7 @@ import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
 import com.ceos23.spring_boot.cgv.dto.reservation.ReservationCreateRequest;
 import com.ceos23.spring_boot.cgv.dto.reservation.ReservationResponse;
 import com.ceos23.spring_boot.cgv.service.reservation.ReservationService;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,7 @@ public class ReservationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ReservationResponse createReservation(@RequestBody ReservationCreateRequest request) {
+    public ReservationResponse createReservation(@RequestBody @Valid ReservationCreateRequest request) {
         Reservation reservation = reservationService.createReservation(
                 request.userId(),
                 request.screeningId(),
