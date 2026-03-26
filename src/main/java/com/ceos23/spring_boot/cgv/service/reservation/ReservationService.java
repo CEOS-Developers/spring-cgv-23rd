@@ -131,7 +131,11 @@ public class ReservationService {
     }
 
     private void validateAlreadyReserved(Screening screening, SeatTemplate seatTemplate) {
-        boolean alreadyReserved = reservationSeatRepository.existsByScreeningAndSeatTemplate(screening, seatTemplate);
+        boolean alreadyReserved = reservationSeatRepository.existsByScreeningAndSeatTemplateAndReservation_Status(
+                screening,
+                seatTemplate,
+                ReservationStatus.RESERVED
+        );
 
         if (alreadyReserved) {
             throw new ConflictException(
