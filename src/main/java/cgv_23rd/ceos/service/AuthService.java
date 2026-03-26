@@ -14,6 +14,7 @@ import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.global.jwt.JwtUtil;
 import cgv_23rd.ceos.repository.RefreshTokenRepository;
 import cgv_23rd.ceos.repository.UserRepository;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -95,9 +96,18 @@ public class AuthService {
             throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
         }
 
+        // 만료된 Access Token에서 유저 정보 추출
+        Claims accessClaims = jwtUtil.getClaimsFromExpiredToken(reissueRequestDto.accessToken());
+        Long accessUserId = accessClaims.get("userId", Long.class);
+
         // 2. DB에서 Refresh Token 조회
         RefreshToken token = refreshTokenRepository.findByToken(reissueRequestDto.refreshToken())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.INVALID_TOKEN, "DB에 존재하지 않는 리프레시 토큰입니다."));
+
+        // Access Token의 유저와 Refresh Token의 소유주가 일치하는지 검증
+        if (accessUserId == null || !accessUserId.equals(token.getUserId())) {
+            throw new GeneralException(GeneralErrorCode.INVALID_TOKEN, "토큰 정보가 일치하지 않습니다.");
+        }
 
         // 3. 토큰에 연결된 유저 정보 조회
         User user = userRepository.findById(token.getUserId())
@@ -109,7 +119,6 @@ public class AuthService {
         token.updateToken(newRefreshToken);
 
         // 새로운 토큰 DTO에 담아 반환
-
         return ReissueResponseDto.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)

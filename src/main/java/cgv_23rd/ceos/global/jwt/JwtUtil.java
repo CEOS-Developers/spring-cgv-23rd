@@ -1,5 +1,7 @@
 package cgv_23rd.ceos.global.jwt;
 
+import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
+import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SecurityException;
@@ -66,8 +68,6 @@ public class JwtUtil {
         return builder.compact();
     }
 
-    // --- [ 4단계: 토큰 검증 기능 추가 ] ---
-
     /**
      * 헤더에서 "Bearer " 접두사 제거
      */
@@ -75,8 +75,8 @@ public class JwtUtil {
         if (tokenValue != null && tokenValue.startsWith(BEARER_PREFIX)) {
             return tokenValue.substring(BEARER_PREFIX.length());
         }
-        // Bearer 접두사가 없거나 토큰 값이 null이면 예외 발생 (혹은 null 리턴)
-        throw new IllegalArgumentException("유효하지 않은 토큰입니다.");
+        // Bearer 접두사가 없거나 토큰 값이 null이면 예외 발생
+        throw new GeneralException(GeneralErrorCode.INVALID_TOKEN,"유효하지 않은 토큰입니다.");
     }
 
     /**
@@ -111,5 +111,21 @@ public class JwtUtil {
      */
     public String getEmailFromToken(Claims claims) {
         return claims.getSubject();
+    }
+
+    public Claims getClaimsFromExpiredToken(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            // 만료된 토큰이라도 서명이 유효하면 Claims를 반환함
+            return e.getClaims();
+        } catch (Exception e) {
+            // 서명 위조나 잘못된 형식 등은 예외를 그대로 던져 차단함
+            throw new GeneralException(GeneralErrorCode.INVALID_TOKEN, "유효하지 않은 토큰입니다.");
+        }
     }
 }
