@@ -1,5 +1,6 @@
 package com.ceos23.spring_boot.domain.theater.entity;
 
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -10,7 +11,7 @@ import java.math.BigDecimal;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SeatGrade {
+public class SeatGrade extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "seat_grade_id")
     private Long id;

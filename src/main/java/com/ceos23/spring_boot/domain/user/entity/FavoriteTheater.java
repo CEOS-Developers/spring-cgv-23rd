@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.user.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "favorite_theater", uniqueConstraints = {
         @UniqueConstraint(name = "UQ_FAVORITE_THEATER", columnNames = {"user_id", "theater_id"})
 })
-public class FavoriteTheater {
+public class FavoriteTheater extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "favorite_theater_id")
     private Long id;

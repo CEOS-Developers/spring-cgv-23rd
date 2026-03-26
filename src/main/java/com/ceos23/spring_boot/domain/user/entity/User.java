@@ -1,5 +1,6 @@
 package com.ceos23.spring_boot.domain.user.entity;
 
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -13,7 +14,7 @@ import lombok.NoArgsConstructor;
         @UniqueConstraint(name = "UQ_USER_LOGIN_ID", columnNames = {"login_id"}),
         @UniqueConstraint(name = "UQ_USER_EMAIL", columnNames = {"email"})
 })
-public class User {
+public class User extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;

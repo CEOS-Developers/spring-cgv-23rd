@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Seat;
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -20,7 +21,7 @@ import java.math.BigDecimal;
         )
     }
 )
-public class ReservedSeat {
+public class ReservedSeat extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reserved_seat_id")
     private Long id;

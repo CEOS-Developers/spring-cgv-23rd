@@ -65,6 +65,7 @@ public class ReservationService {
                 .map(seat -> ReservedSeat.builder()
                         .reservation(reservation)
                         .seat(seat)
+                        .schedule(schedule)
                         .build())
                 .toList();
         reservedSeatRepository.saveAll(reservedSeats);

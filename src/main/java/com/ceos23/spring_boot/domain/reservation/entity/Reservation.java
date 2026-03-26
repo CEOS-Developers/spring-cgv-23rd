@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.user.entity.User;
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -15,7 +17,8 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Reservation {
+@SQLRestriction("is_deleted = false")
+public class Reservation extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reservation_id")
     private Long id;
@@ -32,9 +35,6 @@ public class Reservation {
     @Column(nullable = false, length = 20)
     private ReservationStatus status;
 
-    @Column(name = "reserve_date", nullable = false)
-    private LocalDateTime reserveDate = LocalDateTime.now();
-
     @Column(name = "total_price", precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
@@ -42,7 +42,6 @@ public class Reservation {
     public Reservation(User user, Schedule schedule, ReservationStatus status, BigDecimal totalPrice) {
         this.user = user;
         this.schedule = schedule;
-        this.reserveDate = LocalDateTime.now();
         this.status = status;
         this.totalPrice = totalPrice;
     }

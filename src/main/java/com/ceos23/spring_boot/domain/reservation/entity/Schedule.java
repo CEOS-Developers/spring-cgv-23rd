@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.domain.theater.entity.Screen;
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Schedule {
+public class Schedule extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "schedule_id")
     private Long id;

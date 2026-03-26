@@ -1,5 +1,6 @@
 package com.ceos23.spring_boot.domain.theater.entity;
 
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "UQ_SEAT_COORD", columnNames = {"screen_id", "seat_row", "seat_col"})
 })
-public class Seat {
+public class Seat extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "seat_id")
     private Long id;

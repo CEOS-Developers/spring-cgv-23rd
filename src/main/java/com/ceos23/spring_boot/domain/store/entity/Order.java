@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.store.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.user.entity.User;
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "orders") // order는 SQL 예약어이므로 테이블명 명시 필수
-public class Order {
+public class Order extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orders_id")
     private Long id;

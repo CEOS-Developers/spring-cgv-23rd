@@ -1,5 +1,6 @@
 package com.ceos23.spring_boot.domain.movie.entity;
 
+import com.ceos23.spring_boot.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "UQ_DIRECTOR_PERSON_MOVIE", columnNames = {"person_id", "movie_id"})
 })
-public class Director {
+public class Director extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "director_id")
     private Long id;
