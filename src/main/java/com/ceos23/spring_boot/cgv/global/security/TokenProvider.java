@@ -22,9 +22,9 @@ public class TokenProvider implements InitializingBean {
     private final String secret;
     private final long accessTokenValidityInMilliseconds;
     private final long refreshTokenValidityInMilliseconds;
-    private Key key;
-
     private final UserDetailsService userDetailsService;
+
+    private Key key;
 
     public TokenProvider(
             @Value("${jwt.secret}") String secret,
@@ -45,8 +45,8 @@ public class TokenProvider implements InitializingBean {
     }
 
     public String createAccessToken(Long id, Authentication authentication) {
-        long now = (new Date()).getTime();
-        Date validity = new Date(now + this.accessTokenValidityInMilliseconds);
+        long now = new Date().getTime();
+        Date validity = new Date(now + accessTokenValidityInMilliseconds);
 
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -55,14 +55,15 @@ public class TokenProvider implements InitializingBean {
         return Jwts.builder()
                 .setSubject(String.valueOf(id))
                 .claim("auth", authorities)
+                .claim("type", "access")
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
     public String createRefreshToken(Long id) {
-        long now = (new Date()).getTime();
-        Date validity = new Date(now + this.refreshTokenValidityInMilliseconds);
+        long now = new Date().getTime();
+        Date validity = new Date(now + refreshTokenValidityInMilliseconds);
 
         return Jwts.builder()
                 .setSubject(String.valueOf(id))

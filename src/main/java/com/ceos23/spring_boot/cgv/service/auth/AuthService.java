@@ -46,7 +46,7 @@ public class AuthService {
 
     public void signup(SignupRequest request) {
         if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new ConflictException(ErrorCode.CONFLICT);
+            throw new ConflictException(ErrorCode.CONFLICT, "이미 가입된 이메일입니다.");
         }
 
         User user = new User(
@@ -59,20 +59,16 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new NotFoundException(ErrorCode.USER_NOT_FOUND);
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
-        CustomUserDetails userDetails = new CustomUserDetails(user);
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
+        Authentication authentication = createAuthentication(user);
 
         String accessToken = tokenProvider.createAccessToken(user.getId(), authentication);
         String refreshToken = tokenProvider.createRefreshToken(user.getId());
@@ -86,31 +82,26 @@ public class AuthService {
         String refreshToken = request.refreshToken();
 
         if (!tokenProvider.validateRefreshToken(refreshToken)) {
-            throw new BadRequestException(ErrorCode.BAD_REQUEST);
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "유효하지 않은 refresh token 입니다.");
         }
 
         Long userId = Long.parseLong(tokenProvider.getTokenUserId(refreshToken));
 
         RefreshToken savedRefreshToken = refreshTokenRepository.findByUserId(userId)
-                .orElseThrow(() -> new BadRequestException(ErrorCode.BAD_REQUEST));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.BAD_REQUEST, "저장된 refresh token 이 없습니다."));
 
         if (!savedRefreshToken.getToken().equals(refreshToken)) {
-            throw new BadRequestException(ErrorCode.BAD_REQUEST);
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "refresh token 이 일치하지 않습니다.");
         }
 
         if (savedRefreshToken.isExpired()) {
-            throw new BadRequestException(ErrorCode.BAD_REQUEST);
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "만료된 refresh token 입니다.");
         }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
 
-        CustomUserDetails userDetails = new CustomUserDetails(user);
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
+        Authentication authentication = createAuthentication(user);
 
         String newAccessToken = tokenProvider.createAccessToken(user.getId(), authentication);
         String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
@@ -127,6 +118,16 @@ public class AuthService {
 
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    private Authentication createAuthentication(User user) {
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+
+        return new UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.getAuthorities()
+        );
     }
 
     private void saveOrUpdateRefreshToken(Long userId, String refreshToken) {
