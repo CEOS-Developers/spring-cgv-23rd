@@ -63,10 +63,10 @@ public class SecurityConfig {
                         // guest
                         .requestMatchers("/api/v1/auth/**").hasRole(UserRole.GUEST.name())
                         .requestMatchers(HttpMethod.GET, "/api/v1/movies/**", "/api/v1/products/**", "/api/v1/reviews/**", "/api/v1/screenings/**", "/api/v1/theaters/**", "/api/v1/reservations/**").hasRole(UserRole.GUEST.name())
-                        //manger
-                        .requestMatchers("/api/v1/manager").hasRole(UserRole.MANAGER.name())
+                        //manager
+                        .requestMatchers("/api/v1/manager/**").hasRole(UserRole.MANAGER.name())
                         // admin
-                        .requestMatchers("/api/v1/admin").hasRole(UserRole.ADMIN.name())
+                        .requestMatchers("/api/v1/admin/**").hasRole(UserRole.ADMIN.name())
                         // user
                         .anyRequest().hasRole(UserRole.USER.name())
                 )
