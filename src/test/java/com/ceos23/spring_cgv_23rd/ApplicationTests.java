@@ -92,21 +92,10 @@ class ApplicationTests {
 		Theater theater3 = Theater.create("CGV 명동", "서울특별시 중구 명동길 14 Noon Square 8F");
 		Theater theater4 = Theater.create("CGV 대학로", "서울특별시 종로구 대명길 28 대학로 CGV");
 
+		System.out.println("영화관 사전 설정 완료!");
 		return theaterRepository.saveAll(Arrays.asList(theater1, theater2, theater3, theater4));
 	}
-/*
-	Movie movie1 = Movie.builder()
-			.movieName("트루먼쇼")
-			.openDate(LocalDateTime.of(1276, 7, 3, 8, 0))
-			.reservRate(97.6)
-			.eggRate(88.5)
-			.prolog("나가자")
-			.accessibleAge(AccessibleAge.NINETEEN)
-			.movieType(MovieType.DRAMA)
-			.build();(String name, LocalDate date, String prolog, AccessibleAge aca, MovieType type,
-	int price, long runningTime)
 
- */
 	List<Movie> setMovie() {
 		Movie movie1 = Movie.create("트루먼쇼",
 				LocalDate.of(2025, 9, 12),
@@ -442,6 +431,146 @@ class ApplicationTests {
 		System.out.println(res.getResponse().getContentAsString());
 		System.out.println("finish!");
 
+	}
+
+	@Test
+	@DisplayName("영화관 찜")
+	void bookmarkTheater() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Theater theater = theaterRepository.findAll().get(0);
+		System.out.println("ID >>> " + theater.getId());
+
+		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
+						+ "&theaterId=" + theater.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+	}
+
+	@Test
+	@DisplayName("영화관 찜 & 취소")
+	void bookmarkAndCancelTheater() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Theater theater = theaterRepository.findAll().get(0);
+
+		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
+						+ "&theaterId=" + theater.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+
+		MvcResult res2 = mockmvc.perform(get("/api/theater?userId=" + user.getId()
+						+ "&theaterId=" + theater.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res2.getResponse().getContentAsString());
+	}
+
+	@Test
+	@DisplayName("영화관 찜 & 취소 & 조회")
+	void bookmarkAndCancelTheaterAndCheck() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Theater theater = theaterRepository.findAll().get(0);
+
+		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
+						+ "&theaterId=" + theater.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+
+		System.out.println(mockmvc.perform(get("/api/theater?userId=" + user.getId()))
+				.andExpect(status().isOk())
+				.andReturn()
+				.getResponse().getContentAsString());
+
+		MvcResult res2 = mockmvc.perform(get("/api/theater?userId=" + user.getId()
+						+ "&theaterId=" + theater.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		MvcResult res3 = mockmvc.perform(get("/api/theater?userId=" + user.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res3.getResponse().getContentAsString());
+	}
+
+	@Test
+	@DisplayName("영화 찜")
+	void bookmarkMovie() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Movie movie = movieRepository.findAll().get(0);
+
+		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
+						+ "&movieId=" + movie.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+	}
+
+	@Test
+	@DisplayName("영화 찜 + 취소")
+	void bookmarkMovieAndCancel() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Movie movie = movieRepository.findAll().get(0);
+
+		mockmvc.perform(get("/api/movie?userId=" + user.getId()
+						+ "&movieId=" + movie.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
+						+ "&movieId=" + movie.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+	}
+
+	@Test
+	@DisplayName("영화 찜 + 취소 + 조회")
+	void bookmarkMovieAndCancelAndCheck() throws Exception {
+		normalSetting();
+		setUser();
+		User user = userRepository.findAll().get(0);
+		Movie movie = movieRepository.findAll().get(0);
+
+		mockmvc.perform(get("/api/movie?userId=" + user.getId()
+						+ "&movieId=" + movie.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(
+				mockmvc.perform(get("/api/movie?userId=" + user.getId()))
+						.andReturn().getResponse().getContentAsString()
+		);
+
+		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
+						+ "&movieId=" + movie.getId()))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		System.out.println(res.getResponse().getContentAsString());
+
+		System.out.println(
+				mockmvc.perform(get("/api/movie?userId=" + user.getId()))
+						.andReturn().getResponse().getContentAsString()
+		);
 	}
 }
 

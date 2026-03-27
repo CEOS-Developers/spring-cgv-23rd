@@ -1,5 +1,7 @@
 package com.ceos23.spring_cgv_23rd.Theater.Controller;
 
+import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.CheckLikedTheaterResponseDTO;
+import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.LikedTheaterResponseDTO;
 import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.TheaterSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Region;
 import com.ceos23.spring_cgv_23rd.Theater.Service.TheaterService;
@@ -50,6 +52,29 @@ public class TheaterController {
     @GetMapping
     public ResponseEntity<TheaterSearchResponseDTO> searchAll() {
         return theaterService.theaterSearchService();
+    }
+
+    /**
+     * 좋아요 버튼 누르기
+     *
+     * @return 극장id와 이름
+     */
+    @GetMapping(params = {"userId", "theaterId"})
+    public ResponseEntity<LikedTheaterResponseDTO> likey(
+            @RequestParam long userId,
+            @RequestParam long theaterId
+    ) {
+        return ResponseEntity.ok(theaterService.theaterBookMarkService(userId, theaterId));
+    }
+
+    /**
+     * 좋아요 조회
+     */
+    @GetMapping(params = {"userId"})
+    public ResponseEntity<CheckLikedTheaterResponseDTO> likey(
+            @RequestParam long userId
+    ){
+        return ResponseEntity.ok(theaterService.checkTheaterBookMark(userId));
     }
 
 }

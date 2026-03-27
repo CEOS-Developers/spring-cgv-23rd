@@ -53,6 +53,7 @@ public class ReservationService {
     /**
      * TODO: Authentication과 USER 정보 가져오는 것 연결하기
      * TODO: 자리 없으면 예매 불가능하게하기
+     * TODO: 유저정보를 필드에서 긁어와서 AudienceData 등 영화 메타데이터 수정하기
      *
      * @param req
      * @return
