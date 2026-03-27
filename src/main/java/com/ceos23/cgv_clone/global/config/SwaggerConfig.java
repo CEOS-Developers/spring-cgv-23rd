@@ -21,8 +21,8 @@ public class SwaggerConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("🎬 CGV 클론 프로젝트 API")
-                        .description("영화 예매, 매점 구매, 찜 기능 등을 제공하는 백엔드 API 명세서입니다.")
+                        .title("CGV 클론 프로젝트 API")
+                        .description("백엔드 API 명세서")
                         .version("v1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components().addSecuritySchemes("bearerAuth", bearerScheme));

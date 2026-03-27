@@ -93,7 +93,7 @@ public enum ErrorCode {
     // 해당 관 미존재
     SCREEN_NOT_FOUND(HttpStatus.NOT_FOUND, "SCR001", "존재하지 않는 관입니다."),
 
-    ;
+    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "SIGN001", "이미 존재하는 이메일입니다."),;
 
     /**
      ******************************** Error Code Constructor ****************************************

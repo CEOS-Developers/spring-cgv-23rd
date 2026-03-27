@@ -23,7 +23,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String nickname;
 
-    @Column(length = 100)
+    @Column(length = 100, unique = true)
     private String email;
 
     private LocalDate birthdate;
