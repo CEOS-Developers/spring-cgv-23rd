@@ -3,6 +3,47 @@
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
 <details>
+<summary><h2>CGV 클론 코딩 : 찜, 구매</h2></summary>
+
+## 1. 영화관 / 영화 찜 기능
+
+### 핵심 구현
+- User - Cinema / Movie 간 **N:M 관계를 별도 엔티티로 분리**
+- (`CinemaLike`, `MovieLike`)
+
+### 구현 방식
+단순 boolean 필드가 아니라 **엔티티로 분리해서 확장 가능하게 설계**
+
+- 찜 요청 시:
+  - 이미 존재 → 삭제 (취소)
+  - 없으면 → 생성 (찜)
+
+
+---
+
+## 2. 매점 구매 기능
+
+### 핵심 구현
+- `StoreMenu` + `StoreOrder` 구조로 설계
+- 구매 시 재고 차감 + 주문 생성
+
+### 구현 흐름
+1. 메뉴 조회
+2. 재고 확인
+3. 재고 차감
+4. 주문 생성
+
+```java
+if (menu.getStock() < quantity) {
+    throw new IllegalArgumentException("재고 부족");
+}
+menu.decreaseStock(quantity);
+storeOrderRepository.save(order);
+```
+
+</details>
+
+<details>
 <summary><h2> 1️⃣ JWT 인증(Authentication) 방법에 대해서 알아보기 </h2></summary>
 
 # 1. JWT 인증(Authentication) 방법 정리
@@ -399,5 +440,225 @@ Header.Payload.Signature
 - **전통적인 웹 서비스**: 세션 + 쿠키
 - **모바일 앱 / SPA / REST API**: JWT + Refresh Token
 - **소셜 로그인**: OAuth 2.0 + 자체 세션 또는 JWT
+
+</details>
+
+<details>
+<summary><h2> 2️⃣ 액세스 토큰 발급 및 검증 로직 구현 </h2></summary>
+
+### 1. Access Token 발급
+- 로그인 성공 시 `TokenProvider`에서 토큰 생성
+- userId는 subject에, 권한은 claim에 저장
+
+```java
+public String createAccessToken(Long id, Authentication authentication) {
+    return Jwts.builder()
+        .setSubject(String.valueOf(id))
+        .claim("auth", authorities)
+        .setExpiration(...)
+        .signWith(key, SignatureAlgorithm.HS512)
+        .compact();
+}
+```
+---
+
+### 2. 토큰 검증 및 인증 처리
+- 요청마다 `JwtAuthenticationFilter`에서 토큰 검증
+- 유효한 경우 `SecurityContext`에 인증 정보 저장
+```java
+String token = tokenProvider.getAccessToken(request);
+
+if (token != null && tokenProvider.validateAccessToken(token)) {
+    Authentication authentication = tokenProvider.getAuthentication(token);
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+}
+```
+
+---
+
+### 3. 핵심 흐름
+
+**로그인 → 토큰 발급 → 요청 시 토큰 검증 → 사용자 인증 처리**
+
+- 세션 없이 토큰 기반으로 사용자 인증을 처리하는 구조로 구현
+
+</details>
+
+<details>
+<summary><h2> 3️⃣ 회원가입 및 로그인 API 구현하고 테스트하기 </h2></summary>
+
+### 1. 구현 내용
+- 회원가입 API 구현을 위해 `SignupRequest` DTO를 추가
+- `AuthController`와 `AuthService`를 작성
+- `SecurityConfig`에 `PasswordEncoder`를 등록해 회원 비밀번호를 암호화하여 저장하도록 구성
+- 로그인 기능을 위해 `LoginRequest`, `LoginResponse` DTO를 추가
+- `AuthController`에 로그인 API를 구현
+- `AuthService`에서는 이메일로 사용자를 조회하고 비밀번호를 검증
+- 앞서 구현한 `TokenProvider`를 이용해 Access Token을 발급하도록 연결
+- 회원가입 후 로그인 테스트를 진행
+- DB 저장과 토큰 발급이 정상 동작하는 것 확인
+
+---
+
+### 2. 결과
+
+![로그인](images/W3/3_login.png)
+
+</details>
+
+<details>
+<summary><h2> 4️⃣ 토큰이 필요한 API 1개 이상 구현하고 테스트하기 </h2></summary>
+
+### 1. 구현 내용
+- `@AuthenticationPrincipal`을 사용해 로그인한 사용자 정보를 컨트롤러에서 바로 받아오도록 구현
+- 이를 활용해 토큰이 필요한 API로 영화관 찜, 영화 찜, 매점 구매 기능을 구현
+- 각 API에서는 `CustomUserDetails`에서 사용자 id를 꺼내 서비스 레이어로 전달하도록 구성
+- `SecurityConfig`에서 `/api/cinemas/*/likes`, `/api/movies/*/likes`, `/api/store/purchases` 경로를 인증이 필요한 요청으로 설정
+- 토큰이 없는 요청은 보호된 API에 접근할 수 없도록 처리
+
+---
+
+### 2. 결과
+
+**로그인**
+![로그인](images/W3/4_login.png)
+
+**찜 요청 보내기**
+![찜 요청 보내기](images/W3/4_likes.png)
+
+**찜 요청 보내기 취소**
+![찜 요청 보내기 취소](images/W3/4_likes_delete.png)
+
+**영화 요청 보내기**
+![영화 요청 보내기](images/W3/4_movie_likes.png)
+
+**영화 요청 보내기 취소**
+![영화 요청 보내기 취소](images/W3/4_movie_likes_delete.png)
+
+**매점 구매 전 상황**
+![매점 구매 전 상황](images/W3/4_before_store_1.png)
+(images/W3/4_before_store_2.png)
+
+**매점 구매**
+![매점 구매](images/W3/4_purchase.png)
+
+**매점 구매 후 상황**
+![매점 구매 후 상황](images/W3/4_after_store_1.png)
+(images/W3/4_after_store_2.png)
+
+</details>
+
+<details>
+<summary><h2> 5️⃣ (도전 과제) Refresh Token 발급 로직 구현 </h2></summary>
+
+- **기존 로그인 로직**
+	- access token만 발급하도록 구현
+- **도전 과제**
+	- refresh token 발급 및 재발급
+
+- **access token**
+	- 유효 시간이 짧기 때문에 만료되면 다시 로그인이 필요하다는 불편함
+  - 인증이 필요한 API 요청에 사용
+- **refresh token**
+	- 사용자는 매번 다시 로그인하지 않고도 새로운 access token을 발급받을 수 있게 됨
+  - access token이 만료되었을 때 새로운 access token 재발급을 위한 용도로 사용
+
+---
+
+### 구현 방식
+
+- 로그인 성공 시 `access token`과 `refresh token`을 함께 발급
+- refresh token은 DB에 저장하여 사용자별로 관리
+- access token 만료 시 클라이언트가 refresh token을 서버에 전달
+- 서버는 refresh token의 유효성, 만료 여부, DB 저장값 일치 여부를 검증
+- 검증이 완료되면 새로운 access token을 재발급
+- 보안 강화를 위해 refresh token도 함께 새로 발급하는 방식으로 확장 가능
+- 로그아웃 시 DB에 저장된 refresh token을 삭제하여 더 이상 재사용할 수 없도록 처리
+
+---
+
+### 핵심 코드
+
+#### 1. Refresh Token 생성 (TokenProvider)
+
+```java
+public String createRefreshToken(Long id) {
+    long now = (new Date()).getTime();
+    Date validity = new Date(now + this.refreshTokenValidityInMilliseconds);
+
+    return Jwts.builder()
+            .setSubject(String.valueOf(id))
+            .claim("type", "refresh")
+            .setExpiration(validity)
+            .signWith(key, SignatureAlgorithm.HS512)
+            .compact();
+}
+```
+
+#### 2. 로그인 시 Access + Refresh Token 발급
+```java
+String accessToken = tokenProvider.createAccessToken(user.getId(), authentication);
+String refreshToken = tokenProvider.createRefreshToken(user.getId());
+
+saveOrUpdateRefreshToken(user.getId(), refreshToken);
+
+return new LoginResponse(accessToken, refreshToken);
+```
+
+#### 3. Refresh Token 검증 및 재발급
+```java
+if (!tokenProvider.validateRefreshToken(refreshToken)) {
+    throw new BadRequestException(ErrorCode.BAD_REQUEST);
+}
+
+RefreshToken savedToken = refreshTokenRepository.findByUserId(userId)
+        .orElseThrow(() -> new BadRequestException(ErrorCode.BAD_REQUEST));
+
+if (!savedToken.getToken().equals(refreshToken) || savedToken.isExpired()) {
+    throw new BadRequestException(ErrorCode.BAD_REQUEST);
+}
+
+String newAccessToken = tokenProvider.createAccessToken(user.getId(), authentication);
+String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
+```
+
+---
+
+### Refresh Token은 어떻게 사용할 수 있을까?
+- `refresh token` : 평소 API를 호출할 때 사용하는 토큰이 아님
+- 실제 요청에서는 access token을 `Authorization` 헤더에 담아 사용
+- access token이 만료되었을 때만 refresh token을 이용해 새로운 access token을 발급 받음
+
+**전체 흐름**
+
+1. 사용자가 로그인한다.
+2. 서버가 access token과 refresh token을 함께 발급한다.
+3. 클라이언트는 access token으로 인증이 필요한 API를 호출한다.
+4. access token이 만료되면, refresh token을 `/api/auth/refresh` 같은 재발급 API에 전달한다.
+5. 서버가 refresh token을 검증한 뒤 새로운 access token을 발급한다.
+6. 클라이언트는 새 access token으로 다시 요청을 보낸다.
+
+---
+
+### 장점
+- access token의 수명을 짧게 유지할 수 있어 보안상 유리
+- 사용자는 access token이 만료되더라도 다시 로그인하지 않고 인증을 이어갈 수 있음
+- refresh token을 DB에 저장해두면 로그아웃 처리, 토큰 무효화, 중복 로그인 관리 같은 기능으로도 확장 가능
+
+---
+
+### 결과 화면
+
+#### 로그인 결과
+
+![회원가입](images/W3/5_signin.png)
+
+![로그인](images/W3/5_login.png)
+
+![refresh token](images/W3/5_refresh.png)
+
+![로그아웃](images/W3/5_logout.png)
+
+![만료](images/W3/5_wrong_refresh.png)
 
 </details>
