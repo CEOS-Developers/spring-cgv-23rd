@@ -41,15 +41,20 @@ public class ReservationService {
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        // 1. 나이 검사
-        if (user.getBirthdate() == null) {
-            // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
-            throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
-        }
-        int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
+        int ageRestriction = schedule.getMovie().getAgeRestriction();
 
-        if (userAge < schedule.getMovie().getAgeRestriction()) {
-            throw new CustomException(ErrorCode.AGE_RESTRICTED);
+        if (ageRestriction >= 18) {
+            // 1. 나이 검사
+            if (user.getBirthdate() == null) {
+                // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
+                throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
+            }
+            int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
+
+            if (userAge < ageRestriction
+            ) {
+                throw new CustomException(ErrorCode.AGE_RESTRICTED);
+            }
         }
 
         // 2. 좌석 검사
