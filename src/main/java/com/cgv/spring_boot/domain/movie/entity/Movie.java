@@ -24,7 +24,10 @@ public class Movie extends BaseEntity {
     private int runningTime;
     private String rating; // 관람 등급
     private LocalDate releaseDate; // 개봉일
-    private String genre;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Genre genre;
 
     @Column(columnDefinition = "TEXT")
     private String prologue; // 프롤로그
@@ -32,7 +35,7 @@ public class Movie extends BaseEntity {
     private String posterUrl; // 포스터 이미지
 
     @Builder
-    public Movie(String title, int runningTime, String rating, LocalDate releaseDate, String genre, String prologue, String posterUrl) {
+    public Movie(String title, int runningTime, String rating, LocalDate releaseDate, Genre genre, String prologue, String posterUrl) {
         this.title = title;
         this.runningTime = runningTime;
         this.rating = rating;

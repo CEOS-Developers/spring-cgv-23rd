@@ -1,5 +1,6 @@
 package com.cgv.spring_boot.domain.movie.dto.request;
 
+import com.cgv.spring_boot.domain.movie.entity.Genre;
 import com.cgv.spring_boot.domain.movie.entity.Movie;
 
 import java.time.LocalDate;
@@ -9,7 +10,7 @@ public record MovieCreateRequest(
         int runningTime,
         String rating,
         LocalDate releaseDate,
-        String genre,
+        Genre genre,
         String prologue,
         String posterUrl
 ) {
