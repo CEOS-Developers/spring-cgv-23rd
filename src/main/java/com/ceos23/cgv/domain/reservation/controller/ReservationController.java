@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,10 +24,14 @@ public class ReservationController {
 
     @PostMapping
     @Operation(summary = "영화 예매하기", description = "유저, 상영 일정, 인원수, 결제 수단 등을 입력받아 예매를 진행합니다.")
-    public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(@RequestBody ReservationCreateRequest request) {
+    public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(
+            @RequestBody ReservationCreateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = Long.parseLong(userDetails.getUsername());
 
         Reservation reservation = reservationService.createReservation(
-                request.userId(),
+                userId,
                 request.screeningId(),
                 request.peopleCount(),
                 request.payment(),

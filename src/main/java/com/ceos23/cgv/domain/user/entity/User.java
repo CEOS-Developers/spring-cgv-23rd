@@ -1,6 +1,7 @@
 package com.ceos23.cgv.domain.user.entity;
 
 import com.ceos23.cgv.domain.user.enums.Badge;
+import com.ceos23.cgv.domain.user.enums.Role;
 import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,4 +36,12 @@ public class User extends BaseTimeEntity {
     private Badge badge = Badge.NORMAL;
 
     private String imageUrl;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.ROLE_USER;
 }
