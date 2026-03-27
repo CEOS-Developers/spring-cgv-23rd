@@ -4,6 +4,7 @@ import com.cgv.spring_boot.domain.user.dto.request.LoginRequest;
 import com.cgv.spring_boot.domain.user.dto.request.SignUpRequest;
 import com.cgv.spring_boot.domain.user.dto.response.LoginResponse;
 import com.cgv.spring_boot.domain.user.entity.User;
+import com.cgv.spring_boot.domain.user.entity.UserRole;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
 import com.cgv.spring_boot.global.common.code.ErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
@@ -32,6 +33,7 @@ public class AuthService {
                 .loginId(request.loginId())
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name())
+                .role(UserRole.USER)
                 .build();
 
         return userRepository.save(user).getId();
