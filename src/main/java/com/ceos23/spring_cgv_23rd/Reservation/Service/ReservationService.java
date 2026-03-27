@@ -1,76 +1,98 @@
 package com.ceos23.spring_cgv_23rd.Reservation.Service;
 
+import com.ceos23.spring_cgv_23rd.DiscountPolicy.*;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationRequestDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationSeatInfo;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationType;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.WithdrawReservationDTO;
+import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.RemainingSeatsDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.ReservationResponseDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.Reservation;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationSeat;
+import com.ceos23.spring_cgv_23rd.Reservation.Domain.SeatInfo;
 import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationRepository;
+import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationSeatRepository;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
 import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreeningRepository;
+import com.ceos23.spring_cgv_23rd.Screen.Service.SeatValidator;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.boot.web.server.Http2;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ReservationService {
-    UserRepository userRepository;
-    ScreeningRepository screeningRepository;
-    ReservationRepository reservationRepository;
+    private final UserRepository userRepository;
+    private final ScreeningRepository screeningRepository;
+    private final ReservationRepository reservationRepository;
+    private final ReservationSeatRepository reservationSeatRepository;
+    private final SeatValidator seatValidator;
+    private final DiscountPolicyFactory discountPolicyFactory;
 
     ReservationService(UserRepository userRepository,
                        ScreeningRepository screeningRepository,
-                       ReservationRepository reservationRepository){
+                       ReservationRepository reservationRepository,
+                       ReservationSeatRepository reservationSeatRepository,
+                       SeatValidator seatValidator,
+                       DiscountPolicyFactory discountPolicyFactory){
         this.userRepository = userRepository;
         this.screeningRepository = screeningRepository;
         this.reservationRepository = reservationRepository;
+        this.reservationSeatRepository = reservationSeatRepository;
+        this.seatValidator = seatValidator;
+        this.discountPolicyFactory = discountPolicyFactory;
     }
 
-    @Transactional
-    public ResponseEntity<ReservationResponseDTO> reserve(ReservationRequestDTO requestDTO){
-        User user = userRepository.findById(requestDTO.userId()).orElseThrow(() -> new NullPointerException("유저정보없음"));
-        Screening screening = screeningRepository.findById(requestDTO.screeningId()).orElseThrow(() -> new NullPointerException("상영정보없음"));
+    /**
+     * TODO: Authentication과 USER 정보 가져오는 것 연결하기
+     * TODO: 자리 없으면 예매 불가능하게하기
+     *
+     * @param req
+     * @return
+     */
 
-        Reservation reservation = Reservation.builder()
-                .user(user)
-                .screening(screening)
-                .reservationDate(requestDTO.reservationDate())
-                .totalPrice(requestDTO.totalPrice())
-                .build();
+    public ReservationResponseDTO reserve(ReservationRequestDTO req){
+        User user = userRepository.findById(req.userId()).orElseThrow(() -> new EntityNotFoundException("유저 정보가 없습니다."));
+        Screening screening = screeningRepository.findById(req.screeningId()).orElseThrow(() -> new EntityNotFoundException("상영 정보가 없습니다."));
 
-        for (ReservationSeatInfo info : requestDTO.seatInfos()){
-            ReservationSeat seat = ReservationSeat.builder()
-                    .reservation(reservation).seatName(info.seatName()).seatInfo(info.info())
-                    .build();
+        seatValidator.checkValidity(screening, req.seatInfos());
 
-            reservation.getReservationSeats().add(seat);
-        }
-
-        Reservation re =  reservationRepository.save(reservation);
-
-        ReservationResponseDTO response = ReservationResponseDTO.builder()
-                .id(re.getId())
-                .build();
-
-        return ResponseEntity.ok(response);
-    }
-
-    @Transactional
-    public ResponseEntity<ReservationResponseDTO> withdraw(WithdrawReservationDTO requestDTO){
-        Reservation reservation = reservationRepository.findById(requestDTO.reservationId()).orElseThrow(
-                () -> new RuntimeException("예약이 존재하지 않습니다.")
+        Reservation reservation = Reservation.create(
+                user,
+                screening,
+                req.toReservingSeats(),
+                discountPolicyFactory.create(screening, req.toSeatInfos())
         );
 
-        reservationRepository.delete(reservation);
+        reservationRepository.save(reservation);
+        return ReservationResponseDTO.createForReserve(reservation);
+    }
 
-        ReservationResponseDTO response = ReservationResponseDTO.builder()
-                .id(reservation.getId())
-                .build();
+    /**
+     * TODO: Authentication과 USER 정보 가져오는 것 연결하기
+     * screening 객체를 전해주면 남은 좌석 정보 전달
+     *
+     */
+    public ResponseEntity<RemainingSeatsDTO> getSeats(long screeningId){
+        Screening screening = screeningRepository.findById(screeningId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "해당 상영정보가 존재하지 않습니다."));
 
-        return ResponseEntity.ok(response);
+        List<String> reservedSeats = reservationSeatRepository.findByScreening(screening).stream()
+                .map(ReservationSeat::getSeatName)
+                .toList();
+
+        return ResponseEntity.ok(
+                RemainingSeatsDTO.create(screeningId, reservedSeats)
+        );
+    }
+
+    public void cancel(long reservationId) throws Exception{
+        screeningRepository.deleteById(reservationId);
     }
 }

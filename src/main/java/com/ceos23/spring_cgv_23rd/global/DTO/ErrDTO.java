@@ -1,4 +1,4 @@
-package com.ceos23.spring_cgv_23rd.ETC.DTO;
+package com.ceos23.spring_cgv_23rd.global.DTO;
 
 import lombok.Builder;
 

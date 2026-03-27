@@ -1,11 +1,10 @@
-package com.ceos23.spring_cgv_23rd.ETC;
+package com.ceos23.spring_cgv_23rd.global;
 
-import com.ceos23.spring_cgv_23rd.ETC.DTO.ErrDTO;
+import com.ceos23.spring_cgv_23rd.global.DTO.ErrDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.client.HttpClientErrorException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {

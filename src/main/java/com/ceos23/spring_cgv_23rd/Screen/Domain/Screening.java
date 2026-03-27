@@ -3,19 +3,23 @@ package com.ceos23.spring_cgv_23rd.Screen.Domain;
 import com.ceos23.spring_cgv_23rd.Movie.Domain.AudienceData;
 import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAmount;
 
-@Builder
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Screening {
+    private Screening(Screen screen, Movie movie, LocalDateTime stTime){
+        this.screen = screen;
+        this.movie = movie;
+        this.startTime = stTime;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
@@ -30,5 +34,28 @@ public class Screening {
 
     private LocalDateTime startTime;
 
-    private LocalDateTime endDate;
+    public LocalTime getStartTimeInLocalTime(){
+        return startTime.toLocalTime();
+    }
+
+    public int getMoviePrice(){
+        return movie.getPrice();
+    }
+
+    public boolean isMorning(){
+        return startTime.toLocalTime().isBefore(LocalTime.of(11,0));
+    }
+
+    public boolean isEvening(){
+        return startTime.toLocalTime().isAfter(LocalTime.of(22,0));
+    }
+
+    public static Screening create(Screen screen, Movie movie, LocalDateTime startTime){
+        return new Screening(screen, movie, startTime);
+    }
+
+    public LocalTime calculateEndTime(LocalTime time, long runningTime){
+        return time.plusMinutes(runningTime);
+    }
+
 }
