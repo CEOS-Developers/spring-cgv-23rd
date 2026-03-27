@@ -1,6 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.user.entity;
 
 import com.ceos.spring_cgv_23rd.domain.user.enums.Gender;
+import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,6 +38,10 @@ public class User extends BaseEntity {
 
     @Column(name = "nickname", nullable = false, unique = true, length = 20)
     private String nickname;
+
+    @Column(name = "role", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;
