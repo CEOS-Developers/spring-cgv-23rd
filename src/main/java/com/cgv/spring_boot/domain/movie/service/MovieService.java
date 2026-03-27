@@ -8,7 +8,8 @@ import com.cgv.spring_boot.domain.movie.repository.MovieRepository;
 import com.cgv.spring_boot.domain.movie.repository.MovieWishRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.movie.exception.MovieErrorCode;
+import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,27 +40,27 @@ public class MovieService {
 
     public MovieResponse findMovieById(Long id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
         return MovieResponse.from(movie);
     }
 
     @Transactional
     public void deleteMovieById(Long id) {
         Movie movie = movieRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
         movieRepository.delete(movie);
     }
 
     @Transactional
     public Long wishMovie(Long userId, Long movieId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
 
         if (movieWishRepository.existsByUserIdAndMovieId(userId, movieId)) {
-            throw new BusinessException(ErrorCode.MOVIE_ALREADY_WISHED);
+            throw new BusinessException(MovieErrorCode.MOVIE_ALREADY_WISHED);
         }
 
         MovieWish movieWish = MovieWish.builder()

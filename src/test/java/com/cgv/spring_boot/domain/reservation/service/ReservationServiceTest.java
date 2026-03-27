@@ -9,7 +9,7 @@ import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.schedule.repository.ScheduleRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -80,7 +80,7 @@ class ReservationServiceTest {
         // when(then)
         assertThatThrownBy(() -> reservationService.reserve(userId, request))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage(ErrorCode.ALREADY_RESERVED_SEAT.getMessage());
+                .hasMessage(ReservationErrorCode.ALREADY_RESERVED_SEAT.getMessage());
 
         verify(reservationRepository, never()).save(any());
     }

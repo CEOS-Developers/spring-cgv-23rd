@@ -1,6 +1,6 @@
 package com.cgv.spring_boot.domain.store.entity;
 
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.store.exception.StoreErrorCode;
 import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import jakarta.persistence.*;
@@ -44,7 +44,7 @@ public class OrderItem extends BaseEntity {
 
     private void validateCount(int count) {
         if (count < 1) {
-            throw new BusinessException(ErrorCode.INVALID_STOCK_QUANTITY);
+            throw new BusinessException(StoreErrorCode.INVALID_STOCK_QUANTITY);
         }
     }
 

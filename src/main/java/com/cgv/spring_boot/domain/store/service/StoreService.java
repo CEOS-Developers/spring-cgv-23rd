@@ -13,7 +13,9 @@ import com.cgv.spring_boot.domain.theater.entity.Theater;
 import com.cgv.spring_boot.domain.theater.repository.TheaterRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.store.exception.StoreErrorCode;
+import com.cgv.spring_boot.domain.theater.exception.TheaterErrorCode;
+import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,20 +40,20 @@ public class StoreService {
     @Transactional
     public Long order(Long userId, StoreOrderRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         Theater theater = theaterRepository.findById(request.theaterId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(TheaterErrorCode.THEATER_NOT_FOUND));
 
         List<PreparedOrderItem> preparedOrderItems = new ArrayList<>();
         int totalPrice = 0;
 
         for (StoreOrderRequest.OrderItemRequest itemRequest : request.items()) {
             Item item = itemRepository.findById(itemRequest.itemId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.ITEM_NOT_FOUND));
+                    .orElseThrow(() -> new BusinessException(StoreErrorCode.ITEM_NOT_FOUND));
 
             StoreInventory inventory = storeInventoryRepository.findByTheaterIdAndItemId(request.theaterId(), itemRequest.itemId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.STORE_INVENTORY_NOT_FOUND));
+                    .orElseThrow(() -> new BusinessException(StoreErrorCode.STORE_INVENTORY_NOT_FOUND));
 
             inventory.decreaseStock(itemRequest.count());
 

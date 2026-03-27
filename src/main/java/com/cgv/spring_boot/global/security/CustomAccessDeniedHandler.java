@@ -1,7 +1,7 @@
 package com.cgv.spring_boot.global.security;
 
-import com.cgv.spring_boot.global.common.code.ErrorCode;
 import com.cgv.spring_boot.global.common.response.ErrorResponse;
+import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +27,7 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletResponse response,
             AccessDeniedException accessDeniedException
     ) throws IOException, ServletException {
-        ErrorCode errorCode = ErrorCode.FORBIDDEN_ACCESS;
+        GlobalErrorCode errorCode = GlobalErrorCode.FORBIDDEN_ACCESS;
 
         log.warn("Forbidden request: {} {}", request.getMethod(), request.getRequestURI());
 

@@ -7,7 +7,8 @@ import com.cgv.spring_boot.domain.theater.repository.TheaterRepository;
 import com.cgv.spring_boot.domain.theater.repository.TheaterWishRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.theater.exception.TheaterErrorCode;
+import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class TheaterService {
 
     public TheaterResponse findTheaterById(Long id) {
         Theater theater = theaterRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(TheaterErrorCode.THEATER_NOT_FOUND));
         return TheaterResponse.from(theater);
     }
 
@@ -45,13 +46,13 @@ public class TheaterService {
     @Transactional
     public Long wishTheater(Long userId, Long theaterId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(TheaterErrorCode.THEATER_NOT_FOUND));
 
         if (theaterWishRepository.existsByUserIdAndTheaterId(userId, theaterId)) {
-            throw new BusinessException(ErrorCode.THEATER_ALREADY_WISHED);
+            throw new BusinessException(TheaterErrorCode.THEATER_ALREADY_WISHED);
         }
 
         TheaterWish theaterWish = TheaterWish.builder()

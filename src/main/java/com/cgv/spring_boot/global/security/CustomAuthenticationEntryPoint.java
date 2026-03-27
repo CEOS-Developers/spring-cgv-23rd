@@ -1,7 +1,7 @@
 package com.cgv.spring_boot.global.security;
 
-import com.cgv.spring_boot.global.common.code.ErrorCode;
 import com.cgv.spring_boot.global.common.response.ErrorResponse;
+import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,7 +27,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
             HttpServletResponse response,
             AuthenticationException authException
     ) throws IOException, ServletException {
-        ErrorCode errorCode = ErrorCode.UNAUTHORIZED;
+        GlobalErrorCode errorCode = GlobalErrorCode.UNAUTHORIZED;
 
         log.warn("Unauthorized request: {} {}", request.getMethod(), request.getRequestURI());
 

@@ -10,7 +10,10 @@ import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.schedule.repository.ScheduleRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
+import com.cgv.spring_boot.domain.schedule.exception.ScheduleErrorCode;
+import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
+import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,16 +39,16 @@ public class ReservationService {
     @Transactional
     public Long reserve(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = scheduleRepository.findById(request.scheduleId())
-                .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
 
         List<String> rows = request.seats().stream().map(SeatRequest::seatRow).toList();
         List<Integer> cols = request.seats().stream().map(SeatRequest::seatCol).toList();
 
         if (!reservedSeatRepository.findAllByScheduleAndRowsAndCols(schedule.getId(), rows, cols).isEmpty()) {
-            throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT);
+            throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
 
         Reservation reservation = Reservation.builder()
@@ -76,10 +79,10 @@ public class ReservationService {
     @Transactional
     public void cancel(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new BusinessException(GlobalErrorCode.FORBIDDEN_ACCESS);
         }
 
         reservation.cancelStatus();

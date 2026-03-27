@@ -1,7 +1,7 @@
 package com.cgv.spring_boot.domain.store.entity;
 
 import com.cgv.spring_boot.domain.theater.entity.Theater;
-import com.cgv.spring_boot.global.common.code.ErrorCode;
+import com.cgv.spring_boot.domain.store.exception.StoreErrorCode;
 import com.cgv.spring_boot.global.common.entity.BaseEntity;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import jakarta.persistence.*;
@@ -42,17 +42,17 @@ public class StoreInventory extends BaseEntity {
 
     public void decreaseStock(int quantity) {
         if (quantity < 1) {
-            throw new BusinessException(ErrorCode.INVALID_STOCK_QUANTITY);
+            throw new BusinessException(StoreErrorCode.INVALID_STOCK_QUANTITY);
         }
         if (this.stock - quantity < 1) {
-            throw new BusinessException(ErrorCode.INSUFFICIENT_STOCK);
+            throw new BusinessException(StoreErrorCode.INSUFFICIENT_STOCK);
         }
         this.stock -= quantity;
     }
 
     private void validateStock(int stock) {
         if (stock < 1) {
-            throw new BusinessException(ErrorCode.INVALID_STOCK_QUANTITY);
+            throw new BusinessException(StoreErrorCode.INVALID_STOCK_QUANTITY);
         }
     }
 }
