@@ -37,6 +37,9 @@ public enum ErrorCode {
     // @RequestBody 및 @RequestParam, @PathVariable 값이 유효하지 않음
     NOT_VALID_ERROR(HttpStatus.BAD_REQUEST, "G007", "handle Validation Exception"),
 
+    // 인증이 없음
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "G008" , "인증이 필요합니다." ),
+
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G999", "Internal Server Error Exception"),
 
@@ -93,7 +96,11 @@ public enum ErrorCode {
     // 해당 관 미존재
     SCREEN_NOT_FOUND(HttpStatus.NOT_FOUND, "SCR001", "존재하지 않는 관입니다."),
 
-    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "SIGN001", "이미 존재하는 이메일입니다."),;
+    // 중복 이메일
+    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "SIGN001", "이미 존재하는 이메일입니다."),
+
+
+    ;
 
     /**
      ******************************** Error Code Constructor ****************************************
