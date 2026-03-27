@@ -20,18 +20,21 @@ import org.springframework.stereotype.Component;
 public class TokenProvider implements InitializingBean {
 
     private final String secret;
-    private final long tokenValidityInMilliseconds;
+    private final long accessTokenValidityInMilliseconds;
+    private final long refreshTokenValidityInMilliseconds;
     private Key key;
 
     private final UserDetailsService userDetailsService;
 
     public TokenProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-token-validity-in-seconds}") long tokenValidityInSeconds,
+            @Value("${jwt.access-token-validity-in-seconds}") long accessTokenValidityInSeconds,
+            @Value("${jwt.refresh-token-validity-in-seconds}") long refreshTokenValidityInSeconds,
             UserDetailsService userDetailsService
     ) {
         this.secret = secret;
-        this.tokenValidityInMilliseconds = tokenValidityInSeconds * 1000;
+        this.accessTokenValidityInMilliseconds = accessTokenValidityInSeconds * 1000;
+        this.refreshTokenValidityInMilliseconds = refreshTokenValidityInSeconds * 1000;
         this.userDetailsService = userDetailsService;
     }
 
@@ -43,7 +46,7 @@ public class TokenProvider implements InitializingBean {
 
     public String createAccessToken(Long id, Authentication authentication) {
         long now = (new Date()).getTime();
-        Date validity = new Date(now + this.tokenValidityInMilliseconds);
+        Date validity = new Date(now + this.accessTokenValidityInMilliseconds);
 
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -52,6 +55,18 @@ public class TokenProvider implements InitializingBean {
         return Jwts.builder()
                 .setSubject(String.valueOf(id))
                 .claim("auth", authorities)
+                .setExpiration(validity)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String createRefreshToken(Long id) {
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.refreshTokenValidityInMilliseconds);
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(id))
+                .claim("type", "refresh")
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
@@ -79,6 +94,14 @@ public class TokenProvider implements InitializingBean {
     }
 
     public boolean validateAccessToken(String token) {
+        return validateToken(token);
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateToken(token);
+    }
+
+    private boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
                     .setSigningKey(key)
@@ -88,5 +111,9 @@ public class TokenProvider implements InitializingBean {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public long getRefreshTokenValidityInMilliseconds() {
+        return refreshTokenValidityInMilliseconds;
     }
 }
