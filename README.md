@@ -537,14 +537,14 @@ if (token != null && tokenProvider.validateAccessToken(token)) {
 
 **매점 구매 전 상황**
 ![매점 구매 전 상황](images/W3/4_before_store_1.png)
-(images/W3/4_before_store_2.png)
+![매점 구매 전 상황](images/W3/4_before_store_2.png)
 
 **매점 구매**
 ![매점 구매](images/W3/4_purchase.png)
 
 **매점 구매 후 상황**
 ![매점 구매 후 상황](images/W3/4_after_store_1.png)
-(images/W3/4_after_store_2.png)
+![매점 구매 후 상황](images/W3/4_after_store_2.png)
 
 </details>
 
@@ -651,7 +651,7 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 #### 로그인 결과
 
-![회원가입](images/W3/5_signin.png)
+![회원가입](images/W3/5_signup.png)
 
 ![로그인](images/W3/5_login.png)
 
