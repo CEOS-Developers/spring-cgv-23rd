@@ -36,4 +36,20 @@ public class ReservationController {
         reservationService.cancelReservation(userId, reservationId);
         return ApiResponse.onSuccess("예매 취소 성공");
     }
+
+    @Operation(summary = "비회원 영화 예매")
+    @PostMapping("/guest")
+    public ApiResponse<ReservationResponseDTO.ReservationDetailResponseDTO> createGuestReservation(
+            @Valid @RequestBody ReservationRequestDTO.CreateGuestReservationRequestDTO request) {
+        ReservationResponseDTO.ReservationDetailResponseDTO response = reservationService.createGuestReservation(request);
+        return ApiResponse.onSuccess("비회원 영화 예매 성공", response);
+    }
+
+    @Operation(summary = "비회원 예매 취소")
+    @PatchMapping("/guest/cancel")
+    public ApiResponse<Void> cancelGuestReservation(
+            @Valid @RequestBody ReservationRequestDTO.CancelGuestReservationRequestDTO request) {
+        reservationService.cancelGuestReservation(request);
+        return ApiResponse.onSuccess("비회원 예매 취소 성공");
+    }
 }

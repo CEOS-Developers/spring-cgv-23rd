@@ -1,13 +1,12 @@
 package com.ceos.spring_cgv_23rd.domain.reservation.entity;
 
+import com.ceos.spring_cgv_23rd.domain.guest.entity.Guest;
 import com.ceos.spring_cgv_23rd.domain.reservation.enums.ReservationStatus;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-
-import java.util.UUID;
 
 @Entity
 @Table(name = "reservation", indexes = {
@@ -25,8 +24,12 @@ public class Reservation extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "guest_id")
+    private Guest guest;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screening_id", nullable = false)
@@ -43,18 +46,31 @@ public class Reservation extends BaseEntity {
     private Integer totalPrice;
 
 
-    public static Reservation createReservation(User user, Screening screening, int seatSize) {
+    public static Reservation createReservation(User user, Screening screening, int seatSize, String reservationNumber) {
         return Reservation.builder()
                 .user(user)
                 .screening(screening)
-                .reservationNumber(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .reservationNumber(reservationNumber)
                 .status(ReservationStatus.COMPLETED)
                 .totalPrice(screening.getPrice() * seatSize)
                 .build();
     }
 
+    public static Reservation createGuestReservation(Guest guest, Screening screening, int seatSize, String reservationNumber) {
+        return Reservation.builder()
+                .guest(guest)
+                .screening(screening)
+                .reservationNumber(reservationNumber)
+                .status(ReservationStatus.COMPLETED)
+                .totalPrice(screening.getPrice() * seatSize)
+                .build();
+    }
 
     public void cancel() {
         this.status = ReservationStatus.CANCELLED;
+    }
+
+    public boolean isGuest() {
+        return user == null && guest != null;
     }
 }

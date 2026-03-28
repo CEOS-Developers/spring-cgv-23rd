@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 @AllArgsConstructor
 public enum ReservationErrorCode implements BaseErrorCode {
 
+    GUEST_AUTH_FAILED(HttpStatus.UNAUTHORIZED, "RESERVATION_4011", "비회원 인증에 실패했습니다."),
+
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_4041", "존재하지 않는 예매입니다."),
 
     ALREADY_CANCELLED(HttpStatus.BAD_REQUEST, "RESERVATION_4001", "이미 취소된 예매입니다."),

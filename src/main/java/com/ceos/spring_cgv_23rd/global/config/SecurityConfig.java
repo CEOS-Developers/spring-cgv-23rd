@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/guest").permitAll()
                         // guest
                         .requestMatchers("/api/v1/auth/**").hasRole(UserRole.GUEST.name())
+                        .requestMatchers("/api/v1/reservations/guest/**").hasRole(UserRole.GUEST.name())
                         .requestMatchers(HttpMethod.GET, "/api/v1/movies/**", "/api/v1/products/**", "/api/v1/reviews/**", "/api/v1/screenings/**", "/api/v1/theaters/**", "/api/v1/reservations/**").hasRole(UserRole.GUEST.name())
                         //manager
                         .requestMatchers("/api/v1/manager/**").hasRole(UserRole.MANAGER.name())
