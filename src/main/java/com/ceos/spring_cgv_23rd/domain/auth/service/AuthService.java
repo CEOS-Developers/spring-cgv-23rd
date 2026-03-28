@@ -10,4 +10,8 @@ public interface AuthService {
     AuthResponseDTO.TokenResponseDTO signup(AuthRequestDTO.SignupRequestDTO request);
 
     AuthResponseDTO.TokenResponseDTO login(AuthRequestDTO.LoginRequestDTO request);
+
+    AuthResponseDTO.TokenResponseDTO refresh(String refreshToken);
+
+    void logout(String refreshToken);
 }

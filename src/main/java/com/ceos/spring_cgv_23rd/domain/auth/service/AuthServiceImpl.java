@@ -2,18 +2,25 @@ package com.ceos.spring_cgv_23rd.domain.auth.service;
 
 import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthRequestDTO;
 import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthResponseDTO;
+import com.ceos.spring_cgv_23rd.domain.auth.entity.RefreshToken;
+import com.ceos.spring_cgv_23rd.domain.auth.repository.RefreshTokenRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
 import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.code.GeneralErrorCode;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import com.ceos.spring_cgv_23rd.global.jwt.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
@@ -21,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public AuthResponseDTO.TokenResponseDTO issueGuestToken() {
@@ -70,10 +78,11 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        return generateTokens(user);
+        return generateAndSaveTokens(user);
     }
 
     @Override
+    @Transactional
     public AuthResponseDTO.TokenResponseDTO login(AuthRequestDTO.LoginRequestDTO request) {
 
         // 유저 조회
@@ -85,14 +94,67 @@ public class AuthServiceImpl implements AuthService {
             throw new GeneralException(GeneralErrorCode.INVALID_LOGIN);
         }
 
-        return generateTokens(user);
+        return generateAndSaveTokens(user);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponseDTO.TokenResponseDTO refresh(String refreshToken) {
+
+        // refreshToken 유효성 검증
+        Claims claims;
+        try {
+            claims = jwtTokenProvider.validateToken(refreshToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
+        }
+
+        if (!jwtTokenProvider.isRefreshToken(refreshToken)) {
+            throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
+        }
+
+        Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
+
+        // DB에 존재하는지 확인
+        RefreshToken storedToken = refreshTokenRepository.findByToken(refreshToken)
+                .orElseGet(() -> {
+                    // 해당 유저의 모든 refreshToken 삭제
+                    refreshTokenRepository.deleteAllByUserId(userId);
+                    log.warn("토큰 재사용 감지 - userId: {}", userId);
+                    throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
+                });
+
+        // 기존 refreshToken 삭제
+        refreshTokenRepository.delete(storedToken);
+
+        // 유저 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
+
+        // 새 토큰 발급
+        return generateAndSaveTokens(user);
+    }
+
+    @Override
+    @Transactional
+    public void logout(String refreshToken) {
+        refreshTokenRepository.deleteByToken(refreshToken);
     }
 
 
-    private AuthResponseDTO.TokenResponseDTO generateTokens(User user) {
+    private AuthResponseDTO.TokenResponseDTO generateAndSaveTokens(User user) {
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user);
 
+        RefreshToken refreshTokenEntity = RefreshToken.builder()
+                .userId(user.getId())
+                .token(refreshToken)
+                .expiryDate(jwtTokenProvider.getExpirationFromToken(refreshToken))
+                .build();
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
         return new AuthResponseDTO.TokenResponseDTO(accessToken, refreshToken);
+
     }
 }
