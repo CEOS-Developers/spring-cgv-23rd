@@ -5,8 +5,13 @@ import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
 import com.ceos.spring_cgv_23rd.domain.movie.entity.MovieLike;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.MovieStatus;
 import com.ceos.spring_cgv_23rd.domain.movie.exception.MovieErrorCode;
-import com.ceos.spring_cgv_23rd.domain.movie.repository.*;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieCreditRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieLikeRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieMediaRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
+import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,10 +26,10 @@ import java.util.Optional;
 public class MovieServiceImpl implements MovieService {
 
     private final MovieRepository movieRepository;
-    private final MovieStatisticRepository movieStatisticRepository;
     private final MovieCreditRepository movieCreditRepository;
     private final MovieMediaRepository movieMediaRepository;
     private final MovieLikeRepository movieLikeRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<MovieResponseDTO.MovieListResponseDTO> getMovieChart() {
@@ -99,13 +104,9 @@ public class MovieServiceImpl implements MovieService {
     @Transactional
     public MovieResponseDTO.MovieLikeResponseDTO toggleMovieLike(Long userId, Long movieId) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 영화 조회
         Movie movie = movieRepository.findById(movieId)

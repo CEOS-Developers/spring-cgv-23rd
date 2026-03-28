@@ -2,6 +2,7 @@ package com.ceos.spring_cgv_23rd.domain.theater.controller;
 
 import com.ceos.spring_cgv_23rd.domain.theater.dto.TheaterResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.theater.service.TheaterService;
+import com.ceos.spring_cgv_23rd.global.annotation.LoginUser;
 import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,8 +37,9 @@ public class TheaterController {
     @Operation(summary = "영화관 찜 토글")
     @PostMapping("/{theaterId}/like")
     public ApiResponse<TheaterResponseDTO.TheaterLikeResponseDTO> toggleTheaterLike(
-            @PathVariable Long theaterId) {         // TODO: userId 추가
-        TheaterResponseDTO.TheaterLikeResponseDTO response = theaterService.toggleTheaterLike(1L, theaterId);
+            @LoginUser Long userId,
+            @PathVariable Long theaterId) {
+        TheaterResponseDTO.TheaterLikeResponseDTO response = theaterService.toggleTheaterLike(userId, theaterId);
         String message = response.isLiked() ? "영화관 찜 등록 성공" : "영화관 찜 취소 성공";
         return ApiResponse.onSuccess(message, response);
     }

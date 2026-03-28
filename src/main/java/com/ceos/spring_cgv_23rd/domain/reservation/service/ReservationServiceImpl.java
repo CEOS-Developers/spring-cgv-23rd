@@ -14,6 +14,8 @@ import com.ceos.spring_cgv_23rd.domain.screening.repository.ScreeningRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Seat;
 import com.ceos.spring_cgv_23rd.domain.theater.repository.SeatRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
+import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,19 +31,16 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final ScreeningRepository screeningRepository;
+    private final UserRepository userRepository;
     private final SeatRepository seatRepository;
 
     @Override
     @Transactional
     public ReservationResponseDTO.ReservationDetailResponseDTO createReservation(Long userId, ReservationRequestDTO.CreateReservationRequestDTO request) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
 
         // 상영 스케줄 조회
@@ -85,23 +84,19 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public void cancelReservation(Long userId, Long reservationId) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
+
 
         // 예매 조회
         Reservation reservation = reservationRepository.findWithScreeningById(reservationId)
                 .orElseThrow(() -> new GeneralException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
-        // TODO: 주석 제거
         // 본인 예약인지 확인
-//        if (!user.equals(reservation.getUser())) {
-//            throw new GeneralException(ReservationErrorCode.RESERVATION_NOT_FOUND);
-//        }
+        if (!user.equals(reservation.getUser())) {
+            throw new GeneralException(ReservationErrorCode.RESERVATION_NOT_FOUND);
+        }
 
         // 이미 취소된 예약인지 확인
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {

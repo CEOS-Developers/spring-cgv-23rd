@@ -15,6 +15,8 @@ import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
 import com.ceos.spring_cgv_23rd.domain.theater.exception.TheaterErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.repository.TheaterRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
+import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,18 +35,15 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final TheaterRepository theaterRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public ProductResponseDTO.OrderDetailResponseDTO createOrder(Long userId, ProductRequestDTO.CreateOrderRequestDTO request) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 영화관 조회
         Theater theater = theaterRepository.findById(request.theaterId())
@@ -93,23 +92,18 @@ public class ProductServiceImpl implements ProductService {
     @Transactional
     public void cancelOrder(Long userId, Long orderId) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 주문 조회
         ProductOrder order = productOrderRepository.findWithOrderItemsById(orderId)
                 .orElseThrow(() -> new GeneralException(ProductErrorCode.ORDER_NOT_FOUND));
 
-        // TODO: 주석 제거
         // 본인 주문인지 확인
-//        if (!user.equals(order.getUser())) {
-//            throw new GeneralException(ProductErrorCode.ORDER_NOT_FOUND);
-//        }
+        if (!user.equals(order.getUser())) {
+            throw new GeneralException(ProductErrorCode.ORDER_NOT_FOUND);
+        }
 
         // 이미 취소된 주문인지 확인
         if (order.getStatus() == OrderStatus.CANCELLED) {

@@ -7,6 +7,8 @@ import com.ceos.spring_cgv_23rd.domain.theater.exception.TheaterErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.repository.TheaterLikeRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.repository.TheaterRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
+import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class TheaterServiceImpl implements TheaterService {
 
     private final TheaterRepository theaterRepository;
     private final TheaterLikeRepository theaterLikeRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<TheaterResponseDTO.TheaterListResponseDTO> getTheaterList() {
@@ -48,13 +51,9 @@ public class TheaterServiceImpl implements TheaterService {
     @Transactional
     public TheaterResponseDTO.TheaterLikeResponseDTO toggleTheaterLike(Long userId, Long theaterId) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
 
         // 영화관 조회
