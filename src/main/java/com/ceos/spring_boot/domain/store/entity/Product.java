@@ -1,5 +1,6 @@
 package com.ceos.spring_boot.domain.store.entity;
 
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,7 +8,7 @@ import lombok.*;
 @Getter
 @Table(name = "products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Product {
+public class Product extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

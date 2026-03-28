@@ -1,6 +1,8 @@
 package com.ceos.spring_boot.domain.reservation.entity;
 
 import com.ceos.spring_boot.domain.cinema.entity.Seat;
+import com.ceos.spring_boot.domain.schedule.entity.Schedule;
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,7 +20,7 @@ import lombok.*;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ReservationSeat {
+public class ReservationSeat extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,6 +30,10 @@ public class ReservationSeat {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", nullable = false)
+    private Schedule schedule;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)

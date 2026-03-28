@@ -14,7 +14,7 @@ public class ApiResponse<T> {
     @Schema(description = "상태코드 ", example = "200")
     private int statusCode;
 
-    @Schema(description = "상영 코드 메시지", example = "DELETE_SUCCESS")
+    @Schema(description = "상영 코드 메시지", example = "GET_SUCCESS")
     private String message;
 
     @Builder

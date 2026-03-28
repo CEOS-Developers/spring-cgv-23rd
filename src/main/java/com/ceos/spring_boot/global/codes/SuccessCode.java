@@ -8,7 +8,7 @@ public enum SuccessCode {
     // 조회 성공
     GET_SUCCESS(200, "GET_SUCCESS"),
 
-    // 조회 성공
+    // 로그인 성공
     LOGIN_SUCCESS(200, "LOGIN_SUCCESS"),
 
     // 삭제 성공

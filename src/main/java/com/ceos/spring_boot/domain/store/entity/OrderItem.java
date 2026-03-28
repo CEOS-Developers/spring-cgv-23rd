@@ -1,15 +1,16 @@
 package com.ceos.spring_boot.domain.store.entity;
 
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @Table(name = "order_items")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class OrderItem {
+public class OrderItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,5 +26,13 @@ public class OrderItem {
     private Product product;
 
     private Integer count; // 구매 수량
+
+    public void setOrder(Order order) {
+        this.order = order;
+
+        if (!order.getOrderItems().contains(this)) {
+            order.getOrderItems().add(this);
+        }
+    }
 
 }

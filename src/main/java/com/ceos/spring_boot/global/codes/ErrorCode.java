@@ -47,6 +47,38 @@ public enum ErrorCode {
     // 기존 데이터와 충돌
     CONFLICT_ERROR(409, "Conflict Exception"),
 
+    // CUSTUM_ERROR
+    // 사용자 관련 에러
+    USER_NOT_FOUND_ERROR(404,  "사용자를 찾을 수 없습니다."),
+    DUPLICATE_EMAIL_ERROR(409, "이미 가입된 이메일입니다."),
+    INVALID_LOGIN_ERROR(401, "비밀번호가 일치하지 않습니다."),
+
+    // 영화관 관련 에러
+    CINEMA_NOT_FOUND_ERROR(404, "해당 ID의 영화관을 찾을 수 없습니다."),
+
+    // 영화 관련 에러
+    MOVIE_NOT_FOUND_ERROR(404, "해당 ID의 영화를 찾을 수 없습니다."),
+
+    // 상영관 관련 에러
+    SCREEN_NOT_FOUND_ERROR(404, "해당 상영관을 찾을 수 없습니다."),
+    ALREADY_SCREEN_SCHEDULE_ERROR(409, "해당 시간에 이미 등록된 상영 스케줄이 있습니다."),
+
+    // 예매 관련 에러
+    SEAT_NOT_FOUND_ERROR(404, "좌석 정보를 찾을 수 없습니다."),
+    RESERVATION_NOT_FOUND_ERROR(404, "존재하지 않는 예매 내역입니다."),
+    ALREADY_RESERVED_SEAT_ERROR(409, "이미 선택된 좌석이 포함되어 있습니다."),
+    ALREADY_CANCELED_RESERVATION_ERROR(409, "이미 취소된 예매입니다."),
+
+    // 상영 일정 관련 에러
+    SCHEDULE_NOT_FOUND_ERROR(404, "상영 일정을 찾을 수 없습니다."),
+
+    // 매점 관련 에러
+    PRODUCT_NOT_FOUND_ERROR(404, "해당 상품을 찾을 수 없습니다."),
+    STOCK_NOT_FOUND_ERROR(404, "해당 지점에 상품 재고 정보가 없습니다."),
+    OUT_OF_STOCK_ERROR(400, "재고가 부족하여 주문할 수 없습니다."),
+    ORDER_NOT_FOUND_ERROR(404, "해당 주문을 찾을 수 없습니다."),
+    ORDER_NOT_MINE(400, "본인의 주문 내역만 조회할 수 있습니다."),
+
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(500, "Internal Server Error Exception"),
 

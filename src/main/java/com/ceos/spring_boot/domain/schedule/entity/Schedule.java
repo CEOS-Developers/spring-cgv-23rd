@@ -2,6 +2,7 @@ package com.ceos.spring_boot.domain.schedule.entity;
 
 import com.ceos.spring_boot.domain.cinema.entity.Screen;
 import com.ceos.spring_boot.domain.movie.entity.Movie;
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,7 +14,7 @@ import java.time.LocalTime;
 @Getter
 @Table(name = "schedules")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Schedule {
+public class Schedule extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,11 +30,16 @@ public class Schedule {
     private Screen screen; // 상영되는 상영관
 
     @Column(nullable = false)
-    private LocalDate startDate; // 상영 날짜 (예: 2024-03-20)
+    private LocalDateTime startAt;
 
     @Column(nullable = false)
-    private LocalTime startTime; // 상영 시작 시간 (예: 14:30)
+    private LocalDateTime endAt;
 
-    @Column(nullable = false)
-    private LocalTime endTime;   // 상영 종료 시간 (예: 16:30)
+    @Builder
+    public Schedule(Movie movie, Screen screen, LocalDateTime startAt, LocalDateTime endAt) {
+        this.movie = movie;
+        this.screen = screen;
+        this.startAt = startAt;
+        this.endAt = endAt;
+    }
 }
