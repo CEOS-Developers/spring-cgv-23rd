@@ -49,7 +49,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
-        String accessToken = tokenProvider.createAccessToken(String.valueOf(user.getId()), user.getRole().name());
+        String accessToken = tokenProvider.createAccessToken(user.getEmail(), user.getRole().name());
 
         return new TokenResponse(accessToken);
     }

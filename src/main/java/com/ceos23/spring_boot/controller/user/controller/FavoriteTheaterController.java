@@ -33,7 +33,7 @@ public class FavoriteTheaterController {
     }
 
     @Operation(summary = "영화관 찜 토클 (찜하기/취소하기)")
-    @PostMapping("/{theaterId}/favorites")
+    @PostMapping("api/theaters/{theaterId}/favorites")
     public ResponseEntity<FavoriteTheaterToggleResponse> toggleFavorite(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long theaterId
