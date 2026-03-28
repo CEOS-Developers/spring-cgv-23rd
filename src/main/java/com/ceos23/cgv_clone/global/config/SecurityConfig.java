@@ -6,6 +6,7 @@ import com.ceos23.cgv_clone.global.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -40,7 +41,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/signup").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/reissue").permitAll()
                         .requestMatchers("/api/movies/**").permitAll()
                         .requestMatchers("/api/theaters/**").permitAll()
                         .requestMatchers("/api/schedules/**").permitAll()

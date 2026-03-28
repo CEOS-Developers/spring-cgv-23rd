@@ -6,14 +6,14 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
     /**
-     ******************************** Global Error CodeList ****************************************
+     * ******************************* Global Error CodeList ****************************************
      * HTTP Status Code
      * 400 : Bad Request
      * 401 : Unauthorized
      * 403 : Forbidden
      * 404 : Not Found
      * 500 : Internal Server Error
-     **********************************************************************************************
+     * *********************************************************************************************
      */
 
     // 잘못된 서버 요청
@@ -38,14 +38,20 @@ public enum ErrorCode {
     NOT_VALID_ERROR(HttpStatus.BAD_REQUEST, "G007", "handle Validation Exception"),
 
     // 인증이 없음
-    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "G008" , "인증이 필요합니다." ),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "G008", "인증이 필요합니다."),
+
+    // 리프레쉬 토큰이 없음
+    INVALID_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "G009", "리프레쉬 토큰이 없습니다."),
+
+    // 만료된 리프레쉬 토큰
+    EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "G010", "만료된 리프레쉬 토큰입니다."),
 
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G999", "Internal Server Error Exception"),
 
 
     /**
-     ******************************** Custom Error CodeList ****************************************
+     * ******************************* Custom Error CodeList ****************************************
      */
 
     // 유저 데이터 미존재
@@ -100,10 +106,11 @@ public enum ErrorCode {
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "SIGN001", "이미 존재하는 이메일입니다."),
 
     // 비밀번호 불일치
-    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "SIGN002", "비밀번호가 다릅니다" );
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "SIGN002", "비밀번호가 다릅니다"),
 
+    ;
     /**
-     ******************************** Error Code Constructor ****************************************
+     * ******************************* Error Code Constructor ****************************************
      */
     // 에러 코드의 'HTTP 상태'을 반환한다.
     private final HttpStatus httpStatus;

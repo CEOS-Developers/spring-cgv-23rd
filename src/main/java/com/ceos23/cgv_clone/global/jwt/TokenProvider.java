@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Component
@@ -28,6 +29,9 @@ public class TokenProvider implements InitializingBean {
 
     @Value("${jwt.expiration}")
     private long expirationMs;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpirationMs;
 
     private Key key;
 
@@ -57,6 +61,21 @@ public class TokenProvider implements InitializingBean {
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
                 .compact();
+    }
+
+    // 리프레쉬 토큰 생성
+    public String createRefreshToken(Long userId) {
+        Date now = new Date();
+        return Jwts.builder()
+                .subject(String.valueOf(userId))
+                .issuedAt(now)
+                .expiration(new Date(now.getTime() + refreshExpirationMs))
+                .signWith(key)
+                .compact();
+    }
+
+    public LocalDateTime getRefreshTokenExpiresAt() {
+        return LocalDateTime.now().plusSeconds(refreshExpirationMs / 1000);
     }
 
     // 토큰에서 userId 추출
