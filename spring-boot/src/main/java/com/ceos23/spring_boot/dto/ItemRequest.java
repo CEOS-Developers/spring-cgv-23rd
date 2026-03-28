@@ -7,6 +7,6 @@ public record ItemRequest(
         int price
 ) {
     public Item toEntity() {
-        return new Item(null, name, price);
+        return new Item(name, price);
     }
 }

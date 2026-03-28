@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.controller;
 
 import com.ceos23.spring_boot.domain.Reservation;
+import com.ceos23.spring_boot.dto.ReservationRequest;
 import com.ceos23.spring_boot.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;

@@ -10,35 +10,31 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/items")
-@RequiredArgsConstructor
 public class ItemController {
 
-    private final ItemRepository itemRepository;
+    private final ItemService itemService;
 
-    // 🔥 CREATE
     @PostMapping
     public ItemResponse createItem(@RequestBody ItemRequest request) {
         Item item = request.toEntity();
-        Item saved = itemRepository.save(item);
+        Item saved = itemService.save(item);
         return ItemResponse.from(saved);
     }
 
-    // 🔥 GET ALL
     @GetMapping
     public List<ItemResponse> getAllItems() {
-        return itemRepository.findAll()
+        return itemService.findAll()
                 .stream()
                 .map(ItemResponse::from)
                 .toList();
     }
 
-    // 🔥 GET ONE
     @GetMapping("/{id}")
     public ItemResponse getItem(@PathVariable Long id) {
-        Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+        Item item = itemService.findById(id);
         return ItemResponse.from(item);
     }
 }

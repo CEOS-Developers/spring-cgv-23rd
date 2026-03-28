@@ -14,8 +14,8 @@ public class MovieService {
     private final MovieRepository movieRepository;
 
     // 영화 생성
-    public Movie create(String title) {
-        return movieRepository.save(new Movie(title));
+    public Movie create(String title, String director) {
+        return movieRepository.save(new Movie(title, director));
     }
 
     // 전체 조회

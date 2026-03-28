@@ -1,10 +1,13 @@
 package com.ceos23.spring_boot.service;
 
 import com.ceos23.spring_boot.domain.*;
+import com.ceos23.spring_boot.exception.CustomException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import com.ceos23.spring_boot.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 
 @Service
@@ -17,6 +20,7 @@ public class ReservationService {
     private final SeatRepository seatRepository;
 
     // 🎟 예매
+    @Transactional
     public Reservation reserve(Long userId, Long screeningId, Long seatId) {
 
         // 1. 좌석 중복 체크 (핵심🔥)
@@ -24,7 +28,7 @@ public class ReservationService {
                 .existsByScreeningIdAndSeatId(screeningId, seatId);
 
         if (exists) {
-            throw new RuntimeException("이미 예약된 좌석입니다.");
+            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
 
         // 2. 엔티티 조회
