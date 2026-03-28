@@ -523,4 +523,80 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
         3. 우리 백엔드의 **TokenProvider**를 통해 **우리 서비스 전용 새로운 Access Token과 Refresh Token** 생성
         4. 프론트엔드에게 AT, RT 전달
             - 프론트엔드 입장에서 **일반 로그인을 하든, 카카오 로그인을 하든** 똑같이 우리 서비스의 JWT 받아 쓰게 됨
+---
 
+## 프로젝트 인증/인가 전체 흐름
+
+- **JWT + REST API 환경**
+    - 로그인할 때
+    - 토큰 들고 API 요청할 때
+
+---
+
+### 상황 1: 로그인을 할 때
+
+- 사용자가 아이디와 비밀번호를 치고 `/api/auth/login`으로 요청
+1. **Filter Chain Proxy**
+    - 사용자의 요청이 **스프링(DispatcherServlet)**으로 가기 전, **SecurityFilterChain**에 걸림
+2. **필터 통과**
+    - `JwtAuthenticationFilter` 통과
+        - 헤더에 토큰 없으므로, 다음 필터에 넘김
+    - **SecurityFilterChain**도 통과
+        - `SecurityConfig`에`.requestMatchers("/login").permitAll()`이라고 설정되어 있으므로
+3. **`AuthController`에 도달**
+    - 요청이 컨트롤러에 도착
+        - `AuthService` 호출
+4. **`AuthService`의 인증 수행**
+    - DB에서 이메일로 유저 찾고, `PasswordEncoder`로 비밀번호가 맞는지 검사
+5. **토큰 생성** 
+    - 비밀번호가 맞다면 `TokenProvider`를 불러와서 유저의 PK와 권한을 담아 **JWT(Access/Refresh Token) 생성**
+6. **토큰을 담아 응답 전송**
+    - 만들어진 토큰을 JSON에 담아 프론트엔드에게 전송
+        - 프론트엔드는 이 토큰을 메모리나 쿠키에 저장
+
+---
+
+### 상황 2-1: 발급받은 토큰으로 API를 호출할 때 (인증 흐름)
+
+- 프론트엔드가 Access Token을 HTTP 헤더(`Authorization: Bearer <토큰>`)에 담아 내 정보 조회 API(`/api/auth/me`) 호출
+1. **`JwtAuthenticationFilter` 호출**
+    - 직접 만든 커스텀 필터가 요청을 낚아챔
+    - 헤더에 토큰 확인 후, 'Bearer ' 떼고 순수 토큰만 추출
+2. **토큰 검증**
+    - 추출한 토큰을 `TokenProvider`의 `isAccessToken`을 통해 토큰 검증
+        - 토큰 여부, 서명, 만료 기간 등
+    - 정상 토큰이라면, 토큰의 Payload 안에 있는 유저 PK(`userId`)와 권한(`ROLE_USER`) 추출
+3. 토큰을 통해 **유저 인증 정보** 생성
+    - 꺼낸 유저 정보를 바탕으로 `CustomUserDetails` 객체 생성
+    - `SecurityContext`에 저장하기 위해 `UsernamePasswordAuthenticationToken` 객체에 담음
+4. **전역 저장소에 저장**
+    - `Authentication`(유저 정보)를 **`SecurityContext`에 저장**
+        - `SecurityContext`에 저장되어야 **Spring Security**는 인증됐다고 판단
+5. `JwtAuthenticationFilter` 통과
+    - **`filterChain.doFilter`**
+        - 다음 필터로 요청을 넘김
+
+### 상황 2-2: 권한 검사 및 예외 처리 (인가 흐름)
+
+- 인증 필터를 통과 후, **`AuthorizationFilter`**와 **`ExceptionTranslationFilter`**가 남음..
+1. **최종 인가 검사 (`AuthorizationFilter`)**
+    - `SecurityContext` 에 저장된 `Authentication` 확인해 권한 최종적으로 확인
+        - `/api/users/me` API는 로그인한 사람만 들어갈 수 있음
+            - `SecurityContext` 내 `Authentication` 확인
+        - `/api/users/me` API는 관리자 전용
+            - `Authentication` 내 Role 확인
+2. **에러 발생**
+    - 만약 위 검사에서 걸리면, 컨트롤러로 안 넘어가고 예외가 터짐
+        - 이 예외를 `ExceptionTranslationFilter`가 처리
+    - `SecurityContext`에 `Authentication` 없을 때 (401 에러)
+        - **`CustomAuthenticationEntryPoint`** 호출
+    - 유저 정보는 있는데, 권한이 없을 떄 (403 에러)
+        - **`CustomAccessDeniedHandler`**를 호출
+
+### 상황 2-3: 컨트롤러 도달 및 로직 수행
+
+1. **`AuthController`에 요청 도달**
+    - 필터 체인을 통해 인증, 인가 처리 후 스프링 컨트롤러에 요청 도달
+2. **`@AuthenticationPrincipal`**
+    - **전역 저장소(`SecurityContext`)에 넣어두었던 유저 정보를 파라미터로 넣어줌**
+        - DB 조회 없이 `userDetails.getUserId()`를 바로 사용 가능!!
