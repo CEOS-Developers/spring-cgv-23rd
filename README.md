@@ -242,7 +242,74 @@ public ApiResponse<...> 안귀찮은_코드(@LoginUser Long userId) {
 `SecurityContextHolder`는 `Authentication` 객체를 저장하기 때문에, `UserDetails`에 담아서 저장해야 한다.
 </details>
 
+## 비회원 예매
 
+비회원 예매를 위해 고려한 방법은 총 3개 정도였습니다.
+
+#### 1. Reservation 엔티티에 비회원 정보 포함
+
+비회원 이름, 전화번호 등을 Reservation 테이블 하나로 관리할 수 있음.  
+다만, Reservation 테이블이 비회원 예매를 위해 너무 비대해짐.
+
+#### 2. Guest를 엔티티로 승격
+
+Reservation 테이블이 깔끔하게 유지되고, user와 guest의 데이터가 분리됨.  
+다만, user 컬럼에 `nullable=false`를 사용할 수 없고, `user_id`와 `guest_id` 둘 중 반드시 하나만 값이 있어야 하는 XOR 제약을 DB 레벌에서 강제할 수 없음.
+
+#### 3. 공통 상위 테이블(Customer/Buyer)
+
+Reservation이 `buyer_id`를 하나만 바라보게 되면서 객체지향적으로 깔끔함.  
+다만, Reservation에 관련된 쿼리가 복잡해짐. (JOIN)
+
+### 방식2 선택
+
+Reservation 테이블에 FK 컬럼 2개만 추가돼 테이블 구조가 깔끔하고, 비회원 정보를 독립적으로 관리할 수 있어 선택.
+
+```
+// 회원 예매
+public static Reservation createReservation(...) {
+    return Reservation.builder()
+            .user(user)
+            .build();
+}
+
+// 비회원 예매
+public static Reservation createGuestReservation(...) {
+    return Reservation.builder()
+            .guest(guest)
+            .build();
+}
+```
+
+또한, 아래와 같이 `@Builder`를 제거하여 팩토리 메서드로만 객체를 생성할 수 있게하여, XOR 제약을 강제함.
+
+```java
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Reservation extends BaseEntity {
+
+    ...
+    
+    private Reservation(User user, Guest guest, Screening screening, String reservationNumber, int seatSize) {
+        this.user = user;
+        this.guest = guest;
+        this.screening = screening;
+        this.reservationNumber = reservationNumber;
+        this.status = ReservationStatus.COMPLETED;
+        this.totalPrice = screening.getPrice() * seatSize;
+    }
+
+    public static Reservation createReservation(User user, Screening screening, int seatSize, String reservationNumber) {
+        return new Reservation(user, null, screening, reservationNumber, seatSize);
+    }
+
+    public static Reservation createGuestReservation(Guest guest, Screening screening, int seatSize, String reservationNumber) {
+        return new Reservation(null, guest, screening, reservationNumber, seatSize);
+    }
+}
+```
 
 
 
