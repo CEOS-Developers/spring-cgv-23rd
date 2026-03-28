@@ -15,5 +15,5 @@ public interface FavoriteMovieRepository extends JpaRepository<FavoriteMovie, Lo
     Optional<FavoriteMovie> findByUserAndMovie(User user, Movie movie);
 
     @EntityGraph(attributePaths = "movie")
-    List<FavoriteMovie> findAllByUserId(Long userId);
+    List<FavoriteMovie> findAllByUserEmail(String email);
 }

@@ -2,17 +2,10 @@ package com.ceos23.spring_boot.domain.user.service;
 
 import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.domain.movie.repository.MovieRepository;
-import com.ceos23.spring_boot.domain.theater.entity.Theater;
-import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
 import com.ceos23.spring_boot.domain.user.dto.FavoriteMovieInfo;
-import com.ceos23.spring_boot.domain.user.dto.FavoriteMovieSearchCommand;
-import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterInfo;
-import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterSearchCommand;
 import com.ceos23.spring_boot.domain.user.entity.FavoriteMovie;
-import com.ceos23.spring_boot.domain.user.entity.FavoriteTheater;
 import com.ceos23.spring_boot.domain.user.entity.User;
 import com.ceos23.spring_boot.domain.user.repository.FavoriteMovieRepository;
-import com.ceos23.spring_boot.domain.user.repository.FavoriteTheaterRepository;
 import com.ceos23.spring_boot.domain.user.repository.UserRepository;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
@@ -30,12 +23,12 @@ public class FavoriteMovieService {
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
 
-    public List<FavoriteMovieInfo> findFavoriteMovies(FavoriteMovieSearchCommand command) {
-        if (!userRepository.existsById(command.userId())) {
+    public List<FavoriteMovieInfo> findFavoriteMovies(String email) {
+        if (!userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        List<FavoriteMovie> favoriteMovies = favoriteMovieRepository.findAllByUserId(command.userId());
+        List<FavoriteMovie> favoriteMovies = favoriteMovieRepository.findAllByUserEmail(email);
 
         return favoriteMovies.stream()
                 .map(FavoriteMovieInfo::from)
@@ -43,8 +36,8 @@ public class FavoriteMovieService {
     }
 
     @Transactional
-    public boolean toggleFavorite(Long userId, Long movieId) {
-        User user = userRepository.findById(userId)
+    public boolean toggleFavorite(String email, Long movieId) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Movie movie = movieRepository.findById(movieId)

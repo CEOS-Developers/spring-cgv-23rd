@@ -3,7 +3,6 @@ package com.ceos23.spring_boot.domain.user.service;
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
 import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterInfo;
-import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterSearchCommand;
 import com.ceos23.spring_boot.domain.user.entity.FavoriteTheater;
 import com.ceos23.spring_boot.domain.user.entity.User;
 import com.ceos23.spring_boot.domain.user.repository.FavoriteTheaterRepository;
@@ -24,12 +23,12 @@ public class FavoriteTheaterService {
     private final UserRepository userRepository;
     private final TheaterRepository theaterRepository;
 
-    public List<FavoriteTheaterInfo> findFavoriteTheaters(FavoriteTheaterSearchCommand command) {
-        if (!userRepository.existsById(command.userId())) {
+    public List<FavoriteTheaterInfo> findFavoriteTheaters(String email) {
+        if (!userRepository.existsByEmail(email)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        List<FavoriteTheater> favoriteTheaters = favoriteTheaterRepository.findAllByUserId(command.userId());
+        List<FavoriteTheater> favoriteTheaters = favoriteTheaterRepository.findAllByUserEmail(email);
 
         return favoriteTheaters.stream()
                 .map(FavoriteTheaterInfo::from)
@@ -37,8 +36,8 @@ public class FavoriteTheaterService {
     }
 
     @Transactional
-    public boolean toggleFavorite(Long userId, Long theaterId) {
-        User user = userRepository.findById(userId)
+    public boolean toggleFavorite(String email, Long theaterId) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Theater theater = theaterRepository.findById(theaterId)

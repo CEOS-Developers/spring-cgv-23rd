@@ -19,9 +19,9 @@ public record OrderRequest(
         @Valid
         List<OrderItemRequest> orderItems
 ) {
-    public OrderCommand toCommand(Long userId) {
+    public OrderCommand toCommand(String email) {
         return new OrderCommand(
-                userId,
+                email,
                 theaterId,
                 orderItems.stream()
                         .map(OrderItemRequest::toCommand)

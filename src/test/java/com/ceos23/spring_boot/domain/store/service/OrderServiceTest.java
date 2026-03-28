@@ -64,7 +64,7 @@ class OrderServiceTest {
     @DisplayName("매점 주문 성공: 주문이 성공하면 재고가 차감되고 총액이 계산된다.")
     void createOrder_Success() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
         Long theaterId = 1L;
         Long popcornId = 1L;
         Long colaId = 2L;
@@ -94,7 +94,7 @@ class OrderServiceTest {
                 .stock(10)
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
 
         given(menuRepository.findById(popcornId)).willReturn(Optional.of(popcorn));
@@ -109,7 +109,7 @@ class OrderServiceTest {
                 new OrderItemCommand(popcornId, 1),
                 new OrderItemCommand(colaId, 1)
         );
-        OrderCommand command = new OrderCommand(userId, theaterId, orderItems);
+        OrderCommand command = new OrderCommand(userEmail, theaterId, orderItems);
 
         // When
         OrderInfo result = orderService.createOrder(command);
@@ -129,7 +129,7 @@ class OrderServiceTest {
     @DisplayName("매점 주문 실패: 재고가 부족할 경우 예외가 발생하고 주문은 저장되지 않는다.")
     void createOrder_Fail_OutOfStock() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
         Long theaterId = 1L;
         Long popcornId = 1L;
 
@@ -147,14 +147,14 @@ class OrderServiceTest {
                 .stock(1)
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
         given(menuRepository.findById(1L)).willReturn(Optional.of(popcorn));
         given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, popcornId))
                 .willReturn(Optional.of(popcornInventory));
 
         List<OrderItemCommand> orderItems = List.of(new OrderItemCommand(popcornId, 2));
-        OrderCommand command = new OrderCommand(userId, theaterId, orderItems);
+        OrderCommand command = new OrderCommand(userEmail, theaterId, orderItems);
 
         assertThatThrownBy(() -> orderService.createOrder(command))
                 .isInstanceOf(BusinessException.class)

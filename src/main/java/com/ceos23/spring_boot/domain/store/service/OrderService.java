@@ -36,7 +36,7 @@ public class OrderService {
 
     @Transactional
     public OrderInfo createOrder(OrderCommand command) {
-        User user = userRepository.findById(command.userId())
+        User user = userRepository.findByEmail(command.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Theater theater = theaterRepository.findById(command.theaterId())

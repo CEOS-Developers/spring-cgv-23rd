@@ -13,5 +13,5 @@ public interface FavoriteTheaterRepository extends JpaRepository<FavoriteTheater
     Optional<FavoriteTheater> findByUserAndTheater(User user, Theater theater);
 
     @EntityGraph(attributePaths = "theater")
-    List<FavoriteTheater> findAllByUserId(Long userId);
+    List<FavoriteTheater> findAllByUserEmail(String email);
 }

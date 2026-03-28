@@ -1,10 +1,8 @@
 package com.ceos23.spring_boot.domain.user.service;
 
-import com.ceos23.spring_boot.controller.user.dto.FavoriteTheaterDto.FavoriteTheaterResponse;
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
 import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterInfo;
-import com.ceos23.spring_boot.domain.user.dto.FavoriteTheaterSearchCommand;
 import com.ceos23.spring_boot.domain.user.entity.FavoriteTheater;
 import com.ceos23.spring_boot.domain.user.entity.User;
 import com.ceos23.spring_boot.domain.user.repository.FavoriteTheaterRepository;
@@ -24,7 +22,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
@@ -49,7 +46,7 @@ class FavoriteTheaterServiceTest {
     @DisplayName("찜 성공: 기존에 찜하지 않았으면, 새로 저장하고 true를 반환한다.")
     void toggleFavorite_Success_AddFavorite() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
         Long theaterId = 1L;
 
         User user = User.builder().build();
@@ -58,12 +55,12 @@ class FavoriteTheaterServiceTest {
                 .location("서울")
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
         given(favoriteTheaterRepository.findByUserAndTheater(user, theater)).willReturn(Optional.empty());
 
         // When
-        boolean isFavorited = favoriteTheaterService.toggleFavorite(userId, theaterId);
+        boolean isFavorited = favoriteTheaterService.toggleFavorite(userEmail, theaterId);
 
         // Then
         assertThat(isFavorited).isTrue();
@@ -75,7 +72,7 @@ class FavoriteTheaterServiceTest {
     @DisplayName("찜 해제 성공: 기존에 찜 했으면 삭제하고 false를 반환한다.")
     void toggleFavorite_Success_RemoveFavorite() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
         Long theaterId = 1L;
 
         User user = User.builder().build();
@@ -85,12 +82,12 @@ class FavoriteTheaterServiceTest {
                 .build();
         FavoriteTheater favoriteTheater = new FavoriteTheater(user, theater);
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
         given(favoriteTheaterRepository.findByUserAndTheater(user, theater)).willReturn(Optional.of(favoriteTheater));
 
         // When
-        boolean isFavorited = favoriteTheaterService.toggleFavorite(userId, theaterId);
+        boolean isFavorited = favoriteTheaterService.toggleFavorite(userEmail, theaterId);
 
         // Then
         assertThat(isFavorited).isFalse();
@@ -102,13 +99,13 @@ class FavoriteTheaterServiceTest {
     @DisplayName("찜 토글 실패: 존재하지 않는 회원일 경우 예외가 발생한다.")
     void toggleFavorite_Fail_UserNotFound() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
         Long theaterId = 1L;
 
-        given(userRepository.findById(userId)).willReturn(Optional.empty());
+        given(userRepository.findByEmail(userEmail)).willReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> favoriteTheaterService.toggleFavorite(userId, theaterId))
+        assertThatThrownBy(() -> favoriteTheaterService.toggleFavorite(userEmail, theaterId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
     }
@@ -117,7 +114,7 @@ class FavoriteTheaterServiceTest {
     @DisplayName("찜 목록 조회 성공: 유저가 찜한 영화관 목록을 DTO로 변환하여 반환한다.")
     void getFavoriteTheaters_Success() {
         // Given
-        Long userId = 1L;
+        String userEmail = "user@naver.com";
 
         User user = User.builder().build();
         Theater theater1 = Theater.builder()
@@ -135,11 +132,11 @@ class FavoriteTheaterServiceTest {
         FavoriteTheater favorite1 = new FavoriteTheater(user, theater1);
         FavoriteTheater favorite2 = new FavoriteTheater(user, theater2);
 
-        given(userRepository.existsById(userId)).willReturn(true);
-        given(favoriteTheaterRepository.findAllByUserId(userId)).willReturn(List.of(favorite1, favorite2));
+        given(userRepository.existsByEmail(userEmail)).willReturn(true);
+        given(favoriteTheaterRepository.findAllByUserEmail(userEmail)).willReturn(List.of(favorite1, favorite2));
 
         // When
-        List<FavoriteTheaterInfo> result = favoriteTheaterService.findFavoriteTheaters(new FavoriteTheaterSearchCommand(userId));
+        List<FavoriteTheaterInfo> result = favoriteTheaterService.findFavoriteTheaters(userEmail);
 
         // Then
         assertThat(result).hasSize(2);
@@ -155,11 +152,11 @@ class FavoriteTheaterServiceTest {
     @DisplayName("찜 목록 조회 실패: 존재하지 않는 회원일 경우 예외가 발생한다.")
     void getFavoriteTheaters_Fail_UserNotFound() {
         // Given
-        Long userId = 1L;
-        given(userRepository.existsById(userId)).willReturn(false);
+        String userEmail = "user@naver.com";
+        given(userRepository.existsByEmail(userEmail)).willReturn(false);
 
         // When & Then
-        assertThatThrownBy(() -> favoriteTheaterService.findFavoriteTheaters(new FavoriteTheaterSearchCommand(userId)))
+        assertThatThrownBy(() -> favoriteTheaterService.findFavoriteTheaters(userEmail))
                 .isInstanceOf(BusinessException.class)
                 .hasMessage(ErrorCode.USER_NOT_FOUND.getMessage());
     }
