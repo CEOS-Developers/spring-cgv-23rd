@@ -33,6 +33,9 @@ public class User extends BaseEntity {
     @Column(name = "email", nullable = false, unique = true, length = 50)
     private String email;
 
+    @Column(name = "phone", nullable = false, unique = true, length = 20)
+    private String phone;
+
     @Column(name = "birth")
     private LocalDate birth;
 
@@ -46,7 +49,7 @@ public class User extends BaseEntity {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
-    @Column(name = "gender")
+    @Column(name = "gender", nullable = false)
     @Enumerated(EnumType.STRING)
     private Gender gender;
 }

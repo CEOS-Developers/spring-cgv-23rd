@@ -1,6 +1,7 @@
 package com.ceos.spring_cgv_23rd.global.jwt;
 
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
 import com.ceos.spring_cgv_23rd.global.jwt.enums.TokenType;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -17,6 +18,8 @@ import java.util.Date;
 @Component
 @Slf4j
 public class JwtTokenProvider {
+
+    private static final Long GUEST_USER_ID = 0L;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -35,23 +38,31 @@ public class JwtTokenProvider {
         key = Keys.hmacShaKeyFor(keyBytes);
     }
 
+    public String generateGuestAccessToken() {
+        return generateToken(GUEST_USER_ID, UserRole.GUEST, accessTokenExpiration, TokenType.ACCESS_TOKEN);
+    }
+
+    public String generateGuestRefreshToken() {
+        return generateToken(GUEST_USER_ID, UserRole.GUEST, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
+    }
+
     public String generateAccessToken(User user) {
-        return generateToken(user, accessTokenExpiration, TokenType.ACCESS_TOKEN);
+        return generateToken(user.getId(), user.getRole(), accessTokenExpiration, TokenType.ACCESS_TOKEN);
     }
 
     public String generateRefreshToken(User user) {
-        return generateToken(user, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
+        return generateToken(user.getId(), user.getRole(), refreshTokenExpiration, TokenType.REFRESH_TOKEN);
     }
 
-    private String generateToken(User user, Long expiresIn, TokenType tokenType) {
+    private String generateToken(Long userId, UserRole role, Long expiresIn, TokenType tokenType) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiresIn);
 
         return Jwts.builder()
-                .subject(user.getId().toString())
+                .subject(userId.toString())
                 .expiration(expiryDate)
                 .claim("tokenType", tokenType.name())
-                .claim("role", user.getRole().name())
+                .claim("role", role.name())
                 .issuedAt(now)
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();
