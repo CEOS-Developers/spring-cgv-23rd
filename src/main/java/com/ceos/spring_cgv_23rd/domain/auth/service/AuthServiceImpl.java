@@ -3,6 +3,7 @@ package com.ceos.spring_cgv_23rd.domain.auth.service;
 import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthRequestDTO;
 import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.auth.entity.RefreshToken;
+import com.ceos.spring_cgv_23rd.domain.auth.exception.AuthException;
 import com.ceos.spring_cgv_23rd.domain.auth.repository.RefreshTokenRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
@@ -18,6 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.time.Period;
 
 @Service
 @Slf4j
@@ -43,24 +47,30 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponseDTO.TokenResponseDTO signup(AuthRequestDTO.SignupRequestDTO request) {
+
+        // 만 14세 미만 검증
+        if (Period.between(request.birth(), LocalDate.now()).getYears() < 14) {
+            throw new GeneralException(AuthException.UNDER_AGE);
+        }
+
         // 아이디 중복 검사
         if (userRepository.existsByUsername(request.username())) {
-            throw new GeneralException(GeneralErrorCode.DUPLICATE_LOGINID);
+            throw new GeneralException(AuthException.DUPLICATE_LOGINID);
         }
 
         // 이메일 중복 검사
         if (userRepository.existsByEmail(request.email())) {
-            throw new GeneralException(GeneralErrorCode.DUPLICATE_EMAIL);
+            throw new GeneralException(AuthException.DUPLICATE_EMAIL);
         }
 
         // 전화번호 중복 검사
         if (userRepository.existsByPhone(request.phone())) {
-            throw new GeneralException(GeneralErrorCode.DUPLICATE_PHONE);
+            throw new GeneralException(AuthException.DUPLICATE_PHONE);
         }
 
         // 닉네임 중복 검사
         if (userRepository.existsByNickname(request.nickname())) {
-            throw new GeneralException(GeneralErrorCode.DUPLICATE_NICKNAME);
+            throw new GeneralException(AuthException.DUPLICATE_NICKNAME);
         }
 
 
