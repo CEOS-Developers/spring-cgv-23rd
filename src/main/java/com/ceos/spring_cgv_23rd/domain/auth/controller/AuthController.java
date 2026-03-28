@@ -6,6 +6,7 @@ import com.ceos.spring_cgv_23rd.domain.auth.service.AuthService;
 import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import com.ceos.spring_cgv_23rd.global.jwt.utils.CookieUtils;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -53,6 +54,7 @@ public class AuthController {
     @Operation(summary = "토큰 재발급")
     @PostMapping("/refresh")
     public ApiResponse<Void> refresh(
+            @Parameter(hidden = true)
             @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE) String refreshToken,
             HttpServletResponse response) {
         AuthResponseDTO.TokenResponseDTO tokens = authService.refresh(refreshToken);
@@ -63,6 +65,7 @@ public class AuthController {
     @Operation(summary = "로그아웃")
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
+            @Parameter(hidden = true)
             @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE, required = false) String refreshToken,
             HttpServletResponse response) {
         if (refreshToken != null) {
