@@ -6,15 +6,15 @@ import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "reservation", indexes = {
         @Index(name = "idx_reservation_screening_status", columnList = "screening_id, status")
 })
 @Getter
-@Builder
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Reservation extends BaseEntity {
 
@@ -46,24 +46,21 @@ public class Reservation extends BaseEntity {
     private Integer totalPrice;
 
 
+    private Reservation(User user, Guest guest, Screening screening, String reservationNumber, int seatSize) {
+        this.user = user;
+        this.guest = guest;
+        this.screening = screening;
+        this.reservationNumber = reservationNumber;
+        this.status = ReservationStatus.COMPLETED;
+        this.totalPrice = screening.getPrice() * seatSize;
+    }
+
     public static Reservation createReservation(User user, Screening screening, int seatSize, String reservationNumber) {
-        return Reservation.builder()
-                .user(user)
-                .screening(screening)
-                .reservationNumber(reservationNumber)
-                .status(ReservationStatus.COMPLETED)
-                .totalPrice(screening.getPrice() * seatSize)
-                .build();
+        return new Reservation(user, null, screening, reservationNumber, seatSize);
     }
 
     public static Reservation createGuestReservation(Guest guest, Screening screening, int seatSize, String reservationNumber) {
-        return Reservation.builder()
-                .guest(guest)
-                .screening(screening)
-                .reservationNumber(reservationNumber)
-                .status(ReservationStatus.COMPLETED)
-                .totalPrice(screening.getPrice() * seatSize)
-                .build();
+        return new Reservation(null, guest, screening, reservationNumber, seatSize);
     }
 
     public void cancel() {
