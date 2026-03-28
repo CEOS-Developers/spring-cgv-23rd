@@ -26,15 +26,19 @@ public class User extends BaseEntity {
     @Column(length = 100, unique = true)
     private String email;
 
+    @Column(nullable = false)
+    private String password;
+
     private LocalDate birthdate;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfile userProfile;
 
     @Builder
-    public User(String nickname, String email, LocalDate birthdate) {
+    public User(String nickname, String email, String password, LocalDate birthdate) {
         this.nickname = nickname;
         this.email = email;
+        this.password = password;
         this.birthdate = birthdate;
     }
 }

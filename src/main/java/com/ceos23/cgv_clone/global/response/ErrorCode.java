@@ -99,8 +99,8 @@ public enum ErrorCode {
     // 중복 이메일
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "SIGN001", "이미 존재하는 이메일입니다."),
 
-
-    ;
+    // 비밀번호 불일치
+    INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "SIGN002", "비밀번호가 다릅니다" );
 
     /**
      ******************************** Error Code Constructor ****************************************

@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.global.jwt;
 
+import lombok.Getter;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,14 +11,13 @@ import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
 
+    @Getter
     private final Long userId;
+    private final String password;
 
-    public CustomUserDetails(Long userId) {
+    public CustomUserDetails(Long userId, String password) {
         this.userId = userId;
-    }
-
-    public Long getUserId() {
-        return userId;
+        this.password = password;
     }
 
     @Override
@@ -26,8 +26,8 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @Override
-    public @Nullable String getPassword() {
-        return null;
+    public String getPassword() {
+        return password;
     }
 
     @Override

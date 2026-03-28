@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.global.jwt;
 
+import com.ceos23.cgv_clone.user.domain.User;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,9 +18,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Long userId = Long.parseLong(username);
 
-        userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("유저를 찾을 수 없습니다."));
 
-        return new CustomUserDetails(userId);
+        return new CustomUserDetails(user.getId(), user.getPassword());
     }
+
 }
