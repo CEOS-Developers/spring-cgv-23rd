@@ -46,7 +46,7 @@ public class TokenProvider {
                 .setSubject(userId)
                 .claim(ROLE_KEY, role)
                 .claim(TOKEN_TYPE_KEY, ACCESS_TOKEN_TYPE)
-                .signWith(key, SignatureAlgorithm.HS256)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .setExpiration(validity)
                 .compact();
     }
