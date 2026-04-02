@@ -24,7 +24,7 @@ public class FavoriteTheaterService {
     private final TheaterRepository theaterRepository;
 
     public List<FavoriteTheaterInfo> findFavoriteTheaters(String email) {
-        if (!userRepository.existsByEmail(email)) {
+        if (!userRepository.existsByEmailAndDeletedAtIsNull(email)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -37,10 +37,10 @@ public class FavoriteTheaterService {
 
     @Transactional
     public boolean toggleFavorite(String email, Long theaterId) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Theater theater = theaterRepository.findById(theaterId)
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(theaterId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         return favoriteTheaterRepository.findByUserAndTheater(user, theater)

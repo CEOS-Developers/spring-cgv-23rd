@@ -4,8 +4,13 @@ import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TheaterRepository extends JpaRepository<Theater, Long> {
-    List<Theater> findByLocation(String location);
-    Boolean existsByName(String name);
+    Optional<Theater> findByIdAndDeletedAtIsNull(Long id);
+    List<Theater> findAllByDeletedAtIsNull();
+
+    List<Theater> findByLocationAndDeletedAtIsNull(String location);
+    Boolean existsByNameAndDeletedAtIsNull(String name);
+    Optional<Theater> findByNameAndDeletedAtIsNotNull(String name);
 }

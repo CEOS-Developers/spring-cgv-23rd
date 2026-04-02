@@ -2,7 +2,8 @@ package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.domain.theater.entity.Screen;
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
@@ -11,13 +12,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Schedule extends BaseEntity {
+public class Schedule extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "schedule_id")
     private Long id;

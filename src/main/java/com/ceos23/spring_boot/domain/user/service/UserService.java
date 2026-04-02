@@ -16,7 +16,7 @@ public class UserService {
     private final UserRepository userRepository;
 
     public UserInfo getMyProfile(String email) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         return UserInfo.from(user);

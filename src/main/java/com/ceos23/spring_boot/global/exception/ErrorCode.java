@@ -11,6 +11,7 @@ public enum ErrorCode {
     DUPLICATE_THEATER_NAME(HttpStatus.BAD_REQUEST, "T002", "이미 존재하는 영화관 지점명입니다."),
 
     MOVIE_NOT_FOUND(HttpStatus.BAD_REQUEST, "M001", "존재하지 않는 영화입니다."),
+    DUPLICATE_MOVIE(HttpStatus.BAD_REQUEST, "M002", "이미 존재하는 영화입니다."),
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U002", "이미 사용 중인 이메일입니다."),
@@ -18,8 +19,11 @@ public enum ErrorCode {
 
     SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "SC001", "존재하지 않는 상영 일정입니다."),
     SCHEDULE_ALREADY_STARTED(HttpStatus.BAD_REQUEST, "S002", "이미 상영이 시작되었거나 종료된 일정입니다."),
+    CANCELLATION_DEADLINE_PASSED(HttpStatus.BAD_REQUEST, "S003", "예매 취소 가능 시간이 지났습니다."),
+
 
     SEAT_NOT_FOUND(HttpStatus.NOT_FOUND, "SE001", "존재하지 않는 좌석입니다."),
+    INVALID_SEAT(HttpStatus.BAD_REQUEST, "SE002", "사용 불가능한 좌석입니다."),
 
     SEAT_ALREADY_RESERVED(HttpStatus.CONFLICT, "R001", "이미 예매가 완료된 좌석입니다."),
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R002", "존재하지 않는 예매 내역입니다."),

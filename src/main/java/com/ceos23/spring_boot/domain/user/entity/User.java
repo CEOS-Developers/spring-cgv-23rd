@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.user.entity;
 
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -11,10 +12,9 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "user", uniqueConstraints = {
-        @UniqueConstraint(name = "UQ_USER_LOGIN_ID", columnNames = {"login_id"}),
         @UniqueConstraint(name = "UQ_USER_EMAIL", columnNames = {"email"})
 })
-public class User extends BaseEntity {
+public class User extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
     private Long id;
@@ -22,7 +22,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String name;
 
-    @Column(name = "email", unique = true, nullable = false, length = 50)
+    @Column(name = "email", nullable = false, length = 50)
     private String email;
 
     @Column(nullable = false, length = 255)

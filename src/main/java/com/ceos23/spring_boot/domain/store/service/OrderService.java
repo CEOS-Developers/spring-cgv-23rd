@@ -36,17 +36,17 @@ public class OrderService {
 
     @Transactional
     public OrderInfo createOrder(OrderCommand command) {
-        User user = userRepository.findByEmail(command.email())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(command.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Theater theater = theaterRepository.findById(command.theaterId())
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         int totalPrice = 0;
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (OrderItemCommand itemCommand : command.orderItems()) {
-            Menu menu = menuRepository.findById(itemCommand.menuId())
+            Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
 
             Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())

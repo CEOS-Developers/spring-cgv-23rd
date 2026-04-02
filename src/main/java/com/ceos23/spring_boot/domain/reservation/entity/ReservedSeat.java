@@ -1,14 +1,13 @@
 package com.ceos23.spring_boot.domain.reservation.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Seat;
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
 
 @Entity
 @Getter
@@ -21,7 +20,7 @@ import java.math.BigDecimal;
         )
     }
 )
-public class ReservedSeat extends BaseEntity {
+public class ReservedSeat extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reserved_seat_id")
     private Long id;

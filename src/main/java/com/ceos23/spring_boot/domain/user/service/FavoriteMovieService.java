@@ -24,7 +24,7 @@ public class FavoriteMovieService {
     private final MovieRepository movieRepository;
 
     public List<FavoriteMovieInfo> findFavoriteMovies(String email) {
-        if (!userRepository.existsByEmail(email)) {
+        if (!userRepository.existsByEmailAndDeletedAtIsNull(email)) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
@@ -37,7 +37,7 @@ public class FavoriteMovieService {
 
     @Transactional
     public boolean toggleFavorite(String email, Long movieId) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Movie movie = movieRepository.findById(movieId)

@@ -2,21 +2,19 @@ package com.ceos23.spring_boot.domain.store.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.user.entity.User;
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "orders")
-public class Order extends BaseEntity {
+public class Order extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "orders_id")
     private Long id;

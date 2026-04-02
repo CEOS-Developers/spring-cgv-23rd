@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.movie.entity;
 
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,8 +13,11 @@ import java.time.LocalDate;
 
 @Entity
 @Getter
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_Movie", columnNames = {"title", "release_date"})
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Movie extends BaseEntity {
+public class Movie extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "movie_id")
     private Long id;

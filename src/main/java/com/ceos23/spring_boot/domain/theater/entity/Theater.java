@@ -1,13 +1,14 @@
 package com.ceos23.spring_boot.domain.theater.entity;
 
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Theater extends BaseEntity {
+public class Theater extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "theater_id")
     private Long id;

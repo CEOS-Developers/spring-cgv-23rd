@@ -13,6 +13,9 @@ import java.util.List;
 public interface SeatRepository extends JpaRepository<Seat, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = "seatGrade")
-    @Query("select s from Seat s where s.id in :seatIds")
-    List<Seat> findAllByIdWithLock(@Param("seatIds")  List<Long> seatIds);
+    @Query("select s from Seat s where s.id in :seatIds AND s.screen.id = :screenId AND s.deletedAt IS NULL")
+    List<Seat> findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(
+            @Param("seatIds") List<Long> seatIds,
+            @Param("screenId") Long screenId
+    );
 }

@@ -38,12 +38,12 @@ public class TokenProvider {
         this.refreshTokenValidityTime = refreshTokenValidityTime;
     }
 
-    public String createAccessToken(String userId, String role) {
+    public String createAccessToken(String email, String role) {
         long now = (new Date()).getTime();
         Date validity = new Date(now + accessTokenValidityTime);
 
         return Jwts.builder()
-                .setSubject(userId)
+                .setSubject(email)
                 .claim(ROLE_KEY, role)
                 .claim(TOKEN_TYPE_KEY, ACCESS_TOKEN_TYPE)
                 .signWith(key, SignatureAlgorithm.HS512)

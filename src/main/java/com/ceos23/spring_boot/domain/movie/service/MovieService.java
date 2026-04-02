@@ -25,9 +25,9 @@ public class MovieService {
         List<Movie> movies;
 
         if (StringUtils.hasText(command.title())) {
-            movies = movieRepository.findByTitleContaining(command.title());
+            movies = movieRepository.findByTitleContainingAndDeletedAtIsNull(command.title());
         } else {
-            movies = movieRepository.findAll();
+            movies = movieRepository.findAllByDeletedAtIsNull();
         }
 
         return movies.stream()
@@ -43,23 +43,49 @@ public class MovieService {
 
     @Transactional
     public MovieInfo createMovie(MovieCreateCommand command) {
-        Movie movie = Movie.builder()
-                .title(command.title())
-                .runtime(command.runtime())
-                .releaseDate(command.releaseDate())
-                .ageRating(command.ageRating())
-                .posterUrl(command.posterUrl())
-                .description(command.description())
-                .build();
+        if (movieRepository.existsByTitleAndReleaseDateAndDeletedAtIsNull(command.title(), command.releaseDate()))
+            throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
 
-        movieRepository.save(movie);
+        return movieRepository.findByTitleAndReleaseDateAndDeletedAtIsNotNull(command.title(), command.releaseDate())
+                .map(deletedMovie ->{
+                    deletedMovie.restoreDelete();
+                    deletedMovie.update(
+                            command.title(),
+                            command.runtime(),
+                            command.releaseDate(),
+                            command.ageRating(),
+                            command.posterUrl(),
+                            command.description()
+                    );
+                    return MovieInfo.from(deletedMovie);
+                })
+                .orElseGet(() -> {
+                    Movie movie = Movie.builder()
+                            .title(command.title())
+                            .runtime(command.runtime())
+                            .releaseDate(command.releaseDate())
+                            .ageRating(command.ageRating())
+                            .posterUrl(command.posterUrl())
+                            .description(command.description())
+                            .build();
 
-        return MovieInfo.from(movie);
+                    movieRepository.save(movie);
+
+                    return MovieInfo.from(movie);
+                });
     }
 
     @Transactional
     public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
         Movie movie = findMovieById(id);
+
+        boolean isUniqueKeyChanged = !movie.getTitle().equals(command.title()) ||
+                !movie.getReleaseDate().isEqual(command.releaseDate());
+
+        if (isUniqueKeyChanged) {
+            if (movieRepository.existsByTitleAndReleaseDate(command.title(), command.releaseDate()))
+                throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
+        }
 
         movie.update(
                 command.title(),
@@ -77,11 +103,11 @@ public class MovieService {
     public void deleteMovie(Long id) {
         Movie movie = findMovieById(id);
 
-        movieRepository.delete(movie);
+        movie.softDelete();
     }
 
     private Movie findMovieById(Long id) {
-        return movieRepository.findById(id)
+        return movieRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND));
     }
 }

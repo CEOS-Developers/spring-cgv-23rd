@@ -94,11 +94,11 @@ class OrderServiceTest {
                 .stock(10)
                 .build();
 
-        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
-        given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
+        given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
 
-        given(menuRepository.findById(popcornId)).willReturn(Optional.of(popcorn));
-        given(menuRepository.findById(colaId)).willReturn(Optional.of(cola));
+        given(menuRepository.findByIdAndDeletedAtIsNull(popcornId)).willReturn(Optional.of(popcorn));
+        given(menuRepository.findByIdAndDeletedAtIsNull(colaId)).willReturn(Optional.of(cola));
 
         given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, popcornId))
                 .willReturn(Optional.of(popcornInventory));
@@ -147,9 +147,9 @@ class OrderServiceTest {
                 .stock(1)
                 .build();
 
-        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
-        given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
-        given(menuRepository.findById(1L)).willReturn(Optional.of(popcorn));
+        given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
+        given(menuRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(popcorn));
         given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, popcornId))
                 .willReturn(Optional.of(popcornInventory));
 

@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
     @EntityGraph(attributePaths = {"screen", "screen.screenType"})
-    Optional<Schedule> findById(Long scheduleId);
+    Optional<Schedule> findByIdAndDeletedAtIsNull(Long scheduleId);
 }

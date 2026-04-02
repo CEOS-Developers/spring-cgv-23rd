@@ -24,7 +24,7 @@ public class FavoriteTheaterController {
     public ResponseEntity<List<FavoriteTheaterResponse>> findFavoriteTheaters(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
             ) {
-        List<FavoriteTheaterResponse> responses = favoriteTheaterService.findFavoriteTheaters(customUserDetails.getUserId())
+        List<FavoriteTheaterResponse> responses = favoriteTheaterService.findFavoriteTheaters(customUserDetails.getEmail())
                 .stream()
                 .map(FavoriteTheaterResponse::from)
                 .toList();
@@ -38,7 +38,7 @@ public class FavoriteTheaterController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @PathVariable Long theaterId
     ) {
-        boolean isFavorited = favoriteTheaterService.toggleFavorite(customUserDetails.getUserId(), theaterId);
+        boolean isFavorited = favoriteTheaterService.toggleFavorite(customUserDetails.getEmail(), theaterId);
 
         return ResponseEntity.ok(FavoriteTheaterToggleResponse.from(isFavorited));
     }

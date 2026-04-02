@@ -54,15 +54,15 @@ class MovieServiceTest {
                 .ageRating("15세")
                 .build();
 
-        given(movieRepository.findAll()).willReturn(List.of(movie1, movie2));
+        given(movieRepository.findAllByDeletedAtIsNull()).willReturn(List.of(movie1, movie2));
 
         // When
         List<MovieInfo> result = movieService.findMovies(command);
 
         // Then
         assertThat(result).hasSize(2);
-        verify(movieRepository).findAll();
-        verify(movieRepository, never()).findByTitleContaining(any());
+        verify(movieRepository).findAllByDeletedAtIsNull();
+        verify(movieRepository, never()).findByTitleContainingAndDeletedAtIsNull(any());
     }
 
     @Test
@@ -78,7 +78,7 @@ class MovieServiceTest {
                 .ageRating("12세")
                 .build();
 
-        given(movieRepository.findByTitleContaining(keyword)).willReturn(List.of(movie));
+        given(movieRepository.findByTitleContainingAndDeletedAtIsNull(keyword)).willReturn(List.of(movie));
 
         // When
         List<MovieInfo> result = movieService.findMovies(command);
@@ -87,7 +87,7 @@ class MovieServiceTest {
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().title()).isEqualTo("인셉션");
 
-        verify(movieRepository).findByTitleContaining(keyword);
+        verify(movieRepository).findByTitleContainingAndDeletedAtIsNull(keyword);
         verify(movieRepository, never()).findAll();
     }
 
@@ -103,7 +103,7 @@ class MovieServiceTest {
                 .ageRating("12세")
                 .build();
 
-        given(movieRepository.findById(validId)).willReturn(Optional.of(movie));
+        given(movieRepository.findByIdAndDeletedAtIsNull(validId)).willReturn(Optional.of(movie));
 
         // When
         MovieInfo result = movieService.findMovie(validId);
@@ -117,7 +117,7 @@ class MovieServiceTest {
     void findMovie_Fail() {
         // Given
         Long invalidId = 1L;
-        given(movieRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(movieRepository.findByIdAndDeletedAtIsNull(invalidId)).willReturn(Optional.empty());
 
         // When, Then
         assertThatThrownBy(() -> movieService.findMovie(invalidId))
@@ -157,7 +157,7 @@ class MovieServiceTest {
                 "인터스텔라", 200, LocalDate.now(), "15세", "new_url", "새로운 줄거리"
         );
 
-        given(movieRepository.findById(movieId)).willReturn(Optional.of(existingMovie));
+        given(movieRepository.findByIdAndDeletedAtIsNull(movieId)).willReturn(Optional.of(existingMovie));
 
         // When
         MovieInfo result = movieService.updateMovie(movieId, command);
@@ -180,13 +180,13 @@ class MovieServiceTest {
                 .ageRating("12세")
                 .build();
 
-        given(movieRepository.findById(movieId)).willReturn(Optional.of(movie));
+        given(movieRepository.findByIdAndDeletedAtIsNull(movieId)).willReturn(Optional.of(movie));
 
         // When
         movieService.deleteMovie(movieId);
 
         // Then
-        verify(movieRepository).delete(movie);
+        assertThat(movie.getDeletedAt()).isNotNull();
     }
 
     @Test
@@ -194,7 +194,7 @@ class MovieServiceTest {
     void deleteMovie_Fail() {
         // Given
         Long invalidId = 1L;
-        given(movieRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(movieRepository.findByIdAndDeletedAtIsNull(invalidId)).willReturn(Optional.empty());
 
         // When, Then
         assertThatThrownBy(() -> movieService.deleteMovie(invalidId))

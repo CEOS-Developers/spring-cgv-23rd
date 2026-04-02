@@ -25,7 +25,7 @@ public class UserController {
     public ResponseEntity<UserResponse> getMyProfile(
             @AuthenticationPrincipal CustomUserDetails customUserDetails
     ) {
-        String email = customUserDetails.getUserId();
+        String email = customUserDetails.getEmail();
 
         UserInfo response = userService.getMyProfile(email);
 

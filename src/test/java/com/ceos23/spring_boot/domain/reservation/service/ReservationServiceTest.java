@@ -67,6 +67,7 @@ class ReservationServiceTest {
     void createReservation_Success() {
         // Given
         Long userId = 1L;
+        Long screenId = 1L;
         Long scheduleId = 1L;
         List<Long> seatIds = List.of(10L, 11L);
         ReservationCreateCommand command = new ReservationCreateCommand(userId, scheduleId, seatIds);
@@ -82,6 +83,7 @@ class ReservationServiceTest {
         Screen screen = Screen.builder()
                 .screenType(screenType)
                 .build();
+        ReflectionTestUtils.setField(screen, "id", screenId);
 
         Schedule schedule = Schedule.builder()
                 .screen(screen)
@@ -117,9 +119,9 @@ class ReservationServiceTest {
 
         List<Seat> seats = List.of(seat1, seat2);
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
-        given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(seatRepository.findAllByIdWithLock(seatIds)).willReturn(seats);
+        given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+        given(scheduleRepository.findByIdAndDeletedAtIsNull(scheduleId)).willReturn(Optional.of(schedule));
+        given(seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(seatIds, screenId)).willReturn(seats);
         given(reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(scheduleId, seatIds, ReservationStatus.RESERVED)).willReturn(false);
 
         // When
@@ -138,7 +140,7 @@ class ReservationServiceTest {
     void createReservation_Fail_UserNotFound() {
         // Given
         ReservationCreateCommand command = new ReservationCreateCommand(1L, 1L, List.of(10L));
-        given(userRepository.findById(1L)).willReturn(Optional.empty());
+        given(userRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
 
         // When, Then
         assertThatThrownBy(() -> reservationService.createReservation(command))
@@ -153,8 +155,8 @@ class ReservationServiceTest {
         ReservationCreateCommand command = new ReservationCreateCommand(1L, 1L, List.of(10L));
         User user = User.builder().build();
 
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(scheduleRepository.findById(1L)).willReturn(Optional.empty());
+        given(userRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(user));
+        given(scheduleRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.empty());
 
         // When, Then
         assertThatThrownBy(() -> reservationService.createReservation(command))
@@ -166,19 +168,26 @@ class ReservationServiceTest {
     @DisplayName("예매 실패: 요청한 좌석 중 일부가 DB에 존재하지 않으면 예외가 발생한다.")
     void createReservation_Fail_SeatNotFound() {
         // Given
-        ReservationCreateCommand command = new ReservationCreateCommand(1L, 1L, List.of(10L, 11L)); // 999번은 없는 좌석
+        ReservationCreateCommand command = new ReservationCreateCommand(1L, 1L, List.of(10L, 11L));
         User user = User.builder().build();
-        Schedule schedule = Schedule.builder().build();
-        Seat seat1 = Seat.builder().build();
 
-        given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(scheduleRepository.findById(1L)).willReturn(Optional.of(schedule));
-        given(seatRepository.findAllById(command.seatIds())).willReturn(List.of(seat1));
+        Screen screen = Screen.builder().build();
+        ReflectionTestUtils.setField(screen, "id", 1L);
+
+        Schedule schedule = Schedule.builder()
+                .screen(screen)
+                .startTime(LocalDateTime.now().plusDays(1))
+                .build();
+        Seat seat1 = Seat.builder().screen(screen).build();
+
+        given(userRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(user));
+        given(scheduleRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(schedule));
+        given(seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(command.seatIds(), 1L)).willReturn(List.of(seat1));
 
         // When, Then
         assertThatThrownBy(() -> reservationService.createReservation(command))
                 .isInstanceOf(BusinessException.class)
-                .hasMessage(ErrorCode.SEAT_NOT_FOUND.getMessage());
+                .hasMessage(ErrorCode.INVALID_SEAT.getMessage());
     }
 
     @Test
@@ -191,16 +200,23 @@ class ReservationServiceTest {
         ReservationCreateCommand command = new ReservationCreateCommand(userId, scheduleId, seatIds);
 
         User user = User.builder().build();
-        Schedule schedule = Schedule.builder().build();
+
+        Screen screen = Screen.builder().build();
+        ReflectionTestUtils.setField(screen, "id", 1L);
+
+        Schedule schedule = Schedule.builder()
+                .screen(screen)
+                .startTime(LocalDateTime.now().plusDays(1))
+                .build();
         ReflectionTestUtils.setField(schedule, "id", scheduleId);
 
         Seat seat1 = Seat.builder().build();
         Seat seat2 = Seat.builder().build();
         List<Seat> seats = List.of(seat1, seat2);
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
-        given(scheduleRepository.findById(scheduleId)).willReturn(Optional.of(schedule));
-        given(seatRepository.findAllById(seatIds)).willReturn(seats);
+        given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
+        given(scheduleRepository.findByIdAndDeletedAtIsNull(scheduleId)).willReturn(Optional.of(schedule));
+        given(seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(seatIds, 1L)).willReturn(seats);
         given(reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(scheduleId, seatIds, ReservationStatus.RESERVED)).willReturn(true);
 
         // When, Then
@@ -219,8 +235,13 @@ class ReservationServiceTest {
         User user = User.builder().build();
         ReflectionTestUtils.setField(user, "id", userId);
 
+        Schedule schedule = Schedule.builder()
+                .startTime(LocalDateTime.now().plusDays(1))
+                .build();
+
         Reservation reservation = Reservation.builder()
                 .user(user)
+                .schedule(schedule)
                 .status(ReservationStatus.RESERVED)
                 .build();
         ReflectionTestUtils.setField(reservation, "id", reservationId);

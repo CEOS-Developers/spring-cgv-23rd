@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.domain.theater.entity;
 
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -12,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Table(uniqueConstraints = {
         @UniqueConstraint(name = "UQ_SEAT_TEMPLATE_COORD", columnNames = {"screen_type_id", "seat_row", "seat_col"})
 })
-public class SeatTemplate extends BaseEntity {
+public class SeatTemplate extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "seat_template_id")
     private Long id;

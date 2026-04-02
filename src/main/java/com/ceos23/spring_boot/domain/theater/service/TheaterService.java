@@ -25,9 +25,9 @@ public class TheaterService {
         List<Theater> theaters;
 
         if (StringUtils.hasText(command.location()))
-            theaters = theaterRepository.findByLocation(command.location());
+            theaters = theaterRepository.findByLocationAndDeletedAtIsNull(command.location());
         else
-            theaters = theaterRepository.findAll();
+            theaters = theaterRepository.findAllByDeletedAtIsNull();
 
         return theaters
                 .stream()
@@ -36,7 +36,7 @@ public class TheaterService {
     }
 
     public TheaterInfo findTheater(Long id) {
-        Theater theater = theaterRepository.findById(id)
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
         return TheaterInfo.from(theater);
@@ -44,25 +44,31 @@ public class TheaterService {
 
     @Transactional
     public TheaterInfo createTheater(TheaterCreateCommand command) {
-        if (theaterRepository.existsByName(command.name()))
+        if (theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
             throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
 
-        Theater theater = Theater.builder()
-                .name(command.name())
-                .location(command.location())
-                .build();
-
-        theaterRepository.save(theater);
-
-        return TheaterInfo.from(theater);
+        return theaterRepository.findByNameAndDeletedAtIsNotNull(command.name())
+                .map(existedTheater -> {
+                    existedTheater.restoreDelete();
+                    return TheaterInfo.from(existedTheater);
+                })
+                .orElseGet(()->{
+                    Theater newTheater = Theater.builder()
+                            .name(command.name())
+                            .location(command.location())
+                            .build();
+                    theaterRepository.save(newTheater);
+                    return TheaterInfo.from(newTheater);
+                        }
+                );
     }
 
     @Transactional
     public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
-        Theater theater = theaterRepository.findById(id)
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
-        if (!theater.getName().equals(command.name()) && theaterRepository.existsByName(command.name()))
+        if (!theater.getName().equals(command.name()) && theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
             throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
 
         theater.update(command.name(), command.location());
@@ -72,9 +78,9 @@ public class TheaterService {
 
     @Transactional
     public void deleteTheater(Long id) {
-        Theater theater = theaterRepository.findById(id)
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
-        theaterRepository.delete(theater);
+        theater.softDelete();
     }
 }

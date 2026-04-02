@@ -55,8 +55,8 @@ class FavoriteTheaterServiceTest {
                 .location("서울")
                 .build();
 
-        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
-        given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
+        given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
         given(favoriteTheaterRepository.findByUserAndTheater(user, theater)).willReturn(Optional.empty());
 
         // When
@@ -82,8 +82,8 @@ class FavoriteTheaterServiceTest {
                 .build();
         FavoriteTheater favoriteTheater = new FavoriteTheater(user, theater);
 
-        given(userRepository.findByEmail(userEmail)).willReturn(Optional.of(user));
-        given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
+        given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
         given(favoriteTheaterRepository.findByUserAndTheater(user, theater)).willReturn(Optional.of(favoriteTheater));
 
         // When
@@ -102,7 +102,7 @@ class FavoriteTheaterServiceTest {
         String userEmail = "user@naver.com";
         Long theaterId = 1L;
 
-        given(userRepository.findByEmail(userEmail)).willReturn(Optional.empty());
+        given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> favoriteTheaterService.toggleFavorite(userEmail, theaterId))
@@ -132,7 +132,7 @@ class FavoriteTheaterServiceTest {
         FavoriteTheater favorite1 = new FavoriteTheater(user, theater1);
         FavoriteTheater favorite2 = new FavoriteTheater(user, theater2);
 
-        given(userRepository.existsByEmail(userEmail)).willReturn(true);
+        given(userRepository.existsByEmailAndDeletedAtIsNull(userEmail)).willReturn(true);
         given(favoriteTheaterRepository.findAllByUserEmail(userEmail)).willReturn(List.of(favorite1, favorite2));
 
         // When
@@ -153,7 +153,7 @@ class FavoriteTheaterServiceTest {
     void getFavoriteTheaters_Fail_UserNotFound() {
         // Given
         String userEmail = "user@naver.com";
-        given(userRepository.existsByEmail(userEmail)).willReturn(false);
+        given(userRepository.existsByEmailAndDeletedAtIsNull(userEmail)).willReturn(false);
 
         // When & Then
         assertThatThrownBy(() -> favoriteTheaterService.findFavoriteTheaters(userEmail))

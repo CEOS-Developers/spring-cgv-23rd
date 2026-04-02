@@ -26,7 +26,7 @@ public class OrderController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody OrderRequest request
     ) {
-        OrderInfo info = orderService.createOrder(request.toCommand(customUserDetails.getUserId()));
+        OrderInfo info = orderService.createOrder(request.toCommand(customUserDetails.getEmail()));
 
         return ResponseEntity.ok(OrderResponse.from(info));
     }

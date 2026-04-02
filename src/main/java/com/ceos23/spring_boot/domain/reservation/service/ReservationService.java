@@ -36,17 +36,19 @@ public class ReservationService {
 
     @Transactional
     public ReservationInfo createReservation(ReservationCreateCommand command) {
-        User user = userRepository.findById(command.userId())
+        User user = userRepository.findByIdAndDeletedAtIsNull(command.userId())
                 .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        Schedule schedule = scheduleRepository.findById(command.scheduleId())
+        Schedule schedule = scheduleRepository.findByIdAndDeletedAtIsNull(command.scheduleId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
 
         schedule.validateReservableTime(LocalDateTime.now());
 
-        List<Seat> seats = seatRepository.findAllByIdWithLock(command.seatIds());
+        Long screenId = schedule.getScreen().getId();
+
+        List<Seat> seats = seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(command.seatIds(), screenId);
         if (seats.size() != command.seatIds().size()) {
-            throw new BusinessException(ErrorCode.SEAT_NOT_FOUND);
+            throw new BusinessException(ErrorCode.INVALID_SEAT);
         }
 
         boolean isAlreadyReserved = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(
@@ -104,6 +106,7 @@ public class ReservationService {
             throw new BusinessException(ErrorCode.UNAUTHORIZED_RESERVATION_ACCESS);
         }
 
+        reservation.validateCancelable();
         reservation.cancel();
     }
 }

@@ -25,7 +25,7 @@ public class AuthService {
 
     @Transactional
     public void signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        if (userRepository.existsByEmailAndDeletedAtIsNull(request.email())) {
             throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
 
@@ -42,7 +42,7 @@ public class AuthService {
     }
 
     public TokenResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(request.email())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {

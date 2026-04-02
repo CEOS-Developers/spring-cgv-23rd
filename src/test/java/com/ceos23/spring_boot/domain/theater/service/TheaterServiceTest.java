@@ -47,7 +47,7 @@ class TheaterServiceTest {
                 .location("부산")
                 .build();
 
-        given(theaterRepository.findAll()).willReturn(List.of(theater1, theater2));
+        given(theaterRepository.findAllByDeletedAtIsNull()).willReturn(List.of(theater1, theater2));
 
         //when
         List<TheaterInfo> result = theaterService.findTheaters(command);
@@ -59,8 +59,8 @@ class TheaterServiceTest {
         assertThat(result).extracting("location")
                 .containsExactlyInAnyOrder("서울", "부산");
 
-        verify(theaterRepository).findAll();
-        verify(theaterRepository, never()).findByLocation(command.location());
+        verify(theaterRepository).findAllByDeletedAtIsNull();
+        verify(theaterRepository, never()).findByLocationAndDeletedAtIsNull(command.location());
     }
 
     @Test
@@ -79,7 +79,7 @@ class TheaterServiceTest {
                 .location("부산")
                 .build();
 
-        given(theaterRepository.findByLocation(location)).willReturn(List.of(theater1));
+        given(theaterRepository.findByLocationAndDeletedAtIsNull(location)).willReturn(List.of(theater1));
 
         //when
         List<TheaterInfo> result = theaterService.findTheaters(command);
@@ -89,7 +89,7 @@ class TheaterServiceTest {
         assertThat(result.getFirst().name()).isEqualTo("CGV 강남");
         assertThat(result.getFirst().location()).isEqualTo(location);
 
-        verify(theaterRepository).findByLocation(location);
+        verify(theaterRepository).findByLocationAndDeletedAtIsNull(location);
         verify(theaterRepository, never()).findAll();
     }
 
@@ -104,7 +104,7 @@ class TheaterServiceTest {
                 .location("서울")
                 .build();
 
-        given(theaterRepository.findById(validId)).willReturn(Optional.of(theater));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(validId)).willReturn(Optional.of(theater));
 
         //when
         TheaterInfo result = theaterService.findTheater(validId);
@@ -120,7 +120,7 @@ class TheaterServiceTest {
         //given
         Long invalidId = 1L;
 
-        given(theaterRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(theaterRepository.findByIdAndDeletedAtIsNull(invalidId)).willReturn(Optional.empty());
 
         //when, then
         assertThatThrownBy(()-> theaterService.findTheater(invalidId))
@@ -133,7 +133,7 @@ class TheaterServiceTest {
     void createTheater_Success() {
         //given
         TheaterCreateCommand command = new TheaterCreateCommand("CGV 강남점", "서울");
-        given(theaterRepository.existsByName(command.name())).willReturn(false);
+        given(theaterRepository.existsByNameAndDeletedAtIsNull(command.name())).willReturn(false);
 
         //when
         TheaterInfo result = theaterService.createTheater(command);
@@ -148,7 +148,7 @@ class TheaterServiceTest {
     void createTheater_Fail() {
         //given
         TheaterCreateCommand command = new TheaterCreateCommand("CGV 강남점", "서울");
-        given(theaterRepository.existsByName(command.name())).willReturn(true);
+        given(theaterRepository.existsByNameAndDeletedAtIsNull(command.name())).willReturn(true);
 
         //when, then
         assertThatThrownBy(()-> theaterService.createTheater(command))
@@ -168,9 +168,9 @@ class TheaterServiceTest {
                 .location("경기")
                 .build();
 
-        given(theaterRepository.findById(validId)).willReturn(Optional.of(theater));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(validId)).willReturn(Optional.of(theater));
 
-        given(theaterRepository.existsByName("CGV 강남점")).willReturn(false);
+        given(theaterRepository.existsByNameAndDeletedAtIsNull("CGV 강남점")).willReturn(false);
 
         //when
         theaterService.updateTheater(validId, command);
@@ -185,7 +185,7 @@ class TheaterServiceTest {
     void updateTheater_Fail_InvalidId() {
         //given
         Long invalidId = 1L;
-        given(theaterRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(theaterRepository.findByIdAndDeletedAtIsNull(invalidId)).willReturn(Optional.empty());
 
         TheaterUpdateCommand command = new TheaterUpdateCommand("CGV 강남점", "서울");
 
@@ -208,9 +208,9 @@ class TheaterServiceTest {
                 .location("경기")
                 .build();
 
-        given(theaterRepository.findById(validId)).willReturn(Optional.of(theater));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(validId)).willReturn(Optional.of(theater));
 
-        given(theaterRepository.existsByName("CGV 강남점")).willReturn(true);
+        given(theaterRepository.existsByNameAndDeletedAtIsNull("CGV 강남점")).willReturn(true);
 
         //when, then
         assertThatThrownBy(()-> theaterService.updateTheater(validId, command))
@@ -229,13 +229,13 @@ class TheaterServiceTest {
                 .location("서울")
                 .build();
 
-        given(theaterRepository.findById(validId)).willReturn(Optional.of(theater));
+        given(theaterRepository.findByIdAndDeletedAtIsNull(validId)).willReturn(Optional.of(theater));
 
         //when
         theaterService.deleteTheater(validId);
 
         // then
-        verify(theaterRepository).delete(theater);
+        assertThat(theater.getDeletedAt()).isNotNull();
     }
 
     @Test
@@ -244,7 +244,7 @@ class TheaterServiceTest {
         //given
         Long invalidId = 1L;
 
-        given(theaterRepository.findById(invalidId)).willReturn(Optional.empty());
+        given(theaterRepository.findByIdAndDeletedAtIsNull(invalidId)).willReturn(Optional.empty());
 
         //when, then
         assertThatThrownBy(()-> theaterService.deleteTheater(invalidId))

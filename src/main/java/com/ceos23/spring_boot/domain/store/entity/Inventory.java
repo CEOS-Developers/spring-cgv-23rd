@@ -1,7 +1,8 @@
 package com.ceos23.spring_boot.domain.store.entity;
 
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
-import com.ceos23.spring_boot.global.common.BaseEntity;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import jakarta.persistence.*;
@@ -13,8 +14,11 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_INVENTORY_MENU", columnNames = {"menu_id"})
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Inventory extends BaseEntity {
+public class Inventory extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "inventory_id")
     private Long id;

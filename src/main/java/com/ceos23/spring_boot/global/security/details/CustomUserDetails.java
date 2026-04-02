@@ -10,11 +10,11 @@ import java.util.Collections;
 
 @Getter
 public class CustomUserDetails implements UserDetails {
-    private final String userId;
+    private final String email;
     private final String role;
 
-    public CustomUserDetails(String userId, String role) {
-        this.userId = userId;
+    public CustomUserDetails(String email, String role) {
+        this.email = email;
         this.role = role;
     }
 
@@ -31,7 +31,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.userId;
+        return this.email;
     }
 
     @Override
