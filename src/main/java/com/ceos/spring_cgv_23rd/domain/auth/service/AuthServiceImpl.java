@@ -37,11 +37,10 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponseDTO.TokenResponseDTO issueGuestToken() {
 
-        // accessToken 및 refreshToken 생성
+        // accessToken 생성
         String accessToken = jwtTokenProvider.generateGuestAccessToken();
-        String refreshToken = jwtTokenProvider.generateGuestRefreshToken();
 
-        return new AuthResponseDTO.TokenResponseDTO(accessToken, refreshToken);
+        return new AuthResponseDTO.TokenResponseDTO(accessToken, null);
     }
 
     @Override
@@ -120,6 +119,11 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (!jwtTokenProvider.isRefreshToken(refreshToken)) {
+            throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
+        }
+
+        // 게스트 토큰은 갱신 불가
+        if (jwtTokenProvider.isGuestToken(claims)) {
             throw new GeneralException(GeneralErrorCode.INVALID_TOKEN);
         }
 

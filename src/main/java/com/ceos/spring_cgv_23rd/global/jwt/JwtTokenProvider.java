@@ -21,8 +21,6 @@ import java.util.Date;
 @Slf4j
 public class JwtTokenProvider {
 
-    private static final Long GUEST_USER_ID = 0L;
-
     @Value("${jwt.secret}")
     private String secret;
 
@@ -41,11 +39,7 @@ public class JwtTokenProvider {
     }
 
     public String generateGuestAccessToken() {
-        return generateToken(GUEST_USER_ID, UserRole.GUEST, accessTokenExpiration, TokenType.ACCESS_TOKEN);
-    }
-
-    public String generateGuestRefreshToken() {
-        return generateToken(GUEST_USER_ID, UserRole.GUEST, refreshTokenExpiration, TokenType.REFRESH_TOKEN);
+        return generateGuestToken(accessTokenExpiration, TokenType.ACCESS_TOKEN);
     }
 
     public String generateAccessToken(User user) {
@@ -65,6 +59,19 @@ public class JwtTokenProvider {
                 .expiration(expiryDate)
                 .claim("tokenType", tokenType.name())
                 .claim("role", role.name())
+                .issuedAt(now)
+                .signWith(key, Jwts.SIG.HS256)
+                .compact();
+    }
+
+    private String generateGuestToken(Long expiresIn, TokenType tokenType) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expiresIn);
+
+        return Jwts.builder()
+                .expiration(expiryDate)
+                .claim("tokenType", tokenType.name())
+                .claim("role", UserRole.GUEST.name())
                 .issuedAt(now)
                 .signWith(key, Jwts.SIG.HS256)
                 .compact();
@@ -117,6 +124,10 @@ public class JwtTokenProvider {
         } catch (JwtException e) {
             return false;
         }
+    }
+
+    public boolean isGuestToken(Claims claims) {
+        return UserRole.GUEST.name().equals(claims.get("role"));
     }
 
     public Long getUserIdFromClaims(Claims claims) {

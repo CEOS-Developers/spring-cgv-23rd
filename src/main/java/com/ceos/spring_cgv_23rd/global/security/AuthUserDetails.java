@@ -32,6 +32,6 @@ public class AuthUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return userId.toString();
+        return userId != null ? userId.toString() : UserRole.GUEST.name();
     }
 }

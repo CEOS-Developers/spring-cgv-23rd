@@ -49,10 +49,17 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                     throw new JwtException("토큰 타입이 일치하지 않습니다.");
                 }
 
-                Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
-                String role = jwtTokenProvider.getRoleFromClaims(claims);
 
-                AuthUserDetails userDetails = new AuthUserDetails(userId, role);
+                String role = jwtTokenProvider.getRoleFromClaims(claims);
+                AuthUserDetails userDetails;
+
+                if (jwtTokenProvider.isGuestToken(claims)) {
+                    userDetails = new AuthUserDetails(null, role);
+                } else {
+                    Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
+                    userDetails = new AuthUserDetails(userId, role);
+                }
+                
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
