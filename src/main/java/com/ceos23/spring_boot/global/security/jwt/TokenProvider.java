@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -22,7 +23,6 @@ public class TokenProvider {
     private static final String ROLE_KEY = "role";
     private static final String TOKEN_TYPE_KEY = "type";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
-    private static final String REFRESH_TOKEN_TYPE = "REFRESH";
 
     // application.yml에서 jwt.secret 값을 가져와서 암호화 키(Key) 객체로 만듭니다.
     public TokenProvider(
@@ -51,16 +51,12 @@ public class TokenProvider {
                 .compact();
     }
 
-    public String createRefreshToken(String userId) {
-        long now = (new Date()).getTime();
-        Date validity = new Date(now + refreshTokenValidityTime);
+    public String createRefreshToken() {
+        return UUID.randomUUID().toString();
+    }
 
-        return Jwts.builder()
-                .setSubject(userId)
-                .claim(TOKEN_TYPE_KEY, REFRESH_TOKEN_TYPE)
-                .signWith(key, SignatureAlgorithm.HS512)
-                .setExpiration(validity)
-                .compact();
+    public Long getRefreshTokenValiditySeconds() {
+        return this.refreshTokenValidityTime / 1000;
     }
 
     public boolean isAccessToken(String token) {
