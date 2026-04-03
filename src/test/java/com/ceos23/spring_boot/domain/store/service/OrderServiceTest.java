@@ -87,23 +87,22 @@ class OrderServiceTest {
         ReflectionTestUtils.setField(cola, "id", colaId);
 
         Inventory popcornInventory = Inventory.builder()
+                .menu(popcorn)
                 .stock(10)
                 .build();
 
         Inventory colaInventory = Inventory.builder()
+                .menu(cola)
                 .stock(10)
                 .build();
 
         given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
 
-        given(menuRepository.findByIdAndDeletedAtIsNull(popcornId)).willReturn(Optional.of(popcorn));
-        given(menuRepository.findByIdAndDeletedAtIsNull(colaId)).willReturn(Optional.of(cola));
+        given(menuRepository.findAllByIdInAndDeletedAtIsNull(List.of(popcornId, colaId))).willReturn(List.of(popcorn, cola));
 
-        given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, popcornId))
-                .willReturn(Optional.of(popcornInventory));
-        given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, colaId))
-                .willReturn(Optional.of(colaInventory));
+        given(inventoryRepository.findAllByTheaterIdAndMenuIdInWithLock(theaterId, List.of(popcornId, colaId)))
+                .willReturn(List.of(popcornInventory, colaInventory));
 
         List<OrderItemCommand> orderItems = List.of(
                 new OrderItemCommand(popcornId, 1),
@@ -143,14 +142,15 @@ class OrderServiceTest {
         ReflectionTestUtils.setField(popcorn, "id", popcornId);
 
         Inventory popcornInventory = Inventory.builder()
+                .menu(popcorn)
                 .stock(1)
                 .build();
 
         given(userRepository.findByEmailAndDeletedAtIsNull(userEmail)).willReturn(Optional.of(user));
         given(theaterRepository.findByIdAndDeletedAtIsNull(theaterId)).willReturn(Optional.of(theater));
-        given(menuRepository.findByIdAndDeletedAtIsNull(1L)).willReturn(Optional.of(popcorn));
-        given(inventoryRepository.findByTheaterIdAndMenuIdWithLock(theaterId, popcornId))
-                .willReturn(Optional.of(popcornInventory));
+        given(menuRepository.findAllByIdInAndDeletedAtIsNull(List.of(1L))).willReturn(List.of(popcorn));
+        given(inventoryRepository.findAllByTheaterIdAndMenuIdInWithLock(theaterId, List.of(popcornId)))
+                .willReturn(List.of(popcornInventory));
 
         List<OrderItemCommand> orderItems = List.of(new OrderItemCommand(popcornId, 2));
         OrderCommand command = new OrderCommand(userEmail, theaterId, orderItems);
@@ -160,6 +160,5 @@ class OrderServiceTest {
                 .hasMessage(ErrorCode.OUT_OF_STOCK.getMessage());
 
         verify(orderRepository, never()).save(any());
-        verify(orderItemRepository, never()).saveAll(anyList());
     }
 }

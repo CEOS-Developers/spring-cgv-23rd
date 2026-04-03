@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
@@ -15,5 +16,12 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     Optional<Inventory> findByTheaterIdAndMenuIdWithLock(
             @Param("theaterId") Long theaterId,
             @Param("menuId") Long menuId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM Inventory i WHERE i.theater.id = :theaterId AND i.menu.id in :menuIds")
+    List<Inventory> findAllByTheaterIdAndMenuIdInWithLock(
+            @Param("theaterId") Long theaterId,
+            @Param("menuId") List<Long> menuIds
     );
 }

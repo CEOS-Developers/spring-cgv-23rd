@@ -23,6 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,12 +46,23 @@ public class OrderService {
         Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
+        List<Long> menuIds = command.orderItems().stream()
+                .map(OrderItemCommand::menuId)
+                .sorted()
+                .toList();
+
+        Map<Long, Menu> menuMap = menuRepository.findAllByIdInAndDeletedAtIsNull(menuIds).stream()
+                .collect(Collectors.toMap(Menu::getId, menu->menu));
+
+        Map<Long, Inventory> inventoryMap = inventoryRepository.findAllByTheaterIdAndMenuIdInWithLock(theater.getId(), menuIds).stream()
+                .collect(Collectors.toMap(inventory->inventory.getMenu().getId(), inventory -> inventory));
+
         List<OrderItem> orderItems = command.orderItems().stream()
                 .map(itemCommand -> {
-                    Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
+                    Menu menu = Optional.ofNullable(menuMap.get(itemCommand.menuId()))
                             .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
 
-                    Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())
+                    Inventory inventory = Optional.ofNullable(inventoryMap.get(itemCommand.menuId()))
                             .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 
                     inventory.decreaseStock(itemCommand.count());
