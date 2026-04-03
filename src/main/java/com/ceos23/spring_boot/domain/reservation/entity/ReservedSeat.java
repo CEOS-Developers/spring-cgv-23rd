@@ -46,4 +46,22 @@ public class ReservedSeat extends BaseSoftDeleteEntity {
         this.schedule = schedule;
         this.price = price;
     }
+
+    public static ReservedSeat create(Reservation reservation, Schedule schedule, Seat seat) {
+        int screenSurcharge = schedule.getScreen().getScreenType().getSurchargePrice();
+        int baseSeatPrice = schedule.getBasePrice() + screenSurcharge;
+        int seatSurcharge = seat.getSeatGrade().getSurchargePrice();
+        int finalPrice = baseSeatPrice + seatSurcharge;
+
+        return ReservedSeat.builder()
+                .reservation(reservation)
+                .schedule(schedule)
+                .seat(seat)
+                .price(finalPrice)
+                .build();
+    }
+
+    public void updateReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
 }

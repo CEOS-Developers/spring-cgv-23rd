@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional(readOnly = true)
@@ -46,43 +47,46 @@ public class MovieService {
         if (movieRepository.existsByTitleAndReleaseDateAndDeletedAtIsNull(command.title(), command.releaseDate()))
             throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
 
-        return movieRepository.findByTitleAndReleaseDateAndDeletedAtIsNotNull(command.title(), command.releaseDate())
-                .map(deletedMovie ->{
-                    deletedMovie.restoreDelete();
-                    deletedMovie.update(
-                            command.title(),
-                            command.runtime(),
-                            command.releaseDate(),
-                            command.ageRating(),
-                            command.posterUrl(),
-                            command.description()
-                    );
-                    return MovieInfo.from(deletedMovie);
-                })
-                .orElseGet(() -> {
-                    Movie movie = Movie.builder()
-                            .title(command.title())
-                            .runtime(command.runtime())
-                            .releaseDate(command.releaseDate())
-                            .ageRating(command.ageRating())
-                            .posterUrl(command.posterUrl())
-                            .description(command.description())
-                            .build();
+        Optional<Movie> deletedMovie = movieRepository.findByTitleAndReleaseDateAndDeletedAtIsNotNull(command.title(), command.releaseDate());
 
-                    movieRepository.save(movie);
+        return deletedMovie
+                .map(dm ->restoreMovie(dm, command))
+                .orElseGet(() -> createNewMovie(command));
+    }
 
-                    return MovieInfo.from(movie);
-                });
+    private MovieInfo restoreMovie(Movie deletedMovie, MovieCreateCommand command) {
+        deletedMovie.restoreDelete();
+        deletedMovie.update(
+                command.title(),
+                command.runtime(),
+                command.releaseDate(),
+                command.ageRating(),
+                command.posterUrl(),
+                command.description()
+        );
+        return MovieInfo.from(deletedMovie);
+    }
+
+    private MovieInfo createNewMovie(MovieCreateCommand command) {
+        Movie movie = Movie.builder()
+                .title(command.title())
+                .runtime(command.runtime())
+                .releaseDate(command.releaseDate())
+                .ageRating(command.ageRating())
+                .posterUrl(command.posterUrl())
+                .description(command.description())
+                .build();
+
+        movieRepository.save(movie);
+
+        return MovieInfo.from(movie);
     }
 
     @Transactional
     public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
         Movie movie = findMovieById(id);
 
-        boolean isUniqueKeyChanged = !movie.getTitle().equals(command.title()) ||
-                !movie.getReleaseDate().isEqual(command.releaseDate());
-
-        if (isUniqueKeyChanged) {
+        if (movie.uniqueKeyChanged(command.title(), command.releaseDate())) {
             if (movieRepository.existsByTitleAndReleaseDate(command.title(), command.releaseDate()))
                 throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
         }

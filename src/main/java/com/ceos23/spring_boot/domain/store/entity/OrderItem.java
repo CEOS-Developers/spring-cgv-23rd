@@ -38,6 +38,14 @@ public class OrderItem extends BaseSoftDeleteEntity {
         this.count = count;
     }
 
+    public static OrderItem create(Menu menu, int count) {
+        return OrderItem.builder()
+                .menu(menu)
+                .orderPrice(menu.getPrice())
+                .count(count)
+                .build();
+    }
+
     public void updateOrder(Order order) {
         this.order = order;
     }

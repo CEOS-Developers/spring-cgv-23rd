@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import javax.swing.text.html.Option;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,10 +38,14 @@ public class TheaterService {
     }
 
     public TheaterInfo findTheater(Long id) {
-        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+        Theater theater = findTheaterById(id);
 
         return TheaterInfo.from(theater);
+    }
+
+    private Theater findTheaterById(Long id) {
+        return theaterRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
     }
 
     @Transactional
@@ -47,39 +53,48 @@ public class TheaterService {
         if (theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
             throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
 
-        return theaterRepository.findByNameAndDeletedAtIsNotNull(command.name())
-                .map(existedTheater -> {
-                    existedTheater.restoreDelete();
-                    return TheaterInfo.from(existedTheater);
-                })
-                .orElseGet(()->{
-                    Theater newTheater = Theater.builder()
-                            .name(command.name())
-                            .location(command.location())
-                            .build();
-                    theaterRepository.save(newTheater);
-                    return TheaterInfo.from(newTheater);
-                        }
-                );
+        Optional<Theater> deletedTheater = theaterRepository.findByNameAndDeletedAtIsNotNull(command.name());
+
+        return deletedTheater
+                .map(theater -> restoreTheater(theater, command))
+                .orElseGet(() -> createNewTheater(command));
     }
+
+    private TheaterInfo restoreTheater(Theater deletedTheater, TheaterCreateCommand command) {
+        deletedTheater.restoreDelete();
+        deletedTheater.update(command.name(), command.location());
+        return TheaterInfo.from(deletedTheater);
+    }
+
+    private TheaterInfo createNewTheater(TheaterCreateCommand command) {
+        Theater newTheater = Theater.builder()
+                .name(command.name())
+                .location(command.location())
+                .build();
+        theaterRepository.save(newTheater);
+        return TheaterInfo.from(newTheater);
+    }
+
 
     @Transactional
     public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
-        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+        Theater theater = findTheaterById(id);
 
-        if (!theater.getName().equals(command.name()) && theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
-            throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+        validateDuplicateTheaterName(theater, command.name());
 
         theater.update(command.name(), command.location());
 
         return TheaterInfo.from(theater);
     }
 
+    private void validateDuplicateTheaterName(Theater theater, String name) {
+        if (!theater.getName().equals(name) && theaterRepository.existsByNameAndDeletedAtIsNull(name))
+            throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+    }
+
     @Transactional
     public void deleteTheater(Long id) {
-        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
-                .orElseThrow(()-> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+        Theater theater = findTheaterById(id);
 
         theater.softDelete();
     }

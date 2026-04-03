@@ -42,41 +42,21 @@ public class OrderService {
         Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
 
-        int totalPrice = 0;
-        List<OrderItem> orderItems = new ArrayList<>();
+        List<OrderItem> orderItems = command.orderItems().stream()
+                .map(itemCommand -> {
+                    Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
 
-        for (OrderItemCommand itemCommand : command.orderItems()) {
-            Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+                    Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 
-            Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+                    inventory.decreaseStock(itemCommand.count());
 
-            inventory.decreaseStock(itemCommand.count());
+                    return OrderItem.create(menu, itemCommand.count());
+                }).toList();
 
-            int currentOrderPrice = menu.getPrice();
-            totalPrice += (currentOrderPrice * itemCommand.count());
-
-            OrderItem orderItem = OrderItem.builder()
-                    .menu(menu)
-                    .orderPrice(currentOrderPrice)
-                    .count(itemCommand.count())
-                    .build();
-            orderItems.add(orderItem);
-        }
-
-        Order order = Order.builder()
-                .user(user)
-                .theater(theater)
-                .totalPrice(totalPrice)
-                .refundable(false)
-                .build();
+        Order order = Order.create(user, theater, orderItems);
         orderRepository.save(order);
-
-        for (OrderItem orderItem : orderItems) {
-            orderItem.updateOrder(order);
-        }
-        orderItemRepository.saveAll(orderItems);
 
         return OrderInfo.from(order, orderItems);
     }

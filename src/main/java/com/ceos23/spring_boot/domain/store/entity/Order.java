@@ -10,6 +10,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -33,11 +36,36 @@ public class Order extends BaseTimeEntity {
     @Column(nullable = false)
     private Boolean refundable = false;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<>();
+
     @Builder
     public Order(User user, Theater theater, Integer totalPrice, Boolean refundable) {
         this.user = user;
         this.theater = theater;
         this.totalPrice = totalPrice;
         this.refundable = refundable;
+    }
+
+    public static Order create(User user, Theater theater, List<OrderItem> orderItems) {
+        Order order = Order.builder()
+                .user(user)
+                .theater(theater)
+                .refundable(false)
+                .build();
+
+        int totalPrice = 0;
+        for (OrderItem item : orderItems) {
+            order.addOrderItem(item);
+            totalPrice += (item.getOrderPrice() * item.getCount());
+        }
+        order.totalPrice = totalPrice;
+
+        return order;
+    }
+
+    private void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
+        orderItem.updateOrder(this);
     }
 }

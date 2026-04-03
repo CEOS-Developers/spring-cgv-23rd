@@ -61,40 +61,11 @@ public class ReservationService {
             throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
 
-        int screenSurcharge = schedule.getScreen().getScreenType().getSurchargePrice();
-        int baseSeatPrice = schedule.getBasePrice() + screenSurcharge;
+        Reservation reservation = Reservation.create(user, schedule, seats);
 
-        Map<Seat, Integer> seatPriceMap = new HashMap<>();
-        int totalPrice = 0;
-
-        for (Seat seat: seats) {
-            int seatSurcharge = seat.getSeatGrade().getSurchargePrice();
-
-            int seatPrice = baseSeatPrice + seatSurcharge;
-            seatPriceMap.put(seat, seatPrice);
-
-            totalPrice += seatPrice;
-        }
-
-        Reservation reservation = Reservation.builder()
-                .user(user)
-                .schedule(schedule)
-                .status(ReservationStatus.RESERVED)
-                .totalPrice(totalPrice)
-                .build();
         reservationRepository.save(reservation);
 
-        List<ReservedSeat> reservedSeats = seats.stream()
-                .map(seat -> ReservedSeat.builder()
-                        .reservation(reservation)
-                        .seat(seat)
-                        .schedule(schedule)
-                        .price(seatPriceMap.get(seat))
-                        .build())
-                .toList();
-        reservedSeatRepository.saveAll(reservedSeats);
-
-        return ReservationInfo.from(reservation, reservedSeats);
+        return ReservationInfo.from(reservation, reservation.getReservedSeats());
     }
 
     @Transactional

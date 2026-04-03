@@ -122,7 +122,6 @@ class OrderServiceTest {
         assertThat(colaInventory.getStock()).isEqualTo(9);
 
         verify(orderRepository).save(any(Order.class));
-        verify(orderItemRepository).saveAll(anyList());
     }
 
     @Test

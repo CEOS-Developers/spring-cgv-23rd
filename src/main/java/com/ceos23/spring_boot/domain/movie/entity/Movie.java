@@ -61,4 +61,9 @@ public class Movie extends BaseSoftDeleteEntity {
         this.posterUrl = posterUrl;
         this.description = description;
     }
+
+    public boolean uniqueKeyChanged(String title, LocalDate releaseDate) {
+        return !this.title.equals(title) ||
+                !this.releaseDate.isEqual(releaseDate);
+    }
 }
