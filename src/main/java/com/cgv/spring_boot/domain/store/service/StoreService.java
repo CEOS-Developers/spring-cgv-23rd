@@ -37,6 +37,9 @@ public class StoreService {
     private final StoreOrderRepository storeOrderRepository;
     private final OrderItemRepository orderItemRepository;
 
+    /**
+     * 매점 주문 메서드
+     */
     @Transactional
     public Long order(Long userId, StoreOrderRequest request) {
         User user = userRepository.findById(userId)
@@ -45,49 +48,37 @@ public class StoreService {
         Theater theater = theaterRepository.findById(request.theaterId())
                 .orElseThrow(() -> new BusinessException(TheaterErrorCode.THEATER_NOT_FOUND));
 
-        List<PreparedOrderItem> preparedOrderItems = new ArrayList<>();
-        int totalPrice = 0;
-
-        for (StoreOrderRequest.OrderItemRequest itemRequest : request.items()) {
-            Item item = itemRepository.findById(itemRequest.itemId())
-                    .orElseThrow(() -> new BusinessException(StoreErrorCode.ITEM_NOT_FOUND));
-
-            StoreInventory inventory = storeInventoryRepository.findByTheaterIdAndItemId(request.theaterId(), itemRequest.itemId())
-                    .orElseThrow(() -> new BusinessException(StoreErrorCode.STORE_INVENTORY_NOT_FOUND));
-
-            inventory.decreaseStock(itemRequest.count());
-
-            preparedOrderItems.add(new PreparedOrderItem(item, item.getPrice(), itemRequest.count()));
-            totalPrice += item.getPrice() * itemRequest.count();
-        }
-
         StoreOrder storeOrder = StoreOrder.builder()
-                .totalPrice(totalPrice)
+                .totalPrice(0)
                 .orderDate(LocalDateTime.now())
                 .user(user)
                 .theater(theater)
                 .build();
 
-        StoreOrder savedOrder = storeOrderRepository.save(storeOrder);
+        List<OrderItem> orderItems = new ArrayList<>();
 
-        List<OrderItem> orderItems = preparedOrderItems.stream()
-                .map(preparedOrderItem -> OrderItem.builder()
-                        .order(savedOrder)
-                        .item(preparedOrderItem.item())
-                        .orderPrice(preparedOrderItem.orderPrice())
-                        .count(preparedOrderItem.count())
-                        .build())
-                .toList();
+        for (StoreOrderRequest.OrderItemRequest itemRequest : request.items()) {
+            Item item = itemRepository.findById(itemRequest.itemId())
+                    .orElseThrow(() -> new BusinessException(StoreErrorCode.ITEM_NOT_FOUND));
+
+            // 재고 조회
+            StoreInventory inventory = storeInventoryRepository.findByTheaterIdAndItemId(request.theaterId(), itemRequest.itemId())
+                    .orElseThrow(() -> new BusinessException(StoreErrorCode.STORE_INVENTORY_NOT_FOUND));
+
+            inventory.decreaseStock(itemRequest.count());
+            orderItems.add(OrderItem.create(storeOrder, item, itemRequest.count()));
+        }
+
+        int totalPrice = orderItems.stream()
+                .mapToInt(OrderItem::getTotalPrice)
+                .sum();
+
+        storeOrder.updateTotalPrice(totalPrice);
+
+        StoreOrder savedOrder = storeOrderRepository.save(storeOrder);
 
         orderItemRepository.saveAll(orderItems);
 
         return savedOrder.getId();
-    }
-
-    private record PreparedOrderItem(
-            Item item,
-            int orderPrice,
-            int count
-    ) {
     }
 }

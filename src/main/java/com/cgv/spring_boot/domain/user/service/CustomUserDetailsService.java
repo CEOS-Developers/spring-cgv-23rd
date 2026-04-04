@@ -24,6 +24,17 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByLoginId(loginId)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
 
+        return createAuthenticatedUser(user);
+    }
+
+    public UserDetails loadUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다."));
+
+        return createAuthenticatedUser(user);
+    }
+
+    private UserDetails createAuthenticatedUser(User user) {
         UserRole role = user.getRole() == null ? UserRole.USER : user.getRole();
 
         return new AuthenticatedUser(

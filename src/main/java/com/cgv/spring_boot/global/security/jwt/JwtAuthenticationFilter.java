@@ -34,8 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = bearerToken.substring(7); // 꺼낸 토큰 문자열
 
             if (jwtTokenProvider.validateToken(token)) {
-                String loginId = jwtTokenProvider.getLoginId(token);
-                UserDetails userDetails = customUserDetailsService.loadUserByUsername(loginId);
+                Long userId = jwtTokenProvider.getUserId(token);
+                UserDetails userDetails = customUserDetailsService.loadUserById(userId);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(

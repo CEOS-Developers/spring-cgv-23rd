@@ -8,6 +8,7 @@ import com.cgv.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.cgv.spring_boot.domain.reservation.repository.ReservedSeatRepository;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.schedule.repository.ScheduleRepository;
+import com.cgv.spring_boot.domain.theater.entity.HallType;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
 import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
@@ -44,7 +45,13 @@ public class ReservationService {
         Schedule schedule = scheduleRepository.findById(request.scheduleId())
                 .orElseThrow(() -> new BusinessException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
 
-        List<String> rows = request.seats().stream().map(SeatRequest::seatRow).toList();
+        validateSeatRange(schedule.getHall().getHallType(), request.seats());
+
+        List<SeatRequest> normalizedSeats = request.seats().stream()
+                .map(seatRequest -> new SeatRequest(normalizeSeatRow(seatRequest.seatRow()), seatRequest.seatCol()))
+                .toList();
+
+        List<String> rows = normalizedSeats.stream().map(SeatRequest::seatRow).toList();
         List<Integer> cols = request.seats().stream().map(SeatRequest::seatCol).toList();
 
         if (!reservedSeatRepository.findAllByScheduleAndRowsAndCols(schedule.getId(), rows, cols).isEmpty()) {
@@ -59,7 +66,7 @@ public class ReservationService {
 
         Reservation savedReservation = reservationRepository.save(reservation);
 
-        List<ReservedSeat> reservedSeats = request.seats().stream()
+        List<ReservedSeat> reservedSeats = normalizedSeats.stream()
                 .map(seatRequest -> ReservedSeat.builder()
                         .seatRow(seatRequest.seatRow())
                         .seatCol(seatRequest.seatCol())
@@ -71,6 +78,31 @@ public class ReservationService {
         reservedSeatRepository.saveAll(reservedSeats);
 
         return savedReservation.getId();
+    }
+
+    private void validateSeatRange(HallType hallType, List<SeatRequest> seats) {
+        for (SeatRequest seat : seats) {
+            if (isInvalidSeatRow(seat.seatRow(), hallType.getRowCount())
+                    || seat.seatCol() < 1
+                    || seat.seatCol() > hallType.getColCount()) {
+                throw new BusinessException(ReservationErrorCode.INVALID_SEAT_POSITION);
+            }
+        }
+    }
+
+    private boolean isInvalidSeatRow(String seatRow, int rowCount) {
+        if (seatRow == null || seatRow.length() != 1) {
+            return true;
+        }
+
+        char row = Character.toUpperCase(seatRow.charAt(0));
+        char maxRow = (char) ('A' + rowCount - 1);
+
+        return row < 'A' || row > maxRow;
+    }
+
+    private String normalizeSeatRow(String seatRow) {
+        return String.valueOf(Character.toUpperCase(seatRow.charAt(0)));
     }
 
     /**

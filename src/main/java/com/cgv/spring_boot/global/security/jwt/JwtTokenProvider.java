@@ -28,13 +28,12 @@ public class JwtTokenProvider {
     }
 
     // 토큰 생성
-    public String generateToken(Long userId, String loginId) {
+    public String generateToken(Long userId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + accessTokenExpiration);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
-                .claim("loginId", loginId)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(secretKey)
@@ -43,10 +42,6 @@ public class JwtTokenProvider {
 
     public Long getUserId(String token) {
         return Long.valueOf(parseClaims(token).getSubject());
-    }
-
-    public String getLoginId(String token) {
-        return parseClaims(token).get("loginId", String.class);
     }
 
     public boolean validateToken(String token) {

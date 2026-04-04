@@ -42,6 +42,15 @@ public class OrderItem extends BaseEntity {
         this.count = count;
     }
 
+    public static OrderItem create(StoreOrder order, Item item, int count) {
+        return OrderItem.builder()
+                .order(order)
+                .item(item)
+                .orderPrice(item.getPrice())
+                .count(count)
+                .build();
+    }
+
     private void validateCount(int count) {
         if (count < 1) {
             throw new BusinessException(StoreErrorCode.INVALID_STOCK_QUANTITY);

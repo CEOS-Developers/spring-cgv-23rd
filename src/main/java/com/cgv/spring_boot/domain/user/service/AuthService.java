@@ -47,7 +47,7 @@ public class AuthService {
             throw new BusinessException(UserErrorCode.INVALID_LOGIN);
         }
 
-        String accessToken = jwtTokenProvider.generateToken(user.getId(), user.getLoginId());
+        String accessToken = jwtTokenProvider.generateToken(user.getId());
         return new LoginResponse(accessToken);
     }
 }

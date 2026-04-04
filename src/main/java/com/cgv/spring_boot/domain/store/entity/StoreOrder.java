@@ -42,4 +42,8 @@ public class StoreOrder extends BaseEntity {
         this.user = user;
         this.theater = theater;
     }
+
+    public void updateTotalPrice(int totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }
