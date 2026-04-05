@@ -9,12 +9,14 @@ import com.ceos23.spring_boot.global.security.refresh.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +29,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final TokenProvider tokenProvider;
+
+    public static final String BEARER = "Bearer ";
 
     @Operation(summary = "회원가입", description = "사용자를 등록합니다.")
     @PostMapping("/api/auth/signup")
@@ -70,12 +74,17 @@ public class AuthController {
     @Operation(summary = "로그아웃", description = "Refresh Token을 삭제하고 쿠키를 비웁니다.")
     @PostMapping("/api/auth/logout")
     public ResponseEntity<Void> logout(
+            HttpServletRequest request,
             @Parameter(hidden = true)
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
 
-        if (refreshToken != null) {
-            authService.logout(refreshToken);
-        }
+        String bearer = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String accessToken = null;
+
+        if (StringUtils.hasText(bearer) && bearer.startsWith(BEARER))
+            accessToken = bearer.substring(BEARER.length());
+
+        authService.logout(accessToken, refreshToken);
 
         ResponseCookie deleteCookie = CookieUtil.emptyCookie("refresh_token");
 

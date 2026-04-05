@@ -100,8 +100,21 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String refreshToken) {
+    public void logout(String accessToken, String refreshToken) {
 
-        redisTemplate.delete(refreshToken);
+        if (refreshToken != null)
+            redisTemplate.delete(refreshToken);
+
+        if (accessToken != null) {
+            long remainingTime = tokenProvider.getRemainingExpiration(accessToken);
+
+            if (remainingTime > 0) {
+                redisTemplate.opsForValue().set(
+                        BLACKLIST_PREFIX + accessToken,
+                        "logout",
+                        Duration.ofMillis(remainingTime)
+                );
+            }
+        }
     }
 }
