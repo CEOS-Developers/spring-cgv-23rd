@@ -9,12 +9,13 @@ import com.ceos23.spring_boot.domain.user.repository.UserRepository;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import com.ceos23.spring_boot.global.security.jwt.TokenProvider;
-import com.ceos23.spring_boot.global.security.refresh.RefreshToken;
-import com.ceos23.spring_boot.global.security.refresh.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +25,10 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final TokenProvider tokenProvider;
-    private final RefreshTokenRepository refreshTokenRepository;
+    private final StringRedisTemplate redisTemplate;
+
+    public static final String RT_PREFIX = "RT:";
+    public static final String BLACKLIST_PREFIX = "BLACKLIST:";
 
     @Transactional
     public void signup(SignupRequest request) {
@@ -53,43 +57,51 @@ public class AuthService {
             throw new BusinessException(ErrorCode.INVALID_PASSWORD);
         }
 
-        String accessToken = tokenProvider.createAccessToken(user.getEmail(), user.getRole().name());
+        String accessToken = tokenProvider.createAccessToken(
+                user.getEmail(),
+                user.getRole().name()
+        );
 
         String refreshToken = tokenProvider.createRefreshToken();
-        refreshTokenRepository.save(new RefreshToken(
-                refreshToken,
+
+        redisTemplate.opsForValue().set(
+                RT_PREFIX + refreshToken,
                 user.getEmail(),
-                tokenProvider.getRefreshTokenValiditySeconds()
-        ));
+                Duration.ofSeconds(tokenProvider.getRefreshTokenValiditySeconds())
+        );
 
         return new TokenResponse(accessToken, refreshToken);
     }
 
     @Transactional
     public TokenResponse reissue(String refreshToken) {
-        RefreshToken existedRefreshToken = refreshTokenRepository.findById(refreshToken)
-                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN));
+        String redisKey = RT_PREFIX + refreshToken;
 
-        User user = userRepository.findByEmailAndDeletedAtIsNull(existedRefreshToken.getEmail())
+        String email = redisTemplate.opsForValue().get(redisKey);
+
+        if (email == null)
+            throw new BusinessException(ErrorCode.INVALID_REFRESH_TOKEN);
+
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        refreshTokenRepository.delete(existedRefreshToken);
+        redisTemplate.delete(redisKey);
 
         String newAccessToken = tokenProvider.createAccessToken(user.getEmail(), user.getRole().name());
         String newRefreshToken = tokenProvider.createRefreshToken();
 
-        refreshTokenRepository.save(new RefreshToken(
-                newRefreshToken,
+        redisTemplate.opsForValue().set(
+                RT_PREFIX + newRefreshToken,
                 user.getEmail(),
-                tokenProvider.getRefreshTokenValiditySeconds()
-        ));
+                Duration.ofSeconds(tokenProvider.getRefreshTokenValiditySeconds())
+        );
 
         return new TokenResponse(newAccessToken, newRefreshToken);
     }
 
     @Transactional
     public void logout(String refreshToken) {
-        refreshTokenRepository.findById(refreshToken)
-                .ifPresent(refreshTokenRepository::delete);
+
+        redisTemplate.delete(refreshToken);
     }
 }
