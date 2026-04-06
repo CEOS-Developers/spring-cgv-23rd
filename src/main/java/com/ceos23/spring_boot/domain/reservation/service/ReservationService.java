@@ -17,6 +17,7 @@ import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -34,7 +35,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservedSeatRepository reservedSeatRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationInfo createReservation(ReservationCreateCommand command) {
         User user = userRepository.findByIdAndDeletedAtIsNull(command.userId())
                 .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
@@ -46,7 +47,7 @@ public class ReservationService {
 
         Long screenId = schedule.getScreen().getId();
 
-        List<Seat> seats = seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(command.seatIds(), screenId);
+        List<Seat> seats = seatRepository.findAllByIdInAndScreenIdAndDeletedAtIsNull(command.seatIds(), screenId);
         if (seats.size() != command.seatIds().size()) {
             throw new BusinessException(ErrorCode.INVALID_SEAT);
         }

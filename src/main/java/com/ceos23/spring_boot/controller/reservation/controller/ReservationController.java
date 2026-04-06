@@ -4,6 +4,7 @@ import com.ceos23.spring_boot.controller.reservation.dto.ReservationCancelReques
 import com.ceos23.spring_boot.controller.reservation.dto.ReservationCreateRequest;
 import com.ceos23.spring_boot.controller.reservation.dto.ReservationResponse;
 import com.ceos23.spring_boot.domain.reservation.dto.ReservationInfo;
+import com.ceos23.spring_boot.domain.reservation.facade.ReservationLockFacade;
 import com.ceos23.spring_boot.domain.reservation.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,13 +19,15 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ReservationController {
     private final ReservationService reservationService;
+    private final ReservationLockFacade reservationLockFacade;
 
     @Operation(summary = "영화 예매 생성", description = "상영일정과 좌석들을 선택하여 예매를 진행합니다.")
     @PostMapping("/api/reservations")
     public ResponseEntity<ReservationResponse> createReservation(
            @Valid @RequestBody ReservationCreateRequest request
     ) {
-        ReservationInfo info = reservationService.createReservation(request.toCommand());
+//        ReservationInfo info = reservationService.createReservation(request.toCommand());
+        ReservationInfo info = reservationLockFacade.createReservationWithLock(request.toCommand());
 
         ReservationResponse response = ReservationResponse.from(info);
 

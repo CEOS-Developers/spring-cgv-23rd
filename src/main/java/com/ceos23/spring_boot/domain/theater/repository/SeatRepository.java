@@ -18,4 +18,6 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
             @Param("seatIds") List<Long> seatIds,
             @Param("screenId") Long screenId
     );
+
+    List<Seat> findAllByIdInAndScreenIdAndDeletedAtIsNull(List<Long> seatIds, Long screenId);
 }

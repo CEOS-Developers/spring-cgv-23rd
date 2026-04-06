@@ -44,6 +44,9 @@ public enum ErrorCode {
     MISSING_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "CK001", "쿠키에 refreshToken이 없습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "CK002", "유효하지 않거나 만료된 refreshToken입니다. "),
 
+    LOCK_ACQUISITION_FAILED(HttpStatus.CONFLICT, "L001", "현재 다른 사용자가 처리 중입니다. 잠시 후 다시 시도해주세요."),
+    LOCK_INTERRUPTED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "L002", "시스템 처리 중 인터럽트가 발생했습니다."),
+
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S001", "서버 내부에 오류가 발생했습니다.");
 
     private final HttpStatus status;

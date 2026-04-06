@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(uniqueConstraints = {
-        @UniqueConstraint(name = "UQ_SEAT_TEMPLATE_COORD", columnNames = {"screen_type_id", "seat_row", "seat_col"})
+        @UniqueConstraint(name = "UQ_SEAT_TEMPLATE_COORD", columnNames = {"screen_type_id", "row_name", "col_number"})
 })
 public class SeatTemplate extends BaseSoftDeleteEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
