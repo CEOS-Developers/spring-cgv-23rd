@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.theater.controller;
 
+import com.ceos.spring_cgv_23rd.domain.theater.application.service.TheaterService;
 import com.ceos.spring_cgv_23rd.domain.theater.dto.TheaterResponseDTO;
-import com.ceos.spring_cgv_23rd.domain.theater.service.TheaterService;
 import com.ceos.spring_cgv_23rd.global.annotation.LoginUser;
 import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;

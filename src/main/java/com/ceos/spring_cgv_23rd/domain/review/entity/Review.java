@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.review.entity;
 
-import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
+import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.entity.MovieEntity;
 import com.ceos.spring_cgv_23rd.domain.reservation.entity.Reservation;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
@@ -26,7 +26,7 @@ public class Review extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
-    private Movie movie;
+    private MovieEntity movie;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id", nullable = false, unique = true)

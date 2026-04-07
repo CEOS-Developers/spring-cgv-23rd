@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.screening.dto;
 
-import com.ceos.spring_cgv_23rd.domain.movie.enums.AgeRating;
+import com.ceos.spring_cgv_23rd.domain.movie.domain.AgeRating;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Hall;
 import lombok.Builder;

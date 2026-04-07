@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.screening.entity;
 
-import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
+import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.entity.MovieEntity;
 import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.entity.Hall;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
@@ -24,7 +24,7 @@ public class Screening {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
-    private Movie movie;
+    private MovieEntity movie;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hall_id", nullable = false)

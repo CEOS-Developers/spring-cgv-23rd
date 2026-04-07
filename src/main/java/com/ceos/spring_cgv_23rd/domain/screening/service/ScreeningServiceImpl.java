@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.screening.service;
 
+import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.repository.MovieJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.movie.exception.MovieErrorCode;
-import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieRepository;
 import com.ceos.spring_cgv_23rd.domain.screening.dto.ScreeningResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
 import com.ceos.spring_cgv_23rd.domain.screening.repository.ScreeningRepository;
@@ -21,14 +21,14 @@ import java.util.List;
 public class ScreeningServiceImpl implements ScreeningService {
 
     private final ScreeningRepository screeningRepository;
-    private final MovieRepository movieRepository;
+    private final MovieJpaRepository movieJpaRepository;
     private final TheaterRepository theaterRepository;
 
     @Override
     public List<ScreeningResponseDTO.ScreeningByMovieResponseDTO> getScreeningByMovie(Long movieId, Long theaterId, LocalDate date) {
 
         // 영화 존재 여부 확인
-        if (!movieRepository.existsById(movieId)) {
+        if (!movieJpaRepository.existsById(movieId)) {
             throw new GeneralException(MovieErrorCode.MOVIE_NOT_FOUND);
         }
 
