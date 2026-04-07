@@ -27,7 +27,7 @@ public class AuthController {
     @PostMapping("/guest")
     public ApiResponse<Void> issueGuestToken(HttpServletResponse response) {
         AuthResponseDTO.TokenResponseDTO tokens = authService.issueGuestToken();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(tokens.accessToken()).toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(tokens.accessToken()).toString());
         return ApiResponse.onSuccess("게스트 로그인 성공");
     }
 
