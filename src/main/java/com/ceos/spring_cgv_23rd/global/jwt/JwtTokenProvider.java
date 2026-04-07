@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.global.jwt;
 
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import com.ceos.spring_cgv_23rd.global.jwt.enums.TokenType;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
@@ -42,12 +42,12 @@ public class JwtTokenProvider {
         return generateGuestToken(accessTokenExpiration, TokenType.ACCESS_TOKEN);
     }
 
-    public String generateAccessToken(User user) {
-        return generateToken(user.getId(), user.getRole(), accessTokenExpiration, TokenType.ACCESS_TOKEN);
+    public String generateAccessToken(UserEntity userEntity) {
+        return generateToken(userEntity.getId(), userEntity.getRole(), accessTokenExpiration, TokenType.ACCESS_TOKEN);
     }
 
-    public String generateRefreshToken(User user) {
-        return generateToken(user.getId(), user.getRole(), refreshTokenExpiration, TokenType.REFRESH_TOKEN);
+    public String generateRefreshToken(UserEntity userEntity) {
+        return generateToken(userEntity.getId(), userEntity.getRole(), refreshTokenExpiration, TokenType.REFRESH_TOKEN);
     }
 
     private String generateToken(Long userId, UserRole role, Long expiresIn, TokenType tokenType) {

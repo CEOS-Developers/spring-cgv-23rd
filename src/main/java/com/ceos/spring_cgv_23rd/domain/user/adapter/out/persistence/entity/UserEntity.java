@@ -1,7 +1,7 @@
-package com.ceos.spring_cgv_23rd.domain.user.entity;
+package com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity;
 
-import com.ceos.spring_cgv_23rd.domain.user.enums.Gender;
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.domain.Gender;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +14,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User extends BaseEntity {
+public class UserEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

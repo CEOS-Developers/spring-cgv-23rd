@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.auth.dto;
 
-import com.ceos.spring_cgv_23rd.domain.user.enums.Gender;
+import com.ceos.spring_cgv_23rd.domain.user.domain.Gender;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 import lombok.Builder;

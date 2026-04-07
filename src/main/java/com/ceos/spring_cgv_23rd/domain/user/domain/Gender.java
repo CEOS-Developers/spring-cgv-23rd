@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.user.enums;
+package com.ceos.spring_cgv_23rd.domain.user.domain;
 
 public enum Gender {
     MALE,       // 남성

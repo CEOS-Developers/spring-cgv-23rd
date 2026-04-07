@@ -14,9 +14,9 @@ import com.ceos.spring_cgv_23rd.domain.product.repository.ProductRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.TheaterEntity;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.repository.TheaterJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.exception.TheaterErrorCode;
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.repository.UserJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
-import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,14 +35,14 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
     private final TheaterJpaRepository theaterJpaRepository;
-    private final UserRepository userRepository;
+    private final UserJpaRepository userRepository;
 
     @Override
     @Transactional
     public ProductResponseDTO.OrderDetailResponseDTO createOrder(Long userId, ProductRequestDTO.CreateOrderRequestDTO request) {
 
         // 유저 조회
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 영화관 조회
@@ -82,7 +82,7 @@ public class ProductServiceImpl implements ProductService {
                 .toList();
 
         // 주문 생성
-        ProductOrder order = ProductOrder.createOrder(user, theater, orderItems);
+        ProductOrder order = ProductOrder.createOrder(userEntity, theater, orderItems);
         productOrderRepository.save(order);
 
         return ProductResponseDTO.OrderDetailResponseDTO.of(order);
@@ -93,7 +93,7 @@ public class ProductServiceImpl implements ProductService {
     public void cancelOrder(Long userId, Long orderId) {
 
         // 유저 조회
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 주문 조회
@@ -101,7 +101,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new GeneralException(ProductErrorCode.ORDER_NOT_FOUND));
 
         // 본인 주문인지 확인
-        if (!user.equals(order.getUser())) {
+        if (!userEntity.equals(order.getUserEntity())) {
             throw new GeneralException(ProductErrorCode.ORDER_NOT_FOUND);
         }
 

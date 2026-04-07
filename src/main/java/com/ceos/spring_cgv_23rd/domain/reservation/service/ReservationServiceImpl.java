@@ -15,9 +15,9 @@ import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
 import com.ceos.spring_cgv_23rd.domain.screening.repository.ScreeningRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.SeatEntity;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.repository.SeatJpaRepository;
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.repository.UserJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
-import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,7 +37,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final ScreeningRepository screeningRepository;
-    private final UserRepository userRepository;
+    private final UserJpaRepository userRepository;
     private final SeatJpaRepository seatRepository;
     private final GuestRepository guestRepository;
     private final PasswordEncoder passwordEncoder;
@@ -47,7 +47,7 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationResponseDTO.ReservationDetailResponseDTO createReservation(Long userId, ReservationRequestDTO.CreateReservationRequestDTO request) {
 
         // 유저 조회
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
 
@@ -62,7 +62,7 @@ public class ReservationServiceImpl implements ReservationService {
         screening.decreaseRemainingSeats(seats.size());
 
         // 예매 생성
-        Reservation reservation = Reservation.createReservation(user, screening, seats.size(), generateReservationNumber());
+        Reservation reservation = Reservation.createReservation(userEntity, screening, seats.size(), generateReservationNumber());
 
         reservationRepository.save(reservation);
 
@@ -77,7 +77,7 @@ public class ReservationServiceImpl implements ReservationService {
     public void cancelReservation(Long userId, Long reservationId) {
 
         // 유저 조회
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
 
@@ -86,7 +86,7 @@ public class ReservationServiceImpl implements ReservationService {
                 .orElseThrow(() -> new GeneralException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         // 본인 예약인지 확인
-        if (!user.equals(reservation.getUser())) {
+        if (!userEntity.equals(reservation.getUserEntity())) {
             throw new GeneralException(ReservationErrorCode.RESERVATION_NOT_FOUND);
         }
 

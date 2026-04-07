@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.review.entity;
 
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -22,7 +22,7 @@ public class ReviewLike extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    private UserEntity userEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "review_id", nullable = false)

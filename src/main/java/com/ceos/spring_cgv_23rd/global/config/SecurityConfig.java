@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.global.config;
 
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import com.ceos.spring_cgv_23rd.global.jwt.filter.JwtTokenFilter;
 import com.ceos.spring_cgv_23rd.global.jwt.handler.JwtAccessDeniedHandler;
 import com.ceos.spring_cgv_23rd.global.jwt.handler.JwtAuthenticationEntryPoint;

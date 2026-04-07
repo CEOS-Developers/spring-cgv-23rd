@@ -5,10 +5,10 @@ import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.auth.entity.RefreshToken;
 import com.ceos.spring_cgv_23rd.domain.auth.exception.AuthException;
 import com.ceos.spring_cgv_23rd.domain.auth.repository.RefreshTokenRepository;
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.repository.UserJpaRepository;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
-import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.code.GeneralErrorCode;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import com.ceos.spring_cgv_23rd.global.jwt.JwtTokenProvider;
@@ -30,7 +30,7 @@ import java.time.Period;
 public class AuthServiceImpl implements AuthService {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserRepository userRepository;
+    private final UserJpaRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
 
@@ -73,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
 
-        User user = User.builder()
+        UserEntity userEntity = UserEntity.builder()
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
                 .name(request.name())
@@ -85,9 +85,9 @@ public class AuthServiceImpl implements AuthService {
                 .role(UserRole.USER)
                 .build();
 
-        userRepository.save(user);
+        userRepository.save(userEntity);
 
-        return generateAndSaveTokens(user);
+        return generateAndSaveTokens(userEntity);
     }
 
     @Override
@@ -95,15 +95,15 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponseDTO.TokenResponseDTO login(AuthRequestDTO.LoginRequestDTO request) {
 
         // 유저 조회
-        User user = userRepository.findByUsername(request.username())
+        UserEntity userEntity = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.INVALID_LOGIN));
 
         // 비밀번호 검증
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+        if (!passwordEncoder.matches(request.password(), userEntity.getPassword())) {
             throw new GeneralException(GeneralErrorCode.INVALID_LOGIN);
         }
 
-        return generateAndSaveTokens(user);
+        return generateAndSaveTokens(userEntity);
     }
 
     @Override
@@ -142,11 +142,11 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.delete(storedToken);
 
         // 유저 조회
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 새 토큰 발급
-        return generateAndSaveTokens(user);
+        return generateAndSaveTokens(userEntity);
     }
 
     @Override
@@ -156,12 +156,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
 
-    private AuthResponseDTO.TokenResponseDTO generateAndSaveTokens(User user) {
-        String accessToken = jwtTokenProvider.generateAccessToken(user);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user);
+    private AuthResponseDTO.TokenResponseDTO generateAndSaveTokens(UserEntity userEntity) {
+        String accessToken = jwtTokenProvider.generateAccessToken(userEntity);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userEntity);
 
         RefreshToken refreshTokenEntity = RefreshToken.builder()
-                .userId(user.getId())
+                .userId(userEntity.getId())
                 .token(refreshToken)
                 .expiryDate(jwtTokenProvider.getExpirationFromToken(refreshToken))
                 .build();

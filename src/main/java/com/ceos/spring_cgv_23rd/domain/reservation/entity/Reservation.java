@@ -3,7 +3,7 @@ package com.ceos.spring_cgv_23rd.domain.reservation.entity;
 import com.ceos.spring_cgv_23rd.domain.guest.entity.Guest;
 import com.ceos.spring_cgv_23rd.domain.reservation.enums.ReservationStatus;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -25,7 +25,7 @@ public class Reservation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User user;
+    private UserEntity userEntity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guest_id")
@@ -46,8 +46,8 @@ public class Reservation extends BaseEntity {
     private Integer totalPrice;
 
 
-    private Reservation(User user, Guest guest, Screening screening, String reservationNumber, int seatSize) {
-        this.user = user;
+    private Reservation(UserEntity userEntity, Guest guest, Screening screening, String reservationNumber, int seatSize) {
+        this.userEntity = userEntity;
         this.guest = guest;
         this.screening = screening;
         this.reservationNumber = reservationNumber;
@@ -55,8 +55,8 @@ public class Reservation extends BaseEntity {
         this.totalPrice = screening.getPrice() * seatSize;
     }
 
-    public static Reservation createReservation(User user, Screening screening, int seatSize, String reservationNumber) {
-        return new Reservation(user, null, screening, reservationNumber, seatSize);
+    public static Reservation createReservation(UserEntity userEntity, Screening screening, int seatSize, String reservationNumber) {
+        return new Reservation(userEntity, null, screening, reservationNumber, seatSize);
     }
 
     public static Reservation createGuestReservation(Guest guest, Screening screening, int seatSize, String reservationNumber) {
@@ -68,6 +68,6 @@ public class Reservation extends BaseEntity {
     }
 
     public boolean isGuest() {
-        return user == null && guest != null;
+        return userEntity == null && guest != null;
     }
 }
