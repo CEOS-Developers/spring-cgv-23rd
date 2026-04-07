@@ -2,7 +2,7 @@ package com.ceos.spring_cgv_23rd.domain.screening.entity;
 
 import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.entity.MovieEntity;
 import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Hall;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.HallEntity;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,7 +28,7 @@ public class Screening {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hall_id", nullable = false)
-    private Hall hall;
+    private HallEntity hall;
 
     @Column(name = "start_at", nullable = false)
     private LocalDateTime startAt;

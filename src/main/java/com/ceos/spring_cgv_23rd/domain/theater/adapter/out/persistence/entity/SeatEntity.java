@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.theater.entity;
+package com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,7 +11,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Seat {
+public class SeatEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,7 +20,7 @@ public class Seat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "hall_type_id", nullable = false)
-    private HallType hallType;
+    private HallTypeEntity hallType;
 
     @Column(name = "row_num", nullable = false)
     private Integer rowNum;

@@ -2,7 +2,7 @@ package com.ceos.spring_cgv_23rd.domain.screening.dto;
 
 import com.ceos.spring_cgv_23rd.domain.movie.domain.AgeRating;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Hall;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.HallEntity;
 import lombok.Builder;
 
 import java.time.LocalDateTime;
@@ -21,14 +21,14 @@ public class ScreeningResponseDTO {
             List<ScreeningInfoDTO> screenings
     ) {
         public static List<ScreeningByMovieResponseDTO> from(List<Screening> screenings) {
-            Map<Hall, List<Screening>> grouped = screenings.stream()
+            Map<HallEntity, List<Screening>> grouped = screenings.stream()
                     .collect(Collectors.groupingBy(
                             Screening::getHall,
                             Collectors.toList()));
 
             return grouped.entrySet().stream()
                     .map(entry -> {
-                        Hall hall = entry.getKey();
+                        HallEntity hall = entry.getKey();
 
                         return ScreeningByMovieResponseDTO.builder()
                                 .hallId(hall.getId())
@@ -109,7 +109,7 @@ public class ScreeningResponseDTO {
             Integer remainingSeats
     ) {
         public static ScreeningWithHallDTO from(Screening screening) {
-            Hall hall = screening.getHall();
+            HallEntity hall = screening.getHall();
 
             return ScreeningWithHallDTO.builder()
                     .screeningId(screening.getId())

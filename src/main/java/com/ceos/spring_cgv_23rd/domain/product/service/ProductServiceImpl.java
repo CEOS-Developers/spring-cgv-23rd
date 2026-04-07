@@ -11,9 +11,9 @@ import com.ceos.spring_cgv_23rd.domain.product.exception.ProductErrorCode;
 import com.ceos.spring_cgv_23rd.domain.product.repository.InventoryRepository;
 import com.ceos.spring_cgv_23rd.domain.product.repository.ProductOrderRepository;
 import com.ceos.spring_cgv_23rd.domain.product.repository.ProductRepository;
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.TheaterEntity;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.repository.TheaterJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.exception.TheaterErrorCode;
-import com.ceos.spring_cgv_23rd.domain.theater.repository.TheaterRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
 import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
@@ -34,7 +34,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductOrderRepository productOrderRepository;
     private final ProductRepository productRepository;
     private final InventoryRepository inventoryRepository;
-    private final TheaterRepository theaterRepository;
+    private final TheaterJpaRepository theaterJpaRepository;
     private final UserRepository userRepository;
 
     @Override
@@ -46,7 +46,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 영화관 조회
-        Theater theater = theaterRepository.findById(request.theaterId())
+        TheaterEntity theater = theaterJpaRepository.findById(request.theaterId())
                 .orElseThrow(() -> new GeneralException(TheaterErrorCode.THEATER_NOT_FOUND));
 
         // 요청한 상품 ID 목록 추출

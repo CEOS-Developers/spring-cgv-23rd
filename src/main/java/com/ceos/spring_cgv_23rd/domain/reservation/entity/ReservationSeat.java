@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.reservation.entity;
 
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Seat;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.SeatEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,10 +23,10 @@ public class ReservationSeat {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)
-    private Seat seat;
+    private SeatEntity seat;
 
 
-    public static ReservationSeat createReservationSeat(Reservation reservation, Seat seat) {
+    public static ReservationSeat createReservationSeat(Reservation reservation, SeatEntity seat) {
         return ReservationSeat.builder()
                 .reservation(reservation)
                 .seat(seat)

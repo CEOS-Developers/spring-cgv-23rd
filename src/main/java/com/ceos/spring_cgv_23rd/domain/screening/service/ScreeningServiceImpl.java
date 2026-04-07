@@ -5,8 +5,8 @@ import com.ceos.spring_cgv_23rd.domain.movie.exception.MovieErrorCode;
 import com.ceos.spring_cgv_23rd.domain.screening.dto.ScreeningResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
 import com.ceos.spring_cgv_23rd.domain.screening.repository.ScreeningRepository;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.repository.TheaterJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.exception.TheaterErrorCode;
-import com.ceos.spring_cgv_23rd.domain.theater.repository.TheaterRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ public class ScreeningServiceImpl implements ScreeningService {
 
     private final ScreeningRepository screeningRepository;
     private final MovieJpaRepository movieJpaRepository;
-    private final TheaterRepository theaterRepository;
+    private final TheaterJpaRepository theaterJpaRepository;
 
     @Override
     public List<ScreeningResponseDTO.ScreeningByMovieResponseDTO> getScreeningByMovie(Long movieId, Long theaterId, LocalDate date) {
@@ -33,7 +33,7 @@ public class ScreeningServiceImpl implements ScreeningService {
         }
 
         // 영화관 존재 여부 확인
-        if (!theaterRepository.existsById(theaterId)) {
+        if (!theaterJpaRepository.existsById(theaterId)) {
             throw new GeneralException(TheaterErrorCode.THEATER_NOT_FOUND);
         }
 
@@ -47,7 +47,7 @@ public class ScreeningServiceImpl implements ScreeningService {
     public List<ScreeningResponseDTO.ScreeningByTheaterResponseDTO> getScreeningByTheater(Long theaterId, LocalDate date) {
 
         // 영화관 존재 여부 확인
-        if (!theaterRepository.existsById(theaterId)) {
+        if (!theaterJpaRepository.existsById(theaterId)) {
             throw new GeneralException(TheaterErrorCode.THEATER_NOT_FOUND);
         }
 

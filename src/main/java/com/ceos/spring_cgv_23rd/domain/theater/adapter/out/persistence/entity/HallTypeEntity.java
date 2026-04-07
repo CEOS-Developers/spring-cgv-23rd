@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.theater.entity;
+package com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class HallType {
+public class HallTypeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

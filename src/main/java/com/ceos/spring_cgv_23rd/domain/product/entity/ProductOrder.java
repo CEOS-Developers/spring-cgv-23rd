@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.product.entity;
 
 import com.ceos.spring_cgv_23rd.domain.product.enums.OrderStatus;
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.TheaterEntity;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -30,7 +30,7 @@ public class ProductOrder extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theater_id", nullable = false)
-    private Theater theater;
+    private TheaterEntity theater;
 
     @Column(name = "order_number", nullable = false, unique = true)
     private String orderNumber;
@@ -47,7 +47,7 @@ public class ProductOrder extends BaseEntity {
     private List<OrderItem> orderItems = new ArrayList<>();
 
 
-    public static ProductOrder createOrder(User user, Theater theater, List<OrderItem> orderItems) {
+    public static ProductOrder createOrder(User user, TheaterEntity theater, List<OrderItem> orderItems) {
 
         int totalPrice = orderItems.stream()
                 .mapToInt(item -> item.getQuantity() * item.getPrice())

@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.product.entity;
 
 import com.ceos.spring_cgv_23rd.domain.product.exception.ProductErrorCode;
-import com.ceos.spring_cgv_23rd.domain.theater.entity.Theater;
+import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.TheaterEntity;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,7 +23,7 @@ public class Inventory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theater_id", nullable = false)
-    private Theater theater;
+    private TheaterEntity theater;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)

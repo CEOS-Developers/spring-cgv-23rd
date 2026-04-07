@@ -1,6 +1,5 @@
-package com.ceos.spring_cgv_23rd.domain.theater.entity;
+package com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity;
 
-import com.ceos.spring_cgv_23rd.domain.user.entity.User;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,26 +12,17 @@ import lombok.*;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TheaterLike extends BaseEntity {
+public class TheaterLikeEntity extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "theater_like_id")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "theater_id", nullable = false)
-    private Theater theater;
-
-
-    public static TheaterLike createTheaterLike(User user, Theater theater) {
-        return TheaterLike.builder()
-                .user(user)
-                .theater(theater)
-                .build();
-    }
+    private TheaterEntity theater;
 }
