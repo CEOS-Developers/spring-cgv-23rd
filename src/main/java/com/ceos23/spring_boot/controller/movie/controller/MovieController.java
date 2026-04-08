@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "2. Movie (영화)", description = "영화 API")
+@Tag(name = "Movie (영화)", description = "영화 API")
 @RestController
 @RequiredArgsConstructor
 public class MovieController {

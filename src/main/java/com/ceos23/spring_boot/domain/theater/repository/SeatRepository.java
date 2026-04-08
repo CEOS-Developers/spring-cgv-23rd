@@ -2,10 +2,7 @@ package com.ceos23.spring_boot.domain.theater.repository;
 
 import com.ceos23.spring_boot.domain.theater.entity.Seat;
 import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -20,4 +17,13 @@ public interface SeatRepository extends JpaRepository<Seat, Long> {
     );
 
     List<Seat> findAllByIdInAndScreenIdAndDeletedAtIsNull(List<Long> seatIds, Long screenId);
+
+    @Modifying(clearAutomatically = true)
+    @Query(value =
+            "INSERT INTO seat (screen_id, seat_grade_id, row_name, col_number, deleted_at) " +
+                    "SELECT :screenId, st.seat_grade_id, st.row_name, st.col_number, NULL " +
+                    "FROM seat_template st " +
+                    "WHERE st.screen_type_id = :screenTypeId AND st.deleted_at IS NULL",
+            nativeQuery = true)
+    int bulkInsertFromTemplate(@Param("screenId") Long screenId, @Param("screenTypeId") Long screenTypeId);
 }

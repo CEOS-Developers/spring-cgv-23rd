@@ -4,6 +4,7 @@ import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
 import com.ceos23.spring_boot.global.common.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -31,4 +32,12 @@ public class SeatTemplate extends BaseSoftDeleteEntity {
 
     @Column(name = "col_number", nullable = false)
     private Integer colNumber;
+
+    @Builder
+    public SeatTemplate(ScreenType screenType, SeatGrade seatGrade, String rowName, Integer colNumber) {
+        this.screenType = screenType;
+        this.seatGrade = seatGrade;
+        this.rowName = rowName;
+        this.colNumber = colNumber;
+    }
 }

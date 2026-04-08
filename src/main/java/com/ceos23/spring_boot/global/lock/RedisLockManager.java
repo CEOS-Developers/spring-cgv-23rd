@@ -27,10 +27,10 @@ public class RedisLockManager {
                 .toList();
 
         RedissonMultiLock multiLock = new RedissonMultiLock(lockList.toArray(new RLock[0]));
-
+        boolean isLocked = false;
 
         try {
-            boolean isLocked = multiLock.tryLock(waitTime, leaseTime, timeUnit);
+            isLocked = multiLock.tryLock(waitTime, leaseTime, timeUnit);
 
             if (!isLocked) {
                 log.warn("Lock 획득 실패 (다른 사용자 요청 처리 중입니다) Key: {}", lockKeys);
@@ -45,7 +45,7 @@ public class RedisLockManager {
             throw new BusinessException(ErrorCode.LOCK_INTERRUPTED_ERROR);
 
         } finally {
-            if (multiLock.isLocked() && multiLock.isHeldByCurrentThread())
+            if (isLocked)
                 multiLock.unlock();
         }
     }

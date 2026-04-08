@@ -13,6 +13,10 @@ public enum ErrorCode {
     MOVIE_NOT_FOUND(HttpStatus.BAD_REQUEST, "M001", "존재하지 않는 영화입니다."),
     DUPLICATE_MOVIE(HttpStatus.BAD_REQUEST, "M002", "이미 존재하는 영화입니다."),
 
+    SCREEN_TYPE_NOT_FOUND(HttpStatus.NOT_FOUND, "ST001", "존재하지 않는 상영관 종류입니다."),
+
+    SEAT_TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "STP001", "존재하지 않는 좌석 템플릿입니다."),
+
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U002", "이미 사용 중인 이메일입니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "U003", "비밀번호가 틀렸습니다."),

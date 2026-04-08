@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "6. Order", description = "매점 주문 API")
+@Tag(name = "Order", description = "매점 주문 API")
 @RestController
 @RequiredArgsConstructor
 public class OrderController {

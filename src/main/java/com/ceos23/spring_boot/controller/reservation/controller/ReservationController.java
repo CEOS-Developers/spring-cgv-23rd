@@ -14,7 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "3. Reservation (예매)", description = "영화 예매 API")
+@Tag(name = "Reservation (예매)", description = "영화 예매 API")
 @RestController
 @RequiredArgsConstructor
 public class ReservationController {
