@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.guest.entity;
+package com.ceos.spring_cgv_23rd.domain.guest.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Guest {
+public class GuestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -1,7 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.reservation.service;
 
-import com.ceos.spring_cgv_23rd.domain.guest.entity.Guest;
-import com.ceos.spring_cgv_23rd.domain.guest.repository.GuestRepository;
+import com.ceos.spring_cgv_23rd.domain.guest.adapter.out.persistence.entity.GuestEntity;
+import com.ceos.spring_cgv_23rd.domain.guest.adapter.out.persistence.repository.GuestJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.reservation.dto.ReservationRequestDTO;
 import com.ceos.spring_cgv_23rd.domain.reservation.dto.ReservationResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.reservation.entity.Reservation;
@@ -39,7 +39,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final ScreeningRepository screeningRepository;
     private final UserJpaRepository userRepository;
     private final SeatJpaRepository seatRepository;
-    private final GuestRepository guestRepository;
+    private final GuestJpaRepository guestRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -109,17 +109,17 @@ public class ReservationServiceImpl implements ReservationService {
         screening.decreaseRemainingSeats(seats.size());
 
         // 비회원 생성
-        Guest guest = Guest.builder()
+        GuestEntity guestEntity = GuestEntity.builder()
                 .name(request.guestName())
                 .phone(request.guestPhone())
                 .birth(request.guestBirth())
                 .password(passwordEncoder.encode(request.guestPassword()))
                 .build();
 
-        guestRepository.save(guest);
+        guestRepository.save(guestEntity);
 
         // 예매 생성
-        Reservation reservation = Reservation.createGuestReservation(guest, screening, seats.size(), generateReservationNumber());
+        Reservation reservation = Reservation.createGuestReservation(guestEntity, screening, seats.size(), generateReservationNumber());
 
         reservationRepository.save(reservation);
 
@@ -143,10 +143,10 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         // 예매 정보가 맞는지 확인
-        Guest guest = reservation.getGuest();
-        if (!guest.getPhone().equals(request.guestPhone())
-                || !guest.getBirth().equals(request.guestBirth())
-                || !passwordEncoder.matches(request.guestPassword(), guest.getPassword())) {
+        GuestEntity guestEntity = reservation.getGuestEntity();
+        if (!guestEntity.getPhone().equals(request.guestPhone())
+                || !guestEntity.getBirth().equals(request.guestBirth())
+                || !passwordEncoder.matches(request.guestPassword(), guestEntity.getPassword())) {
             throw new GeneralException(ReservationErrorCode.GUEST_AUTH_FAILED);
         }
 
