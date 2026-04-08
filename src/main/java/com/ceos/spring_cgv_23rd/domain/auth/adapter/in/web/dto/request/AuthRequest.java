@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.auth.dto;
+package com.ceos.spring_cgv_23rd.domain.auth.adapter.in.web.dto.request;
 
 import com.ceos.spring_cgv_23rd.domain.user.domain.Gender;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -7,10 +7,10 @@ import lombok.Builder;
 
 import java.time.LocalDate;
 
-public class AuthRequestDTO {
+public class AuthRequest {
 
     @Builder
-    public record SignupRequestDTO(
+    public record SignupRequest(
             @NotBlank(message = "아이디가 없습니다.")
             @Size(max = 20, message = "아이디는 20자 이하로 입력해주세요.")
             String username,
@@ -52,7 +52,7 @@ public class AuthRequestDTO {
     }
 
     @Builder
-    public record LoginRequestDTO(
+    public record LoginRequest(
             @NotBlank(message = "아이디가 없습니다.")
             String username,
 

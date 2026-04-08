@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.auth.entity;
+package com.ceos.spring_cgv_23rd.domain.auth.adapter.out.persistence.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class RefreshToken {
+public class RefreshTokenEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

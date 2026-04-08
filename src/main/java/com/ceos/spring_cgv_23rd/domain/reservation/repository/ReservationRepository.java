@@ -15,7 +15,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     @Query("SELECT r FROM Reservation r " +
             "JOIN FETCH r.screening s " +
-            "LEFT JOIN FETCH r.guest g " +
+            "LEFT JOIN FETCH r.guestEntity g " +
             "WHERE r.reservationNumber = :reservationNumber")
     Optional<Reservation> findWithScreeningByReservationNumber(String reservationNumber);
 }

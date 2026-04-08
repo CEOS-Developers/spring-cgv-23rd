@@ -1,8 +1,9 @@
-package com.ceos.spring_cgv_23rd.domain.auth.controller;
+package com.ceos.spring_cgv_23rd.domain.auth.adapter.in.web.controller;
 
-import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthRequestDTO;
-import com.ceos.spring_cgv_23rd.domain.auth.dto.AuthResponseDTO;
-import com.ceos.spring_cgv_23rd.domain.auth.service.AuthService;
+import com.ceos.spring_cgv_23rd.domain.auth.adapter.in.web.dto.request.AuthRequest;
+import com.ceos.spring_cgv_23rd.domain.auth.adapter.in.web.mapper.AuthRequestMapper;
+import com.ceos.spring_cgv_23rd.domain.auth.application.dto.result.TokenResult;
+import com.ceos.spring_cgv_23rd.domain.auth.application.port.in.*;
 import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import com.ceos.spring_cgv_23rd.global.jwt.utils.CookieUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,13 +21,19 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Auth", description = "인증 관련 API")
 public class AuthController {
 
-    private final AuthService authService;
+    private final SignupUseCase signupUseCase;
+    private final LoginUseCase loginUseCase;
+    private final IssueGuestTokenUseCase issueGuestTokenUseCase;
+    private final RefreshTokenUseCase refreshTokenUseCase;
+    private final LogoutUseCase logoutUseCase;
+    private final AuthRequestMapper authRequestMapper;
     private final CookieUtils cookieUtils;
+
 
     @Operation(summary = "게스트 로그인")
     @PostMapping("/guest")
     public ApiResponse<Void> issueGuestToken(HttpServletResponse response) {
-        AuthResponseDTO.TokenResponseDTO tokens = authService.issueGuestToken();
+        TokenResult tokens = issueGuestTokenUseCase.issueGuestToken();
         response.addHeader(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(tokens.accessToken()).toString());
         return ApiResponse.onSuccess("게스트 로그인 성공");
     }
@@ -34,9 +41,9 @@ public class AuthController {
     @Operation(summary = "회원가입")
     @PostMapping("/signup")
     public ApiResponse<Void> signup(
-            @RequestBody @Valid AuthRequestDTO.SignupRequestDTO request,
+            @RequestBody @Valid AuthRequest.SignupRequest request,
             HttpServletResponse response) {
-        AuthResponseDTO.TokenResponseDTO tokens = authService.signup(request);
+        TokenResult tokens = signupUseCase.signup(authRequestMapper.toCommand(request));
         addTokenCookies(response, tokens);
         return ApiResponse.onSuccess("회원가입 성공");
     }
@@ -44,9 +51,9 @@ public class AuthController {
     @Operation(summary = "로그인")
     @PostMapping("/login")
     public ApiResponse<Void> login(
-            @RequestBody @Valid AuthRequestDTO.LoginRequestDTO request,
+            @RequestBody @Valid AuthRequest.LoginRequest request,
             HttpServletResponse response) {
-        AuthResponseDTO.TokenResponseDTO tokens = authService.login(request);
+        TokenResult tokens = loginUseCase.login(authRequestMapper.toCommand(request));
         addTokenCookies(response, tokens);
         return ApiResponse.onSuccess("로그인 성공");
     }
@@ -57,7 +64,7 @@ public class AuthController {
             @Parameter(hidden = true)
             @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE) String refreshToken,
             HttpServletResponse response) {
-        AuthResponseDTO.TokenResponseDTO tokens = authService.refresh(refreshToken);
+        TokenResult tokens = refreshTokenUseCase.refresh(refreshToken);
         addTokenCookies(response, tokens);
         return ApiResponse.onSuccess("토큰 재발급 성공");
     }
@@ -69,7 +76,7 @@ public class AuthController {
             @CookieValue(name = CookieUtils.REFRESH_TOKEN_COOKIE, required = false) String refreshToken,
             HttpServletResponse response) {
         if (refreshToken != null) {
-            authService.logout(refreshToken);
+            logoutUseCase.logout(refreshToken);
         }
 
         clearTokenCookies(response);
@@ -77,7 +84,7 @@ public class AuthController {
     }
 
 
-    private void addTokenCookies(HttpServletResponse response, AuthResponseDTO.TokenResponseDTO tokens) {
+    private void addTokenCookies(HttpServletResponse response, TokenResult tokens) {
         response.addHeader(HttpHeaders.SET_COOKIE, cookieUtils.createAccessTokenCookie(tokens.accessToken()).toString());
         response.addHeader(HttpHeaders.SET_COOKIE, cookieUtils.createRefreshTokenCookie(tokens.refreshToken()).toString());
     }
