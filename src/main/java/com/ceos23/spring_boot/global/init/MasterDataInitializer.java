@@ -102,10 +102,7 @@ public class MasterDataInitializer implements CommandLineRunner {
         Menu colaL = Menu.builder().name("코카콜라 (L)").price(3000).build();
         menuRepository.saveAll(List.of(popcorn, popcornL, cola, colaL));
 
-        // ------------------------------------------------------------------
-        // 위에서 만든 데이터를 참조하는 연관 데이터들입니다.
-        // ------------------------------------------------------------------
-
+        // [연관 데이터]
         // 6. 재고(Inventory) 세팅 (극장 + 메뉴 참조)
         Inventory popcornInventory = Inventory.builder().theater(theater).menu(popcorn).stock(10).build();
         Inventory popcornLInventory = Inventory.builder().theater(theater).menu(popcornL).stock(20).build();

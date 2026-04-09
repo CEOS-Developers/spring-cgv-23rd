@@ -1,4 +1,4 @@
-package com.ceos23.spring_boot.global.lock.config;
+package com.ceos23.spring_boot.global.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;

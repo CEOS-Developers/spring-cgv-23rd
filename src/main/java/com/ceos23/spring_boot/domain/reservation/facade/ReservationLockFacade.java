@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.domain.reservation.facade;
 
 import com.ceos23.spring_boot.domain.reservation.dto.ReservationCreateCommand;
 import com.ceos23.spring_boot.domain.reservation.dto.ReservationInfo;
+import com.ceos23.spring_boot.domain.reservation.entity.Reservation;
 import com.ceos23.spring_boot.domain.reservation.entity.ReservationStatus;
 import com.ceos23.spring_boot.domain.reservation.service.ReservationService;
 import com.ceos23.spring_boot.global.lock.RedisLockManager;
@@ -30,7 +31,7 @@ public class ReservationLockFacade {
         return redisLockManager.executeWithLock(
                 lockKeys,
                 0,
-                3,
+                -1,
                 TimeUnit.SECONDS,
                 () -> reservationService.createReservation(command)
         );

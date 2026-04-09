@@ -20,12 +20,17 @@ import java.util.List;
 
 @Entity
 @Getter
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_PAYMENT_ID", columnNames = {"payment_id"})
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLRestriction("deleted_at IS NULL")
-public class Reservation extends BaseSoftDeleteEntity {
+public class Reservation extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reservation_id")
     private Long id;
+
+    @Column(name = "payment_id", nullable = false, length = 50)
+    private String paymentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)
@@ -46,18 +51,20 @@ public class Reservation extends BaseSoftDeleteEntity {
     private List<ReservedSeat> reservedSeats = new ArrayList<>();
 
     @Builder
-    public Reservation(User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
+    public Reservation(String paymentId, User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
+        this.paymentId = paymentId;
         this.user = user;
         this.schedule = schedule;
         this.status = status;
         this.totalPrice = totalPrice;
     }
 
-    public static Reservation create(User user, Schedule schedule, List<Seat> seats) {
+    public static Reservation create(String paymentId, User user, Schedule schedule, List<Seat> seats) {
         Reservation reservation = Reservation.builder()
+                .paymentId(paymentId)
                 .user(user)
                 .schedule(schedule)
-                .status(ReservationStatus.RESERVED)
+                .status(ReservationStatus.PENDING)
                 .build();
 
         int totalPrice = 0;
@@ -79,6 +86,9 @@ public class Reservation extends BaseSoftDeleteEntity {
 
 
     public void validateCancelable(){
+        if (this.status == ReservationStatus.CANCELED)
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+
         LocalDateTime currentTime = LocalDateTime.now();
 
         if (ReservationStatus.CANCELED == this.status)
@@ -88,7 +98,22 @@ public class Reservation extends BaseSoftDeleteEntity {
             throw new BusinessException(ErrorCode.CANCELLATION_DEADLINE_PASSED);
     }
 
+    public void completePayment() {
+        if (this.status != ReservationStatus.PENDING)
+            throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+
+        this.status = ReservationStatus.PAID;
+    }
+
     public void cancel() {
+        if (this.status == ReservationStatus.CANCELED)
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
         this.status = ReservationStatus.CANCELED;
+
+        this.reservedSeats.clear();
+    }
+
+    public boolean isCanceled() {
+        return this.status == ReservationStatus.CANCELED;
     }
 }
