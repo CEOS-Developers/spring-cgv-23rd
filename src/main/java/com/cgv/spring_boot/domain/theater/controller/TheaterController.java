@@ -3,14 +3,13 @@ package com.cgv.spring_boot.domain.theater.controller;
 import com.cgv.spring_boot.domain.theater.dto.TheaterResponse;
 import com.cgv.spring_boot.domain.theater.service.TheaterService;
 import com.cgv.spring_boot.global.common.response.ApiResponse;
+import com.cgv.spring_boot.global.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,5 +37,17 @@ public class TheaterController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<TheaterResponse>> getTheater(@PathVariable("id") Long id) {
         return ResponseEntity.ok(ApiResponse.success(theaterService.findTheaterById(id)));
+    }
+
+    @Operation(
+            summary = "영화관 찜",
+            description = "로그인한 사용자가 특정 영화관을 찜합니다."
+    )
+    @PostMapping("/{id}/wish")
+    public ResponseEntity<ApiResponse<Long>> wishTheater(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable("id") Long id
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(theaterService.wishTheater(authenticatedUser.getUserId(), id)));
     }
 }
