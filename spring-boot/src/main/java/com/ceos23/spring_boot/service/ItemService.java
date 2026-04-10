@@ -2,18 +2,16 @@ package com.ceos23.spring_boot.service;
 
 import com.ceos23.spring_boot.domain.Item;
 import com.ceos23.spring_boot.repository.ItemRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ItemService {
 
     private final ItemRepository itemRepository;
-
-    public ItemService(ItemRepository itemRepository) {
-        this.itemRepository = itemRepository;
-    }
 
     // CREATE
     public Item save(Item item) {

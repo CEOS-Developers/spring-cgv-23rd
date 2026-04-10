@@ -9,15 +9,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Screen {
 
-    @Id @GeneratedValue
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // IDENTITY로 변경
     private Long id;
 
-    private String type; // 일반관 / 특별관
+    @Enumerated(EnumType.STRING)
+    private ScreenType type;  // String → Enum으로 변경
 
     @ManyToOne
     private Theater theater;
 
-    public Screen(String type, Theater theater) {
+    public Screen(ScreenType type, Theater theater) {
         this.type = type;
         this.theater = theater;
     }

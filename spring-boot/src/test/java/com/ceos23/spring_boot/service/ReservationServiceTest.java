@@ -1,7 +1,15 @@
 package com.ceos23.spring_boot.service;
 
-import com.ceos23.spring_boot.domain.*;
-import com.ceos23.spring_boot.repository.*;
+import com.ceos23.spring_boot.domain.Reservation;
+import com.ceos23.spring_boot.domain.Screen;
+import com.ceos23.spring_boot.domain.Screening;
+import com.ceos23.spring_boot.domain.Seat;
+import com.ceos23.spring_boot.domain.User;
+import com.ceos23.spring_boot.exception.CustomException;
+import com.ceos23.spring_boot.repository.ReservationRepository;
+import com.ceos23.spring_boot.repository.ScreeningRepository;
+import com.ceos23.spring_boot.repository.SeatRepository;
+import com.ceos23.spring_boot.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -10,8 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
@@ -38,9 +49,10 @@ class ReservationServiceTest {
         Long screeningId = 1L;
         Long seatId = 1L;
 
-        User user = new User();
-        Screening screening = new Screening();
-        Seat seat = new Seat();
+        User user = mock(User.class);
+        Screening screening = mock(Screening.class);
+        Screen screen = mock(Screen.class);
+        Seat seat = new Seat(1, 1, screen);
 
         given(reservationRepository.existsByScreeningIdAndSeatId(screeningId, seatId))
                 .willReturn(false);
@@ -54,7 +66,7 @@ class ReservationServiceTest {
         given(seatRepository.findById(seatId))
                 .willReturn(Optional.of(seat));
 
-        given(reservationRepository.save(any()))
+        given(reservationRepository.save(any(Reservation.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when
@@ -76,7 +88,6 @@ class ReservationServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 reservationService.reserve(1L, screeningId, seatId)
-        ).isInstanceOf(RuntimeException.class)
-                .hasMessage("이미 예약된 좌석입니다.");
+        ).isInstanceOf(CustomException.class);
     }
 }

@@ -16,7 +16,7 @@ public class Screening {
 
     private LocalDateTime startTime;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY) // EAGER에서 LAZY로 변경
     private Movie movie;
 
     @ManyToOne
