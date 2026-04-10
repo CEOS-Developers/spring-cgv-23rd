@@ -1,5 +1,6 @@
 package cgv_23rd.ceos.entity.user;
 
+import cgv_23rd.ceos.entity.BaseEntity;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.entity.like.MovieLike;
 import cgv_23rd.ceos.entity.like.TheaterLike;
@@ -18,16 +19,19 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "users")
-public class User {
+public class User extends BaseEntity {
 
-    @Id @GeneratedValue
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
     private String phone;
     private LocalDate birth;
-    private String username;
+    private String email;
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    private UserRole role;
 
     @OneToMany(mappedBy = "user")
     private List<Reservation> reservations = new ArrayList<>();

@@ -735,4 +735,240 @@ UNIQUE (movie_id, sort_order)
 - **낙관적 락(Optimistic Lock)**: 데이터 충돌이 드물 것이라고 가정하는 방식임. 엔티티에 `@Version` 필드를 추가하여 수정 시점에 버전이 일치하는지 확인하며, DB 락 대신 애플리케이션 레벨에서 충돌을 감지하므로 성능상 유리
 - **분산 락(Distributed Lock)**: Redis를 활용하여 DB 외부에서 락을 관리하는 방식임. DB의 부하를 줄일 수 있고, 여러 서버로 구성된 분산 환경에서 특정 자원(상영관, 재고 등)에 대한 동기화를 효율적으로 처리할 수 있음
 - **원자적 쿼리(Atomic Query)**: "UPDATE ... SET amount = amount - 1"과 같이 DB 자체의 원자적 연산을 활용하여 별도의 명시적 락 없이도 재고를 안전하게 차감하는 방식을 고려
+
+### 5. 비관적 락 사용 시 주의사항: '존재하지 않는 데이터'에 대한 잠금 한계
+
+비관적 락(`SELECT ... FOR UPDATE`)은 데이터베이스가 락을 거는 대상과 메커니즘의 특성상 다음과 같은 주의가 필요함.
+
+- **락의 대상은 실제 존재하는 레코드임**: 
+    - **레코드 기반 잠금**: 비관적 락은 쿼리 결과로 조회된 실제 데이터 행에 물리적인 잠금을 거는 방식
+    - **잠금 대상 부재**: `WHERE` 절 조건에 맞는 데이터가 테이블에 없어 아무런 행도 반환되지 않는다면, DB 엔진은 잠금을 설정할 실체를 찾지 못함
+    - **결과**: 잠글 대상이 없으므로 락이 걸리지 않으며, 트랜잭션은 아무런 보호 장치 없이 다음 로직을 수행
+
+
+- **작동 방식의 이해와 레이스 컨디션**: 
+    - **잠금 시도 과정**: 쿼리 실행 시 행을 스캔하고, 행이 존재할 때만 배타적 잠금을 건 뒤 데이터를 반환
+    - **후속 작업의 위험성**: 행이 없어 락이 안 걸린 상태라면, 다른 트랜잭션이 동시에 같은 조건으로 데이터를 `INSERT` 하더라도 이를 물리적으로 막을 수 없음
+
+- **발생 가능한 문제점**: 
+    - **동시성 제어 실패**: 특정 데이터가 없는 것을 확인하고(락이 안 걸린 상태) 새로운 데이터를 삽입(`INSERT`)하려 할 때, 그 사이 다른 트랜잭션이 먼저 데이터를 저장해버리면 **중복 데이터 오류**나 **데이터 불일치**가 발생할 수 있음.
+
+- **해결 방안 및 보완책**: 
+    - **상위 객체 잠금**: 실제 저장하려는 데이터(예: 예약 좌석)가 아직 없다면, 이미 DB에 존재하는 부모 엔티티(예: 상영관, 상품 마스터)에 비관적 락을 걸어 하위 로직 전체를 보호함.
+    - **네임드 락(Named Lock)**: DB 레코드가 아닌 가상의 문자열 키를 기반으로 잠금을 획득하여 데이터 존재 여부와 상관없이 동기화를 제어함.
+    - **원자적 구문 활용**: `Insert Ignore` 또는 `Upsert(ON DUPLICATE KEY UPDATE)` 구문을 사용하여 삽입 시점의 원자성을 보장함.
+
+현재 프로젝트에서 `ScreenRepository`와 `TheaterFoodRepository`에 적용된 비관적 락은 이미 존재하는 상영관 정보나 재고 데이터를 수정할 때는 효과적이나 만약 새로운 데이터를 생성하는 로직에서 중복 여부를 체크하며 락을 걸고자 한다면, 위와 같은 메커니즘의 한계를 인지하고 부모 객체 잠금이나 분산 락 등의 대안을 병행
+</details>
+
+<details><summary><h1>JWT</h1></summary>
+
+## 1. HTTP 상태 유지
+
+HTTP는 각 요청이 독립적인 **Stateless** 프로토콜로 이를 해결하기 위해 초기에는 쿠키와 세션을 활용
+
+### 1.1 쿠키 기반 메커니즘과 보안 속성
+
+쿠키는 브라우저에 저장되는 4KB 이하의 작은 데이터 조각으로 서버가 응답 헤더(`Set-Cookie`)로 전달하면, 이후 모든 요청에 자동으로 포함
+
+- **HttpOnly:** 자바스크립트(`document.cookie`)를 통한 접근을 차단하여 XSS 공격 시 토큰 탈취를 방지
+- **Secure:** 오직 HTTPS 연결에서만 쿠키가 전송되도록 강제하여 패킷 감청을 차단
+- **SameSite:** 교차 출처(Cross-site) 요청 시 쿠키 전송 여부를 결정함. `Lax`나 `Strict` 설정을 통해 CSRF 공격을 효과적으로 방어
+
+### 1.2 서버 측 세션 관리와 확장성 이슈
+
+세션은 민감 정보를 서버(메모리, DB 등)에 두고 클라이언트에게는 **Session ID**만 전달하는 방식
+
+- **장점:** 서버가 세션 생명주기를 완벽히 통제할 수 있어 보안 사고 시 즉각적인 로그아웃 처리가 가능
+- **단점:** 사용자가 늘어날수록 서버 메모리 부하가 가중됨. 다중 서버 환경에서는 세션 정보가 공유되지 않음
+- **대안:** Redis와 같은 외부 캐시 시스템을 활용하나, 매 요청마다 발생하는 네트워크 I/O가 지연 시간의 원인이 됨
+
+## 2. JWT
+
+JWT는 토큰 자체가 정보를 담고 있는 **Self-contained** 구조로 서버가 상태를 저장할 필요가 없어 확장성이 매우 뛰어남
+
+### 2.1 JWT의 3단 구조
+
+1. **Header :** 사용된 해시 알고리즘(예: HS256)과 토큰 타입(JWT) 정보를 담고 있음
+2. **Payload :** 실제 전송할 데이터인 클레임을 포함
+    - **Registered :** `iss`(발행자), `exp`(만료), `sub`(식별자) 등 표준 규격.
+    - **Public/Private:** 협의된 사용자 정의 정보.
+    - **주의 :** Base64Url로 인코딩만 되어 있으므로 누구나 복호화가 가능하므로 절대 민감 정보를 담으면 안 됨
+3. **Signature :** 헤더와 페이로드를 비밀 키로 해싱하여 생성하므로 토큰의 무결성을 보장
+
+### 2.2 서명 알고리즘: 대칭키 vs 비대칭키
+
+- **HS256 (HMAC):** 동일한 비밀 키로 서명하고 검증함. 구조가 단순하고 빠르나, 키 유출 시 전체 보안이 무너지는 리스크 존재
+- **RS256 (RSA):** 개인 키로 서명하고 공개 키로 검증함. 검증 주체가 공개 키만 가지면 되므로 마이크로서비스(MSA) 환경에서 서비스 간 독립적인 검증이 가능
+
+## 3. 토큰 생명주기 : 액세스 및 리프레시 토큰
+
+JWT의 최대 단점인 '한번 발행하면 무효화가 어렵다'는 점을 해결하기 위해 두 종류의 토큰을 조합할 수 있음
+
+### 3.1 토큰의 역할 분리
+
+- **Access Token :** 실제 API 호출에 사용되며 유효 기간을 짧게 설정함. 탈취되어도 피해 범위를 시간적으로 제한할 수 있음
+- **Refresh Token :** 새로운 액세스 토큰을 발급받기 위한 용도임. 유효 기간을 길게 설정하며, 노출 빈도를 낮추기 위해 전용 엔드포인트에서만 사용
+
+### 3.2 리프레시 토큰 회전(RTR) 및 재사용 탐지
+
+- **RTR :** 새로운 액세스 토큰 발급 시 리프레시 토큰도 매번 새로 교체해주는 방식
+- **재사용 탐지 :** 공격자가 탈취한 예전 리프레시 토큰을 사용하려 할 경우, 서버는 이를 '비정상적 재사용'으로 간주함. 해당 사용자의 모든 토큰을 즉시 무효화하여 추가 피해를 차단
+
+## 4. 클라이언트 저장소 보안 전략
+
+### 4.1 LocalStorage vs HttpOnly 쿠키
+
+- **LocalStorage :** 사용은 편하나 XSS 공격에 무방비함. 스크립트 한 줄로 토큰을 전부 털릴 수 있음.
+- **HttpOnly 쿠키 :** XSS에는 강하나 CSRF 공격에 취약함. 브라우저가 자동으로 쿠키를 태워 보내기 때문
+
+### 4.2 가장 권장되는 접근법
+
+1. **Access Token :** 자바스크립트의 변수나 클로저(In-Memory)에 저장함. 페이지를 새로고침하면 사라지지만 XSS로부터 가장 안전
+2. **Refresh Token:** `HttpOnly`, `Secure`, `SameSite` 속성이 적용된 쿠키에 저장
+3. **동작:** 새로고침 시 쿠키의 리프레시 토큰으로 서버에 요청하여 액세스 토큰을 다시 받아 메모리에 올림
+
+## 5. OAuth 2.0과 OpenID Connect (OIDC)
+
+로그인 인증과 권한 위임을 표준화한 프레임워크
+
+### 5.1 OAuth 2.0과 PKCE
+
+- **핵심 :** 비밀번호 노출 없이 제3자 앱에 특정 자원 접근 권한을 부여
+- **PKCE (Proof Key for Code Exchange) :** 클라이언트 보안이 취약한 환경에서 필수로 코드 탈취 후 토큰 교환을 시도해도 미리 전달한 해시값과 검증용 난수가 맞지 않으면 토큰 발급을 거부
+
+### 5.2 OIDC (OpenID Connect)
+
+- **목적:** OAuth 2.0 기반 위에서 '사용자가 누구인지(Identity)' 확인하는 계층을 추가
+- **ID Token :** JWT 형식의 신원 증명서임. 클라이언트는 이를 파싱하여 별도의 API 호출 없이도 사용자 프로필 정보를 즉시 표시할 수 있음
+
+## 6. 소셜 로그인의 원리와 작동 과정
+
+### 6.1 주요 참여자
+
+<img width="820" height="396" alt="image" src="https://github.com/user-attachments/assets/13650652-9426-44e9-a6e3-961d27d290de" />
+
+
+- **자원 소유자 (Resource Owner) :** 소셜 계정을 가진 실제 사용자
+- **인가 서버 (Authorization Server) :** 사용자를 인증하고 토큰을 발급하는 소셜 서비스의 서버
+- **리소스 서버 (Resource Server) :** 사용자의 이름, 이메일 등 프로필 정보를 가진 소셜 서비스의 API 서버
+
+### 6.2 인증 코드 승인 방식의 단계별 과정
+
+가장 보안성이 높아 널리 쓰이는 방식이며, 클라이언트 사이드(브라우저)에 토큰이 직접 노출되는 것을 방지
+
+1. **로그인 시도 :** 사용자가 서비스의 '구글로 로그인' 버튼을 클릭
+2. **인가 요청 (Redirect) :** 서비스가 사용자를 소셜 서비스의 로그인 페이지로 보냄. 이때 `client_id`, `redirect_uri`, `scope`(가져올 정보 범위)를 함께 전달
+3. **인증 및 동의 :** 사용자가 소셜 서비스에 로그인하고, 서비스가 요청한 정보 제공에 동의함.
+4. **인가 코드 발급 :** 소셜 서비스가 사용자를 서비스의 `redirect_uri`로 다시 보내면서, 일회용 인가 코드를 전달
+5. **토큰 교환 :** 서비스의 백엔드 서버가 받은 인가 코드를 가지고 소셜 서버에 직접 접속함. 코드를 주고 실제 액세스 토큰과 ID 토큰을 발급받음
+6. **사용자 정보 획득:** 서비스 백엔드가 액세스 토큰을 사용하여 소셜 리소스 서버로부터 사용자의 프로필 정보를 가져옴
+7. **로그인 완료:** 가져온 정보를 바탕으로 서비스 자체의 세션이나 JWT를 생성하여 사용자에게 전달함으로써 로그인을 마무리
+
+### 6.3 왜 인가 코드를 먼저 받는가?
+
+- **보안 강화:** 브라우저(프론트엔드)는 주소창이나 개발자 도구를 통해 데이터가 노출될 위험이 큼
+- **서버 간 통신:** 실제 중요한 토큰(Access Token)은 백엔드 서버와 소셜 서버 간의 안전한 통신을 통해서만 오가게 하여 탈취 위험을 원천 차단하기 위함
+
+## 7. OIDC와 ID 토큰의 역할
+
+과거 OAuth 2.0은 '권한 위임'만 가능했으나, 그 위에 **OIDC** 계층이 생기면서 신원 확인이 쉬워짐
+
+| **구분** | **OAuth 2.0 (Access Token)** | **OIDC (ID Token)** |
+| --- | --- | --- |
+| **핵심 목적** | 리소스 서버의 API 호출 권한 획득 | 사용자가 누구인지 증명 (신원 확인) |
+| **데이터 형태** | 보통 불투명한 문자열 (Opaque) | 표준화된 **JWT** 형식 |
+| **주요 내용** | Scope(권한 범위), 만료 시간 | 유저 ID, 이메일, 프로필 사진 등 |
+- 소셜 로그인 시 발급되는 **ID Token**은 그 자체로 유효성이 검증된 JWT이므로, 서비스 백엔드는 별도의 API 호출 없이도 토큰 내부의 정보를 믿고 즉시 회원가입이나 로그인을 처리할 수 있음
+
+## 8. 소셜 로그인의 보안적 이점
+
+- **비밀번호 관리 부담 해소 :** 서비스가 사용자의 비밀번호를 직접 저장하지 않으므로 DB 유출 시에도 비밀번호 보안 사고에서 자유로움
+- **신뢰도 높은 인증 :** 구글이나 카카오 같은 대형 플랫폼의 강력한 보안 시스템(2단계 인증 등)을 그대로 활용할 수 있음
+- **간편한 사용자 경험 :** 사용자는 별도의 가입 절차 없이 클릭 몇 번으로 서비스를 시작할 수 있음
+
+</details>
+
+<details><summary><h1>JWT 토큰 및 권한 테스트</h1></summary>
+
+현재 내 Security Config에 설정된 권한은 다음과 같다
+```java
+ http.authorizeHttpRequests((authorize) -> authorize
+                .requestMatchers("/api/v1/auth/**").permitAll() // /api/v1/auth/ 하위 경로는 모두 허용
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger 허용
+                .requestMatchers("/", "/health-check").permitAll()
+                .requestMatchers("/").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin 경로 권한설정
+                .requestMatchers(HttpMethod.GET,"/api/reviews/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/movies/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/reviews/movie/").permitAll()
+                .requestMatchers(HttpMethod.GET,"/api/schedules/").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/theaters/").permitAll()
+                .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
+```
+
+- 회원가입 API
+  
+  <img width="702" height="508" alt="image" src="https://github.com/user-attachments/assets/bc389b1e-ba5e-4bb3-9d5b-cac88dcd8b57" />
+  
+- 로그인 API
+ <img width="1332" height="502" alt="image" src="https://github.com/user-attachments/assets/da1a39ba-5dad-42f3-a654-656fa226ef59" />
+
+Access token과 refresh token을 발급
+
+- JWT 토큰 적용
+  
+  <img width="685" height="292" alt="image" src="https://github.com/user-attachments/assets/c29ae10d-89ee-4ac7-9aee-f76b225c711b" />
+
+- 리프레쉬 토큰으로 재발급
+
+  <img width="1096" height="354" alt="image" src="https://github.com/user-attachments/assets/63a14577-3460-496f-be61-f2ead2690cc2" />
+
+  
+- 로그인된 사용자만 사용할 수 있는 API
+  
+  <img width="1102" height="343" alt="image" src="https://github.com/user-attachments/assets/0fd9480d-7edb-4681-b67b-5f4f34b2187b" />
+  
+- 로그인된 사용자만 사용할 수 있는 API에 로그인 안 한 유저 접근하려 할 때
+  
+  <img width="686" height="398" alt="image" src="https://github.com/user-attachments/assets/cd50baf4-2f4e-435f-8879-cab58efc41da" />
+
+  401 에러를 반환
+  
+- 관리자만 사용할 수 있는 API (/api/admin/**)
+  
+  <img width="952" height="452" alt="image" src="https://github.com/user-attachments/assets/9abb9869-9c8c-43be-b173-a90268432129" />
+
+- 관리자만 사용할 수 있는 API에 일반 유저가 접근하려 할 때
+  
+  <img width="812" height="459" alt="image" src="https://github.com/user-attachments/assets/1912f40e-74a6-4aed-9b9f-291edf5feef8" />
+
+  JWT 토큰을 가지고 있지만 role이 user 이므로 403 에러 발생
+
+
+</details>
+
+<details><summary><h1>401, 403 에러의 공통 응답 미적용 이유와 해결 방안</h1></summary>
+
+### 1. 공통 응답 형식이 적용되지 않는 이유: 발생 시점의 차이
+* **필터와 인터셉터의 위치 차이**: Spring Security는 서블릿 필터 기반으로 동작하며, 이는 스프링 MVC의 `DispatcherServlet`보다 앞단에 위치
+* **@RestControllerAdvice의 한계**: 현재 프로젝트에서 사용 중인 `ExceptionAdvice`는 `@RestControllerAdvice`를 사용함. 이는 Controller 이후 영역(Interceptor, Controller, Service 등)에서 발생하는 예외만 가로챌 수 있음
+* **보안 필터의 예외 발생**: 401(인증 실패)과 403(권한 부족) 에러는 `DispatcherServlet`에 도달하기 전인 보안 필터 체인(Security Filter Chain)에서 발생함. 따라서 `ExceptionAdvice`가 이를 인지하지 못하고 서블릿의 기본 에러 응답이 출력되는 것
+
+### 2. 프로젝트에서의 해결 방식: 커스텀 핸들러 도입
+스프링 시큐리티의 진입점과 권한 핸들러를 직접 구현하여 이 문제를 해결함
+
+#### ① 401 에러 해결: CustomAuthenticationEntryPoint
+* **인증되지 않은 접근 제어**: 로그인이 필요한 API에 토큰 없이 접근할 때 발생하는 예외를 처리
+* **직접 응답 바디 작성**: `commence` 메서드 내에서 `ObjectMapper`를 사용하여 `ApiResponse` 객체를 직접 JSON 문자열로 변환한 뒤, `HttpServletResponse`의 출력 스트림에 직접 써주는 방식
+* **응답 규격 통일**: 이를 통해 인증 실패 시에도 `isSuccess`, `code`, `message` 등을 포함한 공통 포맷이 반환되도록 보장
+
+#### ② 403 에러 해결: CustomAccessDeniedHandler
+* **권한 부족 접근 제어**: 인증은 되었으나 관리자 페이지에 일반 유저가 접근하는 경우 등을 처리
+* **핸들러 구현**: `AccessDeniedHandler` 인터페이스를 구현하여 `ApiResponse.onFailure`를 통해 에러 응답을 생성하고, 403 상태 코드와 함께 JSON을 반환
+
+#### ③ SecurityConfig 등록
+* **필터 체인 적용**: 구현한 두 커스텀 객체를 `SecurityConfig`의 `exceptionHandling` 설정에 등록하여 보안 필터 과정에서 해당 핸들러들이 동작하도록 지정
+
 </details>

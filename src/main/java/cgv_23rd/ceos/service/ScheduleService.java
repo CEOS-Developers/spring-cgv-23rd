@@ -33,52 +33,9 @@ public class ScheduleService {
     private final MovieScreenRepository movieScreenRepository;
     private final ScreenRepository screenRepository;
 
-    // 1. 극장별 상영 시간표 등록
-    public ApiResponse<Void> createSchedule(Long theaterId, ScheduleCreateRequestDto requestDto) {
-        Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(requestDto.movieId())
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
-
-        Screen screen = screenRepository.findByIdWithLock(requestDto.screenId())
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.SCREEN_NOT_FOUND));
-
-        // 해당 상영관이 극장 내에 있는지 확인
-        if (!screen.getTheater().getId().equals(theaterId)) {
-            throw new GeneralException(GeneralErrorCode.SCREEN_THEATER_MISMATCH);
-        }
-
-        // 종료 시간이 시작 시간보다 빨라서는 안 됨
-        if (!requestDto.endAt().isAfter(requestDto.startAt())) {
-            throw new GeneralException(GeneralErrorCode.INVALID_SCHEDULE_TIME);
-        }
-
-        // 상영 시간 겹침 검증
-        boolean isOverlapping = movieScreenRepository.existsOverlappingSchedule(
-                requestDto.screenId(), requestDto.startAt(), requestDto.endAt()
-        );
-
-        if (isOverlapping) {
-            throw new GeneralException(GeneralErrorCode.SCHEDULE_OVERLAPPED);
-        }
-
-        MovieScreen movieScreen = MovieScreen.builder()
-                .movie(movie)
-                .screen(screen)
-                .sequence(requestDto.sequence())
-                .startAt(requestDto.startAt())
-                .endAt(requestDto.endAt())
-                .build();
-
-        movieScreenRepository.save(movieScreen);
-
-        return ApiResponse.onSuccess("상영 시간표 등록 성공");
-    }
-
     // 2. 극장별 상영 시간표 조회
     @Transactional(readOnly = true)
-    public ApiResponse<List<ScheduleResponseDto>> getSchedules(Long theaterId, LocalDate targetDate) {
+    public List<ScheduleResponseDto> getSchedules(Long theaterId, LocalDate targetDate) {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
 
@@ -89,7 +46,7 @@ public class ScheduleService {
                 theaterId, startOfDay, endOfDay
         );
 
-        List<ScheduleResponseDto> responseDtos = schedules.stream()
+        return schedules.stream()
                 .map(ms -> ScheduleResponseDto.builder()
                         .movieScreenId(ms.getId())
                         .movieId(ms.getMovie().getId())
@@ -101,7 +58,5 @@ public class ScheduleService {
                         .endAt(ms.getEndAt())
                         .build())
                 .collect(Collectors.toList());
-
-        return ApiResponse.onSuccess("상영 시간표 조회 성공", responseDtos);
     }
 }

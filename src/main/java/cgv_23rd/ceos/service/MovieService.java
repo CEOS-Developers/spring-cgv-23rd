@@ -26,45 +26,10 @@ public class MovieService {
     private final MovieActorRepository movieActorRepository;
     private final MovieLikeRepository movieLikeRepository;
     private final UserRepository userRepository;
-    private final MovieStatisticsRepository movieStatisticsRepository;
-
-    // 1. 영화 생성
-    @Transactional
-    public ApiResponse<Long> createMovie(MovieRequestDto requestDto){
-
-        if (requestDto.closeDate().isBefore(requestDto.openDate())) {
-            throw new GeneralException(GeneralErrorCode.INVALID_MOVIE_DATE);
-        }
-
-        LocalDate today = LocalDate.now();
-        MovieStatus calculatedStatus;
-
-        if (today.isBefore(requestDto.openDate())) {
-            calculatedStatus = MovieStatus.예정;
-        } else if (today.isAfter(requestDto.closeDate())) {
-            calculatedStatus = MovieStatus.종료;
-        } else {
-            calculatedStatus = MovieStatus.상영중;
-        }
-
-        Movie movie = Movie.builder()
-                .title(requestDto.title())
-                .description(requestDto.description())
-                .status(calculatedStatus)
-                .openDate(requestDto.openDate())
-                .closeDate(requestDto.closeDate())
-                .build();
-
-        movie.createDefaultStatistics();
-
-        movieRepository.save(movie);
-
-        return ApiResponse.onSuccess("영화 생성 성공", movie.getId());
-    }
 
     // 2. 현재 상영중인 영화 목록 조회 (제목, 썸네일)
     @Transactional(readOnly = true)
-    public ApiResponse<List<MovieResponseDto>> getMovieList(){
+    public List<MovieResponseDto> getMovieList(){
         List<Movie> movies = movieRepository.findAllByStatusOrderByReservationRateDesc(MovieStatus.상영중);
         List<MovieResponseDto> movieResponseDtoList = movies.stream()
                 .map(movie -> {
@@ -81,12 +46,12 @@ public class MovieService {
                             .build();
                 })
                 .toList();
-        return ApiResponse.onSuccess("현재 상영중 영화 리스트 조회 성공",movieResponseDtoList);
+        return movieResponseDtoList;
     }
 
     // 3. 영화 상세 조회 (제목, 개봉일, 예매율, 누적관객, 설명, 에그지수, 사진들)
     @Transactional(readOnly = true)
-    public ApiResponse<MovieDetailResponseDto> getMovieDetail(Long movieId){
+    public MovieDetailResponseDto getMovieDetail(Long movieId){
         Movie movie = movieRepository.findDetailById(movieId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
@@ -112,12 +77,12 @@ public class MovieService {
                 .eggRate(movie.getMovieStatistics().getEggRate())
                 .build();
 
-        return ApiResponse.onSuccess("영화 상세 조회 성공", movieDetailResponseDto);
+        return movieDetailResponseDto;
     }
 
     // 4. 출연진 조회
     @Transactional(readOnly = true)
-    public ApiResponse<List<ActorResponseDto>> getMovieActors(Long movieId){
+    public List<ActorResponseDto> getMovieActors(Long movieId){
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
 
@@ -132,12 +97,12 @@ public class MovieService {
                             .build();
                 })
                 .toList();
-        return ApiResponse.onSuccess("영화 출연진 조회 성공", actorResponseDtos);
+        return actorResponseDtos;
     }
 
     // 5. 영화 찜
     @Transactional
-    public ApiResponse<Void> toggleMovieLike(Long userId, Long movieId){
+    public String toggleMovieLike(Long userId, Long movieId){
         User user = userRepository.findById(userId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
 
@@ -153,11 +118,11 @@ public class MovieService {
                     .movie(movie)
                     .build();
             movieLikeRepository.save(movieLike);
-            return ApiResponse.onSuccess("영화 id = " + movieId + " 찜 성공");
+            return "영화 id = " + movieId + " 찜 성공";
         }
         else{
             movieLikeRepository.delete(movieLike);
-            return ApiResponse.onSuccess("영화 id = " + movieId + " 찜 삭제 성공");
+            return "영화 id = " + movieId + " 찜 삭제 성공";
         }
     }
 
