@@ -1,6 +1,6 @@
-package com.ceos23.cgv_clone.config.exception;
+package com.ceos23.cgv_clone.global.exception;
 
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
 import lombok.Getter;
 
 @Getter

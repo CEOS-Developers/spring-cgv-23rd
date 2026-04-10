@@ -1,11 +1,10 @@
 package com.ceos23.cgv_clone.favorite.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.common.codes.SuccessCode;
-import com.ceos23.cgv_clone.config.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
+import com.ceos23.cgv_clone.global.exception.CustomException;
 import com.ceos23.cgv_clone.favorite.domain.MovieFavorite;
 import com.ceos23.cgv_clone.favorite.domain.TheaterFavorite;
+import com.ceos23.cgv_clone.favorite.dto.response.FavoriteResponse;
 import com.ceos23.cgv_clone.favorite.repository.MovieFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.repository.TheaterFavoriteRepository;
 import com.ceos23.cgv_clone.movie.domain.Movie;
@@ -30,7 +29,7 @@ public class FavoriteService {
 
     // 영화관 찜
     @Transactional
-    public ApiResponse<Void> toggleFavoriteTheater(Long userId, Long theaterId) {
+    public FavoriteResponse toggleFavoriteTheater(Long userId, Long theaterId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -40,8 +39,7 @@ public class FavoriteService {
         // 1-1. 이미 자주 가는 곳으로 되어 있을 경우에는 찜 해제
         if (theaterFavoriteRepository.existsByUserAndTheater(user, theater)) {
             theaterFavoriteRepository.deleteByUserAndTheater(user, theater);
-
-            return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
+            return FavoriteResponse.of(false);
         }
         // 1-2. 아닐 경우
         else {
@@ -57,13 +55,13 @@ public class FavoriteService {
                     .build();
 
             theaterFavoriteRepository.save(favorite);
-            return ApiResponse.ok(SuccessCode.INSERT_SUCCESS);
+            return FavoriteResponse.of(true);
         }
     }
 
     // 영화 찜
     @Transactional
-    public ApiResponse<Void> toggleFavoriteMovie(Long userId, Long movieId) {
+    public FavoriteResponse toggleFavoriteMovie(Long userId, Long movieId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -73,8 +71,8 @@ public class FavoriteService {
         // 이미 영화 찜이 되어 있으면 해제
         if (movieFavoriteRepository.existsByUserAndMovie(user, movie)) {
             movieFavoriteRepository.deleteByUserAndMovie(user, movie);
+            return FavoriteResponse.of(false);
 
-            return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
         } else {
             // 아닐 경우 저장
             MovieFavorite favorite = MovieFavorite.builder()
@@ -83,7 +81,7 @@ public class FavoriteService {
                     .build();
 
             movieFavoriteRepository.save(favorite);
-            return ApiResponse.ok(SuccessCode.INSERT_SUCCESS);
+            return FavoriteResponse.of(true);
         }
     }
 }

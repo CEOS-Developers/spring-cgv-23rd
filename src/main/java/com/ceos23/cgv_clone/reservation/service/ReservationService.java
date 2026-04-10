@@ -1,11 +1,9 @@
 package com.ceos23.cgv_clone.reservation.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.common.codes.SuccessCode;
-import com.ceos23.cgv_clone.config.exception.CustomException;
-import com.ceos23.cgv_clone.movie.domain.Schedule;
-import com.ceos23.cgv_clone.movie.repository.ScheduleRepository;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
+import com.ceos23.cgv_clone.global.exception.CustomException;
+import com.ceos23.cgv_clone.theater.domain.Schedule;
+import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.reservation.domain.Reservation;
 import com.ceos23.cgv_clone.reservation.domain.ReservationSeat;
 import com.ceos23.cgv_clone.reservation.domain.ReservationStatus;
@@ -22,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
+import java.util.HashSet;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,41 +34,54 @@ public class ReservationService {
 
     // 영화 예매
     @Transactional
-    public ApiResponse<ReservationResponse> createReservation(Long userId, ReservationRequest request) {
+    public ReservationResponse createReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        // 1. 나이 검사
-        if (user.getBirthdate() == null) {
-            // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
-            throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
-        }
-        int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
+        int ageRestriction = schedule.getMovie().getAgeRestriction();
 
-        if (userAge < schedule.getMovie().getAgeRestriction()) {
-            throw new CustomException(ErrorCode.AGE_RESTRICTED);
+        if (ageRestriction >= 18) {
+            // 1. 나이 검사
+            if (user.getBirthdate() == null) {
+                // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
+                throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
+            }
+            int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
+
+            if (userAge < ageRestriction
+            ) {
+                throw new CustomException(ErrorCode.AGE_RESTRICTED);
+            }
         }
 
         // 2. 좌석 검사
-        for (String seatStr : request.getSeats()) {
-            char row = seatStr.charAt(0);
-            int col = Integer.parseInt(seatStr.substring(1));
+        // 2-1. 하나의 요청에 중복 좌석 입력 검사
+        List<String> seats = request.getSeats();
+        // HashSet -> 중복 허용하지 않는 자료구조
+        if (seats.size() != new HashSet<>(seats).size()) {
+            throw new CustomException(ErrorCode.INVALID_SEAT);
+        }
 
-            // 2-1. 좌석 문자열 검사
+        for (String seatStr : request.getSeats()) {
+            // 2-2. 좌석 문자열 검사
             if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
 
-            // 2-2. 좌석 범위 검사
+            char row = seatStr.charAt(0);
+            int col = Integer.parseInt(seatStr.substring(1));
+
+            // 2-3. 좌석 범위 검사
             if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
 
-            // 2-3. 좌석 중복 검사
-            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatCol(schedule, row, col)) {
+            // 2-4. 좌석 중복 검사
+            // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
+            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }
         }
@@ -76,16 +89,12 @@ public class ReservationService {
         int pricePerSeat = schedule.getScreen().getScreenType().getPrice();
         int totalPrice = pricePerSeat * request.getSeats().size();
 
-        // 취소 이후에도 취소 내역 조회를 위한 스냅샷
-        String snapshotSeatNames = String.join(", ", request.getSeats());
-
         Reservation reservation = Reservation.builder()
                 .reservedAt(LocalDateTime.now())
                 .totalPrice(totalPrice)
                 .status(ReservationStatus.RESERVED)
                 .user(user)
                 .schedule(schedule)
-                .seatNames(snapshotSeatNames)
                 .build();
 
         for (String seatStr : request.getSeats()) {
@@ -101,12 +110,12 @@ public class ReservationService {
 
         reservationRepository.save(reservation);
 
-        return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, ReservationResponse.from(reservation));
+        return ReservationResponse.from(reservation);
     }
 
     // 예매 취소
     @Transactional
-    public ApiResponse<Void> cancelReservation(Long userId, Long reservationId) {
+    public void cancelReservation(Long userId, Long reservationId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -124,7 +133,5 @@ public class ReservationService {
         }
 
         reservation.cancel();
-
-        return ApiResponse.ok(SuccessCode.DELETE_SUCCESS);
     }
 }

@@ -1,6 +1,7 @@
 package com.ceos23.cgv_clone.movie.controller;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
+import com.ceos23.cgv_clone.global.response.SuccessCode;
 import com.ceos23.cgv_clone.movie.dto.response.MovieResponse;
 import com.ceos23.cgv_clone.movie.service.MovieService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,6 @@ public class MovieController {
     public ApiResponse<MovieResponse> getMovie(
             @PathVariable Long movieId
     ) {
-        return movieService.getMovie(movieId);
+        return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, movieService.getMovie(movieId));
     }
 }

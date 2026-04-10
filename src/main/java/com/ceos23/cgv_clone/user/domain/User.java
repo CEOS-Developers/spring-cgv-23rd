@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.user.domain;
 
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,7 +13,7 @@ import java.time.LocalDate;
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,8 +23,11 @@ public class User {
     @Column(nullable = false, length = 50)
     private String nickname;
 
-    @Column(length = 100)
+    @Column(length = 100, unique = true)
     private String email;
+
+    @Column(nullable = false)
+    private String password;
 
     private LocalDate birthdate;
 
@@ -31,9 +35,10 @@ public class User {
     private UserProfile userProfile;
 
     @Builder
-    public User(String nickname, String email, LocalDate birthdate) {
+    public User(String nickname, String email, String password, LocalDate birthdate) {
         this.nickname = nickname;
         this.email = email;
+        this.password = password;
         this.birthdate = birthdate;
     }
 }

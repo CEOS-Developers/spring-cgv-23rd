@@ -1,6 +1,7 @@
-package com.ceos23.cgv_clone.movie.domain;
+package com.ceos23.cgv_clone.theater.domain;
 
-import com.ceos23.cgv_clone.theater.domain.Screen;
+import com.ceos23.cgv_clone.global.domain.BaseEntity;
+import com.ceos23.cgv_clone.movie.domain.Movie;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
 @Table(name = "schedules")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Schedule {
+public class Schedule extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

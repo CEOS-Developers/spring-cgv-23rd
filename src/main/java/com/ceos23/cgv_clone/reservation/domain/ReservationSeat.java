@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.reservation.domain;
 
-import com.ceos23.cgv_clone.movie.domain.Schedule;
+import com.ceos23.cgv_clone.theater.domain.Schedule;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -8,12 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(
-        name = "reservation_seats",
-        uniqueConstraints = @UniqueConstraint(
-                columnNames = {"schedule_id", "seat_row", "seat_col"}
-        )
-)
+// unique 제약 삭제 -> ReservationService 레벨에서 existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot로 확인하는 걸로...?
+@Table(name = "reservation_seats")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class ReservationSeat {

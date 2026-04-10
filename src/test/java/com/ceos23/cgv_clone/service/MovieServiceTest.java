@@ -1,8 +1,8 @@
 package com.ceos23.cgv_clone.service;
 
-import com.ceos23.cgv_clone.common.ApiResponse;
-import com.ceos23.cgv_clone.common.codes.ErrorCode;
-import com.ceos23.cgv_clone.config.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ApiResponse;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
+import com.ceos23.cgv_clone.global.exception.CustomException;
 import com.ceos23.cgv_clone.movie.domain.Movie;
 import com.ceos23.cgv_clone.movie.dto.response.MovieResponse;
 import com.ceos23.cgv_clone.movie.repository.MovieRepository;
@@ -44,26 +44,18 @@ class MovieServiceTest {
         given(movieRepository.findById(movieId)).willReturn(Optional.of(movie));
 
         // when
-        ApiResponse<MovieResponse> response = movieService.getMovie(movieId);
+        MovieResponse response = movieService.getMovie(movieId);
 
         // then
-        // 코드 및 반환 값 확인
-        assertTrue(response.isSuccess());
-        assertEquals(200, response.getResultCode());
-        assertEquals("SELECT SUCCESS", response.getResultMsg());
-        assertNotNull(response.getResult());
-
-        // 값 확인
-        MovieResponse result = response.getResult();
-        assertEquals(movieId, result.getId());
-        assertEquals("프로젝트 헤일메리", result.getName());
-        assertEquals(156, result.getRunningTime());
-        assertEquals(12, result.getAgeRestriction());
+        assertEquals(movieId, response.getId());
+        assertEquals("프로젝트 헤일메리", response.getName());
+        assertEquals(156, response.getRunningTime());
+        assertEquals(12, response.getAgeRestriction());
 
         // movieStatistic이 없으면 0으로 매핑되는지 확인
-        assertEquals(0, result.getReservationRate());
-        assertEquals(0, result.getTotalViewers());
-        assertEquals(0, result.getEggRate());
+        assertEquals(0, response.getReservationRate());
+        assertEquals(0, response.getTotalViewers());
+        assertEquals(0, response.getEggRate());
     }
 
     @Test
