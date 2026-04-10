@@ -8,12 +8,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "store_purchase")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StorePurchase {
@@ -28,7 +30,7 @@ public class StorePurchase {
     @Column(nullable = false)
     private Integer totalPrice;
 
-    @Column(nullable = false)
+    @Column(name = "purchased_at", nullable = false)
     private LocalDateTime purchasedAt;
 
     @ManyToOne

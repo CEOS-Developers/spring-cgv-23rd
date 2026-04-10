@@ -3,6 +3,7 @@ package com.ceos23.spring_boot.cgv.domain.reservation;
 import com.ceos23.spring_boot.cgv.domain.cinema.SeatTemplate;
 import com.ceos23.spring_boot.cgv.domain.movie.Screening;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,15 +32,15 @@ public class ReservationSeat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reservation_id", nullable = false)
     private Reservation reservation;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screening_id", nullable = false)
     private Screening screening;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_template_id", nullable = false)
     private SeatTemplate seatTemplate;
 
