@@ -1,0 +1,26 @@
+package com.ceos.spring_boot.domain.movie.dto;
+
+import com.ceos.spring_boot.domain.cinema.entity.CinemaStatus;
+import com.ceos.spring_boot.domain.movie.entity.AgeRating;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.time.LocalDate;
+
+public record MovieCreateRequest(
+
+        @Schema(description = "영화 제목", example = "왕과 사는 남자")
+        String title,
+
+        @Schema(description = "러닝타임(분)", example = "120")
+        Integer runningTime,
+
+        @Schema(description = "장르", example = "드라마")
+        String genre,
+
+        @Schema(description = "개봉일", example = "2026-03-10")
+        LocalDate releaseDate,
+
+        @Schema(description = "연령제한", example = "AGE_12")
+        AgeRating ageRating
+){
+}

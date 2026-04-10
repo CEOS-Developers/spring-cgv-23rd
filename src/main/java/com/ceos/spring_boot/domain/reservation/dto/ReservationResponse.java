@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -36,20 +37,30 @@ public record ReservationResponse(
         @Schema(description = "예매 좌석", example = "[A10, A11]", type = "string")
         List<String> seats,
 
+        // 예매 완료 시각
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+        @Schema(description = "예매 일시", example = "2026-03-23 23:55:01", type = "string")
+        LocalDateTime createdAt,
+
+        // 예매 상태
         ReservationStatus status
 ) {
     public static ReservationResponse from(Reservation reservation) {
+        LocalDateTime startAt = reservation.getSchedule().getStartAt();
+        LocalDateTime endAt = reservation.getSchedule().getEndAt();
+
         return new ReservationResponse(
                 reservation.getId(),
                 reservation.getSchedule().getMovie().getTitle(),
                 reservation.getSchedule().getScreen().getCinema().getName(),
                 reservation.getSchedule().getScreen().getName(),
-                reservation.getSchedule().getStartDate(),
-                reservation.getSchedule().getStartTime(),
-                reservation.getSchedule().getEndTime(),
+                startAt.toLocalDate(),
+                startAt.toLocalTime(),
+                endAt.toLocalTime(),
                 reservation.getReservationSeats().stream()
                         .map(rs -> rs.getSeat().getSeatRow() + "-" + rs.getSeat().getSeatCol())
                         .toList(),
+                reservation.getCreatedAt(),
                 reservation.getStatus()
         );
     }

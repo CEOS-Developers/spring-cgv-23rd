@@ -16,6 +16,7 @@ public class DataInit implements CommandLineRunner {
 
     private final SeatRepository seatRepository;
 
+    // 좌석 생성 코드
     @Override
     public void run(String... args) {
         // DB에 좌석이 하나도 없을 때만 초기화

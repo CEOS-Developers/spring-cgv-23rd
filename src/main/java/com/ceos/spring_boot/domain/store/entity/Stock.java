@@ -1,6 +1,8 @@
 package com.ceos.spring_boot.domain.store.entity;
 
 import com.ceos.spring_boot.domain.cinema.entity.Cinema;
+import com.ceos.spring_boot.global.codes.ErrorCode;
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,7 +10,7 @@ import lombok.*;
 @Getter
 @Table(name = "stocks")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Stock {
+public class Stock extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,5 +26,14 @@ public class Stock {
     private Product product; // 어떤 상품인지
 
     @Column(nullable = false)
-    private Integer stock; // 현재 재고 수량
+    private Integer quantity; // 현재 재고 수량
+
+    public void decreaseQuantity(Integer amount) {
+        int restStock = this.quantity - amount;
+        if (restStock < 0) {
+            throw new IllegalStateException(ErrorCode.OUT_OF_STOCK_ERROR.getMessage());
+        }
+        this.quantity = restStock;
+    }
+
 }

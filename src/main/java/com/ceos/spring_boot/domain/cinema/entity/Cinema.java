@@ -1,5 +1,6 @@
 package com.ceos.spring_boot.domain.cinema.entity;
 
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +11,7 @@ import lombok.*;
 @Builder
 @Table(name = "cinemas")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Cinema {
+public class Cinema extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "cinema_id")

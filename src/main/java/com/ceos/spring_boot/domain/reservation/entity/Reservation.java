@@ -2,6 +2,7 @@ package com.ceos.spring_boot.domain.reservation.entity;
 
 import com.ceos.spring_boot.domain.schedule.entity.Schedule;
 import com.ceos.spring_boot.domain.user.entity.User;
+import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -14,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Table(name = "reservations")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Reservation {
+public class Reservation extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,8 +29,6 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)
     private Schedule schedule; // 예매한 상영 일정
-
-    private LocalDateTime reservationDate; // 예매 일시
 
     @Enumerated(EnumType.STRING)
     private ReservationStatus status; // 예매 상태 (CONFIRMED, CANCELED)

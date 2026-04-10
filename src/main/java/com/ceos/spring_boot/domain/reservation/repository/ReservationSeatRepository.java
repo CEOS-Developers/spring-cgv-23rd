@@ -24,6 +24,9 @@ public interface ReservationSeatRepository extends JpaRepository<ReservationSeat
             "AND rs.reservation.status = 'CONFIRMED'")
     Optional<ReservationSeat> findByScheduleIdAndSeatIdWithLock(@Param("scheduleId") Long scheduleId, @Param("seatId") Long seatId);
 
+    // 특정 상영 일정에 해당 좌석이 이미 있는지 확인
+    boolean existsByScheduleIdAndSeatId(Long scheduleId, Long seatId);
+
     // 취소 시 사용되는 삭제 메서드
     void deleteByReservationId(Long reservationId);
 }
