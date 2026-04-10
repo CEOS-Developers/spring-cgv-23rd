@@ -20,13 +20,13 @@ public class ProductResponseDTO {
             Integer totalPrice,
             LocalDateTime createdAt
     ) {
-        public static OrderDetailResponseDTO of(ProductOrder order, List<OrderItem> items) {
+        public static OrderDetailResponseDTO of(ProductOrder order) {
             return OrderDetailResponseDTO.builder()
                     .orderId(order.getId())
                     .orderNumber(order.getOrderNumber())
                     .status(order.getStatus())
                     .theaterName(order.getTheater().getName())
-                    .items(items.stream()
+                    .items(order.getOrderItems().stream()
                             .map(OrderItemInfoDTO::from)
                             .toList())
                     .totalPrice(order.getTotalPrice())

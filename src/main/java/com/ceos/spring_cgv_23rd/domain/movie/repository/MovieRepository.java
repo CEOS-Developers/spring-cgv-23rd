@@ -9,11 +9,13 @@ import java.util.List;
 
 public interface MovieRepository extends JpaRepository<Movie, Long> {
 
-    @Query("SELECT m, ms FROM Movie m LEFT JOIN MovieStatistic ms ON ms.movie = m " +
-            " WHERE m.status = :status ORDER BY ms.reservationRate DESC")
-    List<Object[]> findWithStatisticByStatus(MovieStatus status);
 
-    @Query("SELECT m, ms FROM Movie m LEFT JOIN MovieStatistic ms ON ms.movie = m " +
-            " WHERE m.status IN :statuses ORDER BY ms.reservationRate DESC ")
-    List<Object[]> findWithStatisticByStatusIn(List<MovieStatus> statuses);
+    @Query("SELECT m FROM Movie m JOIN FETCH m.movieStatistic " +
+            "WHERE m.status = :status ORDER BY m.movieStatistic.reservationRate DESC")
+    List<Movie> findWithStatisticByStatus(MovieStatus status);
+
+    
+    @Query("SELECT m FROM Movie m JOIN FETCH m.movieStatistic " +
+            "WHERE m.status IN :statuses ORDER BY m.movieStatistic.reservationRate DESC")
+    List<Movie> findWithStatisticByStatusIn(List<MovieStatus> statuses);
 }

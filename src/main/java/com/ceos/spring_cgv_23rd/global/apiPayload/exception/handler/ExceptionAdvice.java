@@ -165,7 +165,7 @@ public class ExceptionAdvice {
     public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
         BaseErrorCode code = GeneralErrorCode.INTERNAL_SERVER_ERROR;
 
-        log.warn("Exception: {}", e.getMessage());
+        log.error("Exception: {}", e.getMessage());
 
         return ResponseEntity
                 .status(code.getHttpStatus())

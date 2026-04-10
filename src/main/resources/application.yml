@@ -2,6 +2,9 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  profiles:
+    active: ${SPRING_ACTIVE_PROFILE}
+
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -18,9 +21,11 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 100
 
-logging:
-  level:
-    org.hibernate.SQL: debug
+jwt:
+  secret: ${JWT_SECRET_KEY}
+  access-token-expiration: ${JWT_ACCESSTOKEN_EXPIRATION}
+  refresh-token-expiration: ${JWT_REFRESHTOKEN_EXPIRATION}
+  cookie-secure: ${JWT_COOKIE_SECURE}
 
 swagger:
   server-url: http://localhost:8080

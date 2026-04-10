@@ -8,4 +8,8 @@ public interface ReservationService {
     ReservationResponseDTO.ReservationDetailResponseDTO createReservation(Long userId, ReservationRequestDTO.CreateReservationRequestDTO request);
 
     void cancelReservation(Long userId, Long reservationId);
+
+    ReservationResponseDTO.ReservationDetailResponseDTO createGuestReservation(ReservationRequestDTO.CreateGuestReservationRequestDTO request);
+
+    void cancelGuestReservation(ReservationRequestDTO.CancelGuestReservationRequestDTO request);
 }

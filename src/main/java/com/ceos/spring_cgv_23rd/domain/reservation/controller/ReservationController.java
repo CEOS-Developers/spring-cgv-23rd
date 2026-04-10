@@ -3,6 +3,7 @@ package com.ceos.spring_cgv_23rd.domain.reservation.controller;
 import com.ceos.spring_cgv_23rd.domain.reservation.dto.ReservationRequestDTO;
 import com.ceos.spring_cgv_23rd.domain.reservation.dto.ReservationResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.reservation.service.ReservationService;
+import com.ceos.spring_cgv_23rd.global.annotation.LoginUser;
 import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,16 +22,34 @@ public class ReservationController {
     @Operation(summary = "영화 예매")
     @PostMapping
     public ApiResponse<ReservationResponseDTO.ReservationDetailResponseDTO> createReservation(
-            @Valid @RequestBody ReservationRequestDTO.CreateReservationRequestDTO request) {      // TODO: userId 추가
-        ReservationResponseDTO.ReservationDetailResponseDTO response = reservationService.createReservation(1L, request);
+            @LoginUser Long userId,
+            @Valid @RequestBody ReservationRequestDTO.CreateReservationRequestDTO request) {
+        ReservationResponseDTO.ReservationDetailResponseDTO response = reservationService.createReservation(userId, request);
         return ApiResponse.onSuccess("영화 예매 성공", response);
     }
 
     @Operation(summary = "예매 취소")
     @PatchMapping("/{reservationId}/cancel")
     public ApiResponse<Void> cancelReservation(
-            @PathVariable Long reservationId) {     // TODO: userId 추가
-        reservationService.cancelReservation(1L, reservationId);
+            @LoginUser Long userId,
+            @PathVariable Long reservationId) {
+        reservationService.cancelReservation(userId, reservationId);
         return ApiResponse.onSuccess("예매 취소 성공");
+    }
+
+    @Operation(summary = "비회원 영화 예매")
+    @PostMapping("/guest")
+    public ApiResponse<ReservationResponseDTO.ReservationDetailResponseDTO> createGuestReservation(
+            @Valid @RequestBody ReservationRequestDTO.CreateGuestReservationRequestDTO request) {
+        ReservationResponseDTO.ReservationDetailResponseDTO response = reservationService.createGuestReservation(request);
+        return ApiResponse.onSuccess("비회원 영화 예매 성공", response);
+    }
+
+    @Operation(summary = "비회원 예매 취소")
+    @PatchMapping("/guest/cancel")
+    public ApiResponse<Void> cancelGuestReservation(
+            @Valid @RequestBody ReservationRequestDTO.CancelGuestReservationRequestDTO request) {
+        reservationService.cancelGuestReservation(request);
+        return ApiResponse.onSuccess("비회원 예매 취소 성공");
     }
 }

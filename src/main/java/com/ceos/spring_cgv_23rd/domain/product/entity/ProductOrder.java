@@ -7,6 +7,8 @@ import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -40,18 +42,36 @@ public class ProductOrder extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
+    @Builder.Default
+    @OneToMany(mappedBy = "productOrder", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<>();
 
-    public static ProductOrder createOrder(User user, Theater theater, int totalPrice) {
-        return ProductOrder.builder()
+
+    public static ProductOrder createOrder(User user, Theater theater, List<OrderItem> orderItems) {
+
+        int totalPrice = orderItems.stream()
+                .mapToInt(item -> item.getQuantity() * item.getPrice())
+                .sum();
+
+        ProductOrder order = ProductOrder.builder()
                 .user(user)
                 .theater(theater)
                 .orderNumber(UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .totalPrice(totalPrice)
                 .status(OrderStatus.COMPLETED)
                 .build();
+
+        orderItems.forEach(order::addOrderItem);
+
+        return order;
     }
 
     public void cancel() {
         this.status = OrderStatus.CANCELLED;
+    }
+
+    public void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
+        orderItem.assignOrder(this);
     }
 }

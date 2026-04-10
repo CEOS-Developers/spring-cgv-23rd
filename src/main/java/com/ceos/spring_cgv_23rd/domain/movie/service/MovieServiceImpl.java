@@ -3,11 +3,15 @@ package com.ceos.spring_cgv_23rd.domain.movie.service;
 import com.ceos.spring_cgv_23rd.domain.movie.dto.MovieResponseDTO;
 import com.ceos.spring_cgv_23rd.domain.movie.entity.Movie;
 import com.ceos.spring_cgv_23rd.domain.movie.entity.MovieLike;
-import com.ceos.spring_cgv_23rd.domain.movie.entity.MovieStatistic;
 import com.ceos.spring_cgv_23rd.domain.movie.enums.MovieStatus;
 import com.ceos.spring_cgv_23rd.domain.movie.exception.MovieErrorCode;
-import com.ceos.spring_cgv_23rd.domain.movie.repository.*;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieCreditRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieLikeRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieMediaRepository;
+import com.ceos.spring_cgv_23rd.domain.movie.repository.MovieRepository;
 import com.ceos.spring_cgv_23rd.domain.user.entity.User;
+import com.ceos.spring_cgv_23rd.domain.user.exception.UserErrorCode;
+import com.ceos.spring_cgv_23rd.domain.user.repository.UserRepository;
 import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,20 +26,20 @@ import java.util.Optional;
 public class MovieServiceImpl implements MovieService {
 
     private final MovieRepository movieRepository;
-    private final MovieStatisticRepository movieStatisticRepository;
     private final MovieCreditRepository movieCreditRepository;
     private final MovieMediaRepository movieMediaRepository;
     private final MovieLikeRepository movieLikeRepository;
+    private final UserRepository userRepository;
 
     @Override
     public List<MovieResponseDTO.MovieListResponseDTO> getMovieChart() {
 
         // 상영중/상영예정 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatusIn(
+        List<Movie> movies = movieRepository.findWithStatisticByStatusIn(
                 List.of(MovieStatus.RUNNING, MovieStatus.UPCOMING));
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -43,10 +47,10 @@ public class MovieServiceImpl implements MovieService {
     public List<MovieResponseDTO.MovieListResponseDTO> getRunningMovie() {
 
         // 상영 중인 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatus(MovieStatus.RUNNING);
+        List<Movie> movies = movieRepository.findWithStatisticByStatus(MovieStatus.RUNNING);
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -54,10 +58,10 @@ public class MovieServiceImpl implements MovieService {
     public List<MovieResponseDTO.MovieListResponseDTO> getUpcomingMovie() {
 
         // 상영 예정 영화 조회
-        List<Object[]> results = movieRepository.findWithStatisticByStatus(MovieStatus.UPCOMING);
+        List<Movie> movies = movieRepository.findWithStatisticByStatus(MovieStatus.UPCOMING);
 
-        return results.stream()
-                .map(res -> MovieResponseDTO.MovieListResponseDTO.of((Movie) res[0], (MovieStatistic) res[1]))
+        return movies.stream()
+                .map(movie -> MovieResponseDTO.MovieListResponseDTO.of(movie, movie.getMovieStatistic()))
                 .toList();
     }
 
@@ -68,12 +72,8 @@ public class MovieServiceImpl implements MovieService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new GeneralException(MovieErrorCode.MOVIE_NOT_FOUND));
 
-        // 영화 통계 조회
-        MovieStatistic statistic = movieStatisticRepository.findByMovieId(movieId)
-                .orElseThrow(() -> new GeneralException(MovieErrorCode.MOVIE_STAT_NOT_FOUND));
 
-
-        return MovieResponseDTO.MovieDetailResponseDTO.of(movie, statistic);
+        return MovieResponseDTO.MovieDetailResponseDTO.of(movie, movie.getMovieStatistic());
     }
 
     @Override
@@ -104,13 +104,9 @@ public class MovieServiceImpl implements MovieService {
     @Transactional
     public MovieResponseDTO.MovieLikeResponseDTO toggleMovieLike(Long userId, Long movieId) {
 
-        // TODO : 주석 제거
         // 유저 조회
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
-        User user = User.builder()
-                .id(userId)
-                .build();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(UserErrorCode.USER_NOT_FOUND));
 
         // 영화 조회
         Movie movie = movieRepository.findById(movieId)
