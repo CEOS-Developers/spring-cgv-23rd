@@ -5,7 +5,7 @@ import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "screenings")
@@ -28,10 +28,10 @@ public class Screening extends BaseTimeEntity {
     private Theater theater;
 
     @Column(nullable = false)
-    private LocalDate startTime;
+    private LocalDateTime startTime;
 
     @Column(nullable = false)
-    private LocalDate endTime;
+    private LocalDateTime endTime;
 
     @Column(nullable = false)
     private Boolean isMorning; //조조영화 여부 (영화마다 기준이 다르다?)

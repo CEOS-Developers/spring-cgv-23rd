@@ -1,15 +1,15 @@
 package com.ceos23.cgv.domain.movie.dto;
 
 import com.ceos23.cgv.domain.movie.entity.Screening;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record ScreeningResponse(
         Long screeningId,
         String movieTitle,
         String cinemaName,
         String theaterName,
-        LocalDate startTime,
-        LocalDate endTime,
+        LocalDateTime startTime,
+        LocalDateTime endTime,
         Boolean isMorning
 ) {
     public static ScreeningResponse from(Screening screening) {

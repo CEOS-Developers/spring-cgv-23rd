@@ -30,4 +30,9 @@ public class FoodOrder extends BaseTimeEntity {
 
     @Column(nullable = false)
     private int totalPrice;
+
+    // 총 결제 금액을 업데이트하는 메서드
+    public void updateTotalPrice(int totalPrice) {
+        this.totalPrice = totalPrice;
+    }
 }

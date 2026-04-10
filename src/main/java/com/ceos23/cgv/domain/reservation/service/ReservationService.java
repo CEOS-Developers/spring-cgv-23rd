@@ -7,6 +7,7 @@ import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.enums.Payment;
 import com.ceos23.cgv.domain.reservation.enums.ReservationStatus;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
+import com.ceos23.cgv.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.global.exception.CustomException;
@@ -25,6 +26,10 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final ScreeningRepository screeningRepository;
+    private final ReservedSeatRepository reservedSeatRepository;
+
+    // 전역적으로 관리할 할인 금액 상수 선언
+    private static final int MORNING_DISCOUNT = 4000;
 
     /**
      * 영화 예매 로직
@@ -37,18 +42,12 @@ public class ReservationService {
         Screening screening = screeningRepository.findById(screeningId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
 
-        // 2. 1인당 결제 금액 계산
-        int ticketPrice = 15000; // 일반관 요금
+        // 2. 1인당 결제 금액 계산 (Enum에서 직접 가져옴)
+        int ticketPrice = screening.getTheater().getType().getBasePrice();
 
-        // 상영관 타입이 NORMAL이 아니면 특별관 요금 적용(20,000원으로 통일)
-        if (screening.getTheater().getType() != TheaterType.NORMAL) {
-            ticketPrice = 20000;
-        }
-
-        // 조조 영화인 경우 4,000원 할인
-        // NullPointerException 방지를 위해 Boolean.TRUE.equals 사용
+        // 조조 영화인 경우 할인 상수 적용
         if (Boolean.TRUE.equals(screening.getIsMorning())){
-            ticketPrice -= 4000;
+            ticketPrice -= MORNING_DISCOUNT;
         }
 
         // 최종 금액 = 1인당 티켓 가격 * 예매 인원수
@@ -59,10 +58,10 @@ public class ReservationService {
             calculatedPrice = applyCouponDiscount(calculatedPrice, couponCode);
         }
 
-        // 3. 고유한 예매 번호 생성 (임시로 UUID 사용)
+        // 4. 고유한 예매 번호 생성 (임시로 UUID 사용)
         String saleNumber = UUID.randomUUID().toString().substring(0, 15);
 
-        // 4. 예매 엔티티 생성
+        // 5. 예매 엔티티 생성
         Reservation reservation = Reservation.builder()
                 .user(user)
                 .screening(screening)
@@ -74,7 +73,7 @@ public class ReservationService {
                 .saleNumber(saleNumber)
                 .build();
 
-        // 5. DB에 저장
+        // 6. DB에 저장
         return reservationRepository.save(reservation);
     }
 
@@ -117,7 +116,10 @@ public class ReservationService {
             throw new IllegalStateException("이미 취소 처리된 예매입니다.");
         }
 
-        // 4. 취소 상태로 변경 (이후 @Transactional에 의해 DB에 자동 반영됨 - Dirty Checking)
+        // 4. 예매를 취소하면 점유했던 좌석 데이터도 모두 삭제하여 빈자리로 만듭니다!
+        reservedSeatRepository.deleteAllByReservationId(reservationId);
+
+        // 5. 취소 상태로 변경 (이후 @Transactional에 의해 DB에 자동 반영됨 - Dirty Checking)
         reservation.cancel();
     }
 }

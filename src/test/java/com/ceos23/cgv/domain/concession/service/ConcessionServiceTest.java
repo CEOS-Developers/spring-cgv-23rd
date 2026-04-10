@@ -82,8 +82,7 @@ class ConcessionServiceTest {
         assertThat(savedOrder.getTotalPrice()).isEqualTo(13000);
         assertThat(savedOrder.getUser().getNickname()).isEqualTo("우혁");
 
-        // 주문(FoodOrder) 저장은 로직 특성상 2번(초기화 시 1번, 총액 업데이트 후 1번) 발생함
-        verify(foodOrderRepository, times(2)).save(any(FoodOrder.class));
+        verify(foodOrderRepository).save(any(FoodOrder.class));
         // 상품 종류가 2가지(팝콘, 콜라)이므로 OrderItem은 2번 저장되어야 함
         verify(orderItemRepository, times(2)).save(any(OrderItem.class));
     }
