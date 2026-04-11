@@ -16,9 +16,11 @@ import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -33,7 +35,7 @@ public class ReservationService {
     private final ReservedSeatRepository reservedSeatRepository;
 
     /**
-     * 영화 예매 메서드
+     * 예매 좌석 선점
      */
     @Transactional
     public Long reserve(Long userId, ReservationRequest request) {
@@ -54,7 +56,8 @@ public class ReservationService {
         // 이미 다른 예매가 선점한 좌석인지 확인
         validateAlreadyReservedSeats(schedule, seatPositions);
 
-        Reservation reservation = Reservation.create(user, schedule);
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(5);
+        Reservation reservation = Reservation.createPending(user, schedule, expiresAt);
 
         Reservation savedReservation = reservationRepository.save(reservation);
 
@@ -62,9 +65,31 @@ public class ReservationService {
                 .map(seatPosition -> ReservedSeat.create(savedReservation, schedule, seatPosition))
                 .toList();
 
-        reservedSeatRepository.saveAll(reservedSeats);
+        // DB 유니크 제약조건 검증
+        try {
+            reservedSeatRepository.saveAllAndFlush(reservedSeats);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
+        }
 
         return savedReservation.getId();
+    }
+
+    /**
+     * 예약 확정
+     */
+    @Transactional
+    public void confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+        if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
+            reservation.expire();
+            reservedSeatRepository.deleteByReservation(reservation);
+            throw new BusinessException(ReservationErrorCode.RESERVATION_EXPIRED);
+        }
+
+        reservation.confirm();
     }
 
     private void validateSeatRange(Schedule schedule, List<SeatPosition> seatPositions) {
@@ -92,7 +117,7 @@ public class ReservationService {
     }
 
     /**
-     * 예매 취소 메서드
+     * 예매 취소
      */
     @Transactional
     public void cancel(Long userId, Long reservationId) {

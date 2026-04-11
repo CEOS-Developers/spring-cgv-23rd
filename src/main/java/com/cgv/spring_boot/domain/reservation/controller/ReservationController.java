@@ -21,7 +21,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
 
-    @Operation(summary = "영화 예매", description = "스케줄과 좌석 정보를 통해 영화를 예매합니다.")
+    @Operation(summary = "영화 좌석 선점", description = "스케줄과 좌석 정보를 통해 좌석 선점을 진행합니다.")
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> reserve(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
@@ -29,6 +29,13 @@ public class ReservationController {
     ) {
         Long reservationId = reservationService.reserve(authenticatedUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(reservationId));
+    }
+
+    @Operation(summary = "영화 예매 확정", description = "결제 완료 후 영화 예매를 확정합니다.")
+    @PostMapping("/{reservationId}/confirm")
+    public ResponseEntity<ApiResponse<Void>> confirmReservation(@PathVariable Long reservationId) {
+        reservationService.confirmReservation(reservationId);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @Operation(summary = "영화 예매 취소", description = "영화 예매를 취소합니다.")
