@@ -25,7 +25,7 @@ public class ReservationResponseDTO {
             LocalDateTime createdAt
     ) {
         public static ReservationDetailResponseDTO of(Reservation reservation, List<ReservationSeat> reservationSeats) {
-            var screening = reservation.getScreening();
+            var screening = reservation.getScreeningEntity();
             var hall = screening.getHall();
 
             return ReservationDetailResponseDTO.builder()

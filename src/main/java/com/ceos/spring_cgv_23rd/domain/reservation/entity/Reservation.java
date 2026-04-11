@@ -2,7 +2,7 @@ package com.ceos.spring_cgv_23rd.domain.reservation.entity;
 
 import com.ceos.spring_cgv_23rd.domain.guest.adapter.out.persistence.entity.GuestEntity;
 import com.ceos.spring_cgv_23rd.domain.reservation.enums.ReservationStatus;
-import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
+import com.ceos.spring_cgv_23rd.domain.screening.adapter.out.persistence.entity.ScreeningEntity;
 import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
 import com.ceos.spring_cgv_23rd.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -33,7 +33,7 @@ public class Reservation extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screening_id", nullable = false)
-    private Screening screening;
+    private ScreeningEntity screeningEntity;
 
     @Column(name = "reservation_number", nullable = false, unique = true)
     private String reservationNumber;
@@ -46,21 +46,21 @@ public class Reservation extends BaseEntity {
     private Integer totalPrice;
 
 
-    private Reservation(UserEntity userEntity, GuestEntity guestEntity, Screening screening, String reservationNumber, int seatSize) {
+    private Reservation(UserEntity userEntity, GuestEntity guestEntity, ScreeningEntity screeningEntity, String reservationNumber, int seatSize) {
         this.userEntity = userEntity;
         this.guestEntity = guestEntity;
-        this.screening = screening;
+        this.screeningEntity = screeningEntity;
         this.reservationNumber = reservationNumber;
         this.status = ReservationStatus.COMPLETED;
-        this.totalPrice = screening.getPrice() * seatSize;
+        this.totalPrice = screeningEntity.getPrice() * seatSize;
     }
 
-    public static Reservation createReservation(UserEntity userEntity, Screening screening, int seatSize, String reservationNumber) {
-        return new Reservation(userEntity, null, screening, reservationNumber, seatSize);
+    public static Reservation createReservation(UserEntity userEntity, ScreeningEntity screeningEntity, int seatSize, String reservationNumber) {
+        return new Reservation(userEntity, null, screeningEntity, reservationNumber, seatSize);
     }
 
-    public static Reservation createGuestReservation(GuestEntity guestEntity, Screening screening, int seatSize, String reservationNumber) {
-        return new Reservation(null, guestEntity, screening, reservationNumber, seatSize);
+    public static Reservation createGuestReservation(GuestEntity guestEntity, ScreeningEntity screeningEntity, int seatSize, String reservationNumber) {
+        return new Reservation(null, guestEntity, screeningEntity, reservationNumber, seatSize);
     }
 
     public void cancel() {

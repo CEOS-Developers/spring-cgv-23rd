@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.screening.entity;
+package com.ceos.spring_cgv_23rd.domain.screening.adapter.out.persistence.entity;
 
 import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.entity.MovieEntity;
 import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Screening {
+public class ScreeningEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,6 +46,7 @@ public class Screening {
     private Integer price;
 
 
+    // TODO: 삭제
     public void decreaseRemainingSeats(int count) {
         if (this.remainingSeats < count) {
             throw new GeneralException(ScreeningErrorCode.NO_REMAINING_SEATS);
@@ -54,6 +55,7 @@ public class Screening {
         this.remainingSeats -= count;
     }
 
+    // TODO: 삭제
     public void increaseRemainingSeats(int count) {
         if (this.remainingSeats + count > this.totalSeats) {
             throw new GeneralException(ScreeningErrorCode.INVALID_SEAT_COUNT);

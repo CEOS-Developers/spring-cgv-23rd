@@ -10,9 +10,9 @@ import com.ceos.spring_cgv_23rd.domain.reservation.enums.ReservationStatus;
 import com.ceos.spring_cgv_23rd.domain.reservation.exception.ReservationErrorCode;
 import com.ceos.spring_cgv_23rd.domain.reservation.repository.ReservationRepository;
 import com.ceos.spring_cgv_23rd.domain.reservation.repository.ReservationSeatRepository;
-import com.ceos.spring_cgv_23rd.domain.screening.entity.Screening;
+import com.ceos.spring_cgv_23rd.domain.screening.adapter.out.persistence.entity.ScreeningEntity;
+import com.ceos.spring_cgv_23rd.domain.screening.adapter.out.persistence.repository.ScreeningJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
-import com.ceos.spring_cgv_23rd.domain.screening.repository.ScreeningRepository;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.SeatEntity;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.repository.SeatJpaRepository;
 import com.ceos.spring_cgv_23rd.domain.user.adapter.out.persistence.entity.UserEntity;
@@ -36,7 +36,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
-    private final ScreeningRepository screeningRepository;
+    private final ScreeningJpaRepository screeningRepository;
     private final UserJpaRepository userRepository;
     private final SeatJpaRepository seatRepository;
     private final GuestJpaRepository guestRepository;
@@ -52,17 +52,17 @@ public class ReservationServiceImpl implements ReservationService {
 
 
         // 상영 스케줄 조회
-        Screening screening = screeningRepository.findWithDetailsById(request.screeningId())
+        ScreeningEntity screeningEntity = screeningRepository.findWithDetailsById(request.screeningId())
                 .orElseThrow(() -> new GeneralException(ScreeningErrorCode.SCREENING_NOT_FOUND));
 
         // 좌석 조회
         List<SeatEntity> seats = validateAndGetSeats(request.seatIds(), request.screeningId());
 
         // 남은 좌석 차감
-        screening.decreaseRemainingSeats(seats.size());
+        screeningEntity.decreaseRemainingSeats(seats.size());
 
         // 예매 생성
-        Reservation reservation = Reservation.createReservation(userEntity, screening, seats.size(), generateReservationNumber());
+        Reservation reservation = Reservation.createReservation(userEntity, screeningEntity, seats.size(), generateReservationNumber());
 
         reservationRepository.save(reservation);
 
@@ -99,14 +99,14 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationResponseDTO.ReservationDetailResponseDTO createGuestReservation(ReservationRequestDTO.CreateGuestReservationRequestDTO request) {
 
         // 상영 스케줄 조회
-        Screening screening = screeningRepository.findWithDetailsById(request.screeningId())
+        ScreeningEntity screeningEntity = screeningRepository.findWithDetailsById(request.screeningId())
                 .orElseThrow(() -> new GeneralException(ScreeningErrorCode.SCREENING_NOT_FOUND));
 
         // 좌석 조회
         List<SeatEntity> seats = validateAndGetSeats(request.seatIds(), request.screeningId());
 
         // 남은 좌석 차감
-        screening.decreaseRemainingSeats(seats.size());
+        screeningEntity.decreaseRemainingSeats(seats.size());
 
         // 비회원 생성
         GuestEntity guestEntity = GuestEntity.builder()
@@ -119,7 +119,7 @@ public class ReservationServiceImpl implements ReservationService {
         guestRepository.save(guestEntity);
 
         // 예매 생성
-        Reservation reservation = Reservation.createGuestReservation(guestEntity, screening, seats.size(), generateReservationNumber());
+        Reservation reservation = Reservation.createGuestReservation(guestEntity, screeningEntity, seats.size(), generateReservationNumber());
 
         reservationRepository.save(reservation);
 
@@ -194,7 +194,7 @@ public class ReservationServiceImpl implements ReservationService {
         List<ReservationSeat> reservationSeats = reservationSeatRepository.findByReservationId(reservation.getId());
 
         // 남은 좌석 수 복구
-        reservation.getScreening().increaseRemainingSeats(reservationSeats.size());
+        reservation.getScreeningEntity().increaseRemainingSeats(reservationSeats.size());
 
         // 예매 취소
         reservation.cancel();

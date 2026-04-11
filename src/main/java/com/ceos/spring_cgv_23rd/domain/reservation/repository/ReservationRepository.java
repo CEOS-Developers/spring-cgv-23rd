@@ -9,12 +9,12 @@ import java.util.Optional;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
     @Query("SELECT r FROM Reservation r " +
-            "JOIN FETCH r.screening " +
+            "JOIN FETCH r.screeningEntity " +
             "WHERE r.id = :reservationId")
     Optional<Reservation> findWithScreeningById(Long reservationId);
 
     @Query("SELECT r FROM Reservation r " +
-            "JOIN FETCH r.screening s " +
+            "JOIN FETCH r.screeningEntity s " +
             "LEFT JOIN FETCH r.guestEntity g " +
             "WHERE r.reservationNumber = :reservationNumber")
     Optional<Reservation> findWithScreeningByReservationNumber(String reservationNumber);

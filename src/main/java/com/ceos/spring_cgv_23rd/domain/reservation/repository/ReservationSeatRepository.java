@@ -10,7 +10,7 @@ public interface ReservationSeatRepository extends JpaRepository<ReservationSeat
 
     // 특정 상영의 예약된 좌석 목록 조회
     @Query("SELECT rs.seat.id FROM ReservationSeat rs " +
-            "WHERE rs.reservation.screening.id = :screeningId " +
+            "WHERE rs.reservation.screeningEntity.id = :screeningId " +
             "AND rs.reservation.status = 'COMPLETED'")
     List<Long> findReservedSeatIdsByScreeningId(Long screeningId);
 
