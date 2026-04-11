@@ -75,23 +75,6 @@ public class ReservationService {
         return savedReservation.getId();
     }
 
-    /**
-     * 예약 확정
-     */
-    @Transactional
-    public void confirmReservation(Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
-
-        if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
-            reservation.expire();
-            reservedSeatRepository.deleteByReservation(reservation);
-            throw new BusinessException(ReservationErrorCode.RESERVATION_EXPIRED);
-        }
-
-        reservation.confirm();
-    }
-
     private void validateSeatRange(Schedule schedule, List<SeatPosition> seatPositions) {
         seatPositions.forEach(seatPosition -> seatPosition.validateAgainst(schedule.getHall().getHallType()));
     }
@@ -117,6 +100,23 @@ public class ReservationService {
     }
 
     /**
+     * 예약 확정
+     */
+    @Transactional
+    public void confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+
+        if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
+            reservation.expire();
+            reservedSeatRepository.deleteByReservation(reservation);
+            throw new BusinessException(ReservationErrorCode.RESERVATION_EXPIRED);
+        }
+
+        reservation.confirm();
+    }
+
+    /**
      * 예매 취소
      */
     @Transactional
@@ -128,7 +128,7 @@ public class ReservationService {
             throw new BusinessException(GlobalErrorCode.FORBIDDEN_ACCESS);
         }
 
-        reservation.cancelStatus();
+        reservation.cancel();
 
         reservedSeatRepository.deleteByReservation(reservation);
     }

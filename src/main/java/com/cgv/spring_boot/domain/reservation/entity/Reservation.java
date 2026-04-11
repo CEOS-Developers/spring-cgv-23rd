@@ -57,7 +57,7 @@ public class Reservation extends BaseEntity {
     /**
      * 예약 상태 변경 관련 메서드
      */
-    public void cancelStatus() {
+    public void cancel() {
         if (this.status == ReservationStatus.CANCELLED) {
             throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
         }
