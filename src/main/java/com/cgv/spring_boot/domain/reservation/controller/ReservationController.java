@@ -7,6 +7,7 @@ import com.cgv.spring_boot.global.common.response.ApiResponse;
 import com.cgv.spring_boot.global.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,7 +25,7 @@ public class ReservationController {
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> reserve(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @RequestBody ReservationRequest request
+            @Valid @RequestBody ReservationRequest request
     ) {
         Long reservationId = reservationService.reserve(authenticatedUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(reservationId));

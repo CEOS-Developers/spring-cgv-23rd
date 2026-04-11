@@ -39,12 +39,20 @@ public class Reservation extends BaseEntity {
         this.schedule = schedule;
     }
 
+    public static Reservation create(User user, Schedule schedule) {
+        return Reservation.builder()
+                .status(ReservationStatus.RESERVED)
+                .user(user)
+                .schedule(schedule)
+                .build();
+    }
+
     /**
      * 예약 상태 변경 (RESERVED -> CANCELLED)
      */
     public void cancelStatus() {
         if (this.status == ReservationStatus.CANCELLED) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELED);
+            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
         }
         this.status = ReservationStatus.CANCELLED;
     }

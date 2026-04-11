@@ -2,13 +2,12 @@ package com.cgv.spring_boot.domain.reservation.service;
 
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.entity.Reservation;
-import com.cgv.spring_boot.domain.reservation.entity.ReservationStatus;
 import com.cgv.spring_boot.domain.reservation.entity.ReservedSeat;
+import com.cgv.spring_boot.domain.reservation.entity.SeatPosition;
 import com.cgv.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.cgv.spring_boot.domain.reservation.repository.ReservedSeatRepository;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.schedule.repository.ScheduleRepository;
-import com.cgv.spring_boot.domain.theater.entity.HallType;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.domain.user.repository.UserRepository;
 import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
@@ -21,8 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
-import static com.cgv.spring_boot.domain.reservation.dto.ReservationRequest.*;
+import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -45,34 +43,23 @@ public class ReservationService {
         Schedule schedule = scheduleRepository.findById(request.scheduleId())
                 .orElseThrow(() -> new BusinessException(ScheduleErrorCode.SCHEDULE_NOT_FOUND));
 
-        validateSeatRange(schedule.getHall().getHallType(), request.seats());
-
-        List<SeatRequest> normalizedSeats = request.seats().stream()
-                .map(seatRequest -> new SeatRequest(normalizeSeatRow(seatRequest.seatRow()), seatRequest.seatCol()))
+        List<SeatPosition> seatPositions = request.seats().stream()
+                .map(seatRequest -> new SeatPosition(seatRequest.seatRow(), seatRequest.seatCol()))
                 .toList();
 
-        List<String> rows = normalizedSeats.stream().map(SeatRequest::seatRow).toList();
-        List<Integer> cols = request.seats().stream().map(SeatRequest::seatCol).toList();
+        // 상영관 범위를 벗어난 좌석인지 확인
+        validateSeatRange(schedule, seatPositions);
+        // 같은 요청 안에서 중복 좌석을 선택했는지 확인
+        validateDuplicateSeatsInRequest(seatPositions);
+        // 이미 다른 예매가 선점한 좌석인지 확인
+        validateAlreadyReservedSeats(schedule, seatPositions);
 
-        if (!reservedSeatRepository.findAllByScheduleAndRowsAndCols(schedule.getId(), rows, cols).isEmpty()) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
-        }
-
-        Reservation reservation = Reservation.builder()
-                .status(ReservationStatus.RESERVED)
-                .user(user)
-                .schedule(schedule)
-                .build();
+        Reservation reservation = Reservation.create(user, schedule);
 
         Reservation savedReservation = reservationRepository.save(reservation);
 
-        List<ReservedSeat> reservedSeats = normalizedSeats.stream()
-                .map(seatRequest -> ReservedSeat.builder()
-                        .seatRow(seatRequest.seatRow())
-                        .seatCol(seatRequest.seatCol())
-                        .schedule(schedule) // 유니크 제약 조건을 위해 반드시 추가!
-                        .reservation(savedReservation)
-                        .build())
+        List<ReservedSeat> reservedSeats = seatPositions.stream()
+                .map(seatPosition -> ReservedSeat.create(savedReservation, schedule, seatPosition))
                 .toList();
 
         reservedSeatRepository.saveAll(reservedSeats);
@@ -80,29 +67,28 @@ public class ReservationService {
         return savedReservation.getId();
     }
 
-    private void validateSeatRange(HallType hallType, List<SeatRequest> seats) {
-        for (SeatRequest seat : seats) {
-            if (isInvalidSeatRow(seat.seatRow(), hallType.getRowCount())
-                    || seat.seatCol() < 1
-                    || seat.seatCol() > hallType.getColCount()) {
-                throw new BusinessException(ReservationErrorCode.INVALID_SEAT_POSITION);
-            }
+    private void validateSeatRange(Schedule schedule, List<SeatPosition> seatPositions) {
+        seatPositions.forEach(seatPosition -> seatPosition.validateAgainst(schedule.getHall().getHallType()));
+    }
+
+    private void validateDuplicateSeatsInRequest(List<SeatPosition> seatPositions) {
+        Set<SeatPosition> uniqueSeats = Set.copyOf(seatPositions);
+        if (uniqueSeats.size() != seatPositions.size()) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
     }
 
-    private boolean isInvalidSeatRow(String seatRow, int rowCount) {
-        if (seatRow == null || seatRow.length() != 1) {
-            return true;
+    private void validateAlreadyReservedSeats(Schedule schedule, List<SeatPosition> seatPositions) {
+        boolean alreadyReserved = seatPositions.stream()
+                .anyMatch(seatPosition -> reservedSeatRepository.existsByScheduleIdAndSeatRowAndSeatCol(
+                        schedule.getId(),
+                        seatPosition.seatRow(),
+                        seatPosition.seatCol())
+                );
+
+        if (alreadyReserved) {
+            throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
-
-        char row = Character.toUpperCase(seatRow.charAt(0));
-        char maxRow = (char) ('A' + rowCount - 1);
-
-        return row < 'A' || row > maxRow;
-    }
-
-    private String normalizeSeatRow(String seatRow) {
-        return String.valueOf(Character.toUpperCase(seatRow.charAt(0)));
     }
 
     /**
