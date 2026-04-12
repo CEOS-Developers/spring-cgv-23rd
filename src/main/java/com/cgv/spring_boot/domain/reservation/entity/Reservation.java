@@ -1,5 +1,6 @@
 package com.cgv.spring_boot.domain.reservation.entity;
 
+import com.cgv.spring_boot.domain.payment.entity.Payment;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.global.common.entity.BaseEntity;
@@ -36,6 +37,9 @@ public class Reservation extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
+
+    @OneToOne(mappedBy = "reservation", fetch = FetchType.LAZY)
+    private Payment payment;
 
     @Builder
     public Reservation(ReservationStatus status, User user, Schedule schedule, LocalDateTime expiresAt) {

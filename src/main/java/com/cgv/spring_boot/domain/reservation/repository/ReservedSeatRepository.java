@@ -9,5 +9,7 @@ import org.springframework.stereotype.Repository;
 public interface ReservedSeatRepository extends JpaRepository<ReservedSeat, Long> {
     boolean existsByScheduleIdAndSeatRowAndSeatCol(Long scheduleId, String seatRow, int seatCol);
 
+    long countByReservationId(Long reservationId);
+
     void deleteByReservation(Reservation reservation);
 }

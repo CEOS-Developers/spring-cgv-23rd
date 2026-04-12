@@ -23,6 +23,9 @@ public class Schedule extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime startTime;
 
+    @Column(nullable = false)
+    private int ticketPrice;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id")
     private Movie movie;
@@ -32,8 +35,9 @@ public class Schedule extends BaseEntity {
     private Hall hall;
 
     @Builder
-    public Schedule(LocalDateTime startTime, Movie movie, Hall hall) {
+    public Schedule(LocalDateTime startTime, int ticketPrice, Movie movie, Hall hall) {
         this.startTime = startTime;
+        this.ticketPrice = ticketPrice;
         this.movie = movie;
         this.hall = hall;
     }

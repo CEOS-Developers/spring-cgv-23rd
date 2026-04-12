@@ -1,5 +1,6 @@
 package com.cgv.spring_boot.domain.reservation.controller;
 
+import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.service.ReservationService;
 import com.cgv.spring_boot.global.common.code.SuccessCode;
@@ -29,6 +30,16 @@ public class ReservationController {
     ) {
         Long reservationId = reservationService.reserve(authenticatedUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(reservationId));
+    }
+
+    @Operation(summary = "영화 예매 결제", description = "선점한 좌석에 대해 결제를 진행하고 예매를 확정합니다.")
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<ApiResponse<PaymentResponse>> pay(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable("id") Long id
+    ) {
+        PaymentResponse response = reservationService.pay(authenticatedUser.getUserId(), id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "영화 예매 취소", description = "영화 예매를 취소합니다.")

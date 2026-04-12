@@ -1,7 +1,10 @@
 package com.cgv.spring_boot.domain.reservation.service;
 
+import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
+import com.cgv.spring_boot.domain.payment.service.PaymentService;
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.entity.Reservation;
+import com.cgv.spring_boot.domain.reservation.entity.ReservationStatus;
 import com.cgv.spring_boot.domain.reservation.entity.ReservedSeat;
 import com.cgv.spring_boot.domain.reservation.entity.SeatPosition;
 import com.cgv.spring_boot.domain.reservation.repository.ReservationRepository;
@@ -33,6 +36,7 @@ public class ReservationService {
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
     private final ReservedSeatRepository reservedSeatRepository;
+    private final PaymentService paymentService;
 
     /**
      * 예매 좌석 선점
@@ -75,10 +79,12 @@ public class ReservationService {
         return savedReservation.getId();
     }
 
+    /** 좌석 범위 검증 */
     private void validateSeatRange(Schedule schedule, List<SeatPosition> seatPositions) {
         seatPositions.forEach(seatPosition -> seatPosition.validateAgainst(schedule.getHall().getHallType()));
     }
 
+    /** 요청 내 중복 좌석 검증 */
     private void validateDuplicateSeatsInRequest(List<SeatPosition> seatPositions) {
         Set<SeatPosition> uniqueSeats = Set.copyOf(seatPositions);
         if (uniqueSeats.size() != seatPositions.size()) {
@@ -86,6 +92,7 @@ public class ReservationService {
         }
     }
 
+    /** 기예약 좌석 검증 */
     private void validateAlreadyReservedSeats(Schedule schedule, List<SeatPosition> seatPositions) {
         boolean alreadyReserved = seatPositions.stream()
                 .anyMatch(seatPosition -> reservedSeatRepository.existsByScheduleIdAndSeatRowAndSeatCol(
@@ -100,20 +107,35 @@ public class ReservationService {
     }
 
     /**
-     * 예약 확정
+     * 예매 결제 및 확정
      */
     @Transactional
-    public void confirmReservation(Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
+    public PaymentResponse pay(Long userId, Long reservationId) {
+        Reservation reservation = getOwnedReservation(userId, reservationId);
+        validateReservationPayable(reservation);
 
+        long seatCount = reservedSeatRepository.countByReservationId(reservationId);
+        Schedule schedule = reservation.getSchedule();
+        int totalAmount = Math.toIntExact(seatCount * schedule.getTicketPrice());
+        String orderName = schedule.getMovie().getTitle() + " 예매";
+        String customData = "{\"reservationId\":" + reservationId + ",\"seatCount\":" + seatCount + "}";
+
+        PaymentResponse response = paymentService.payReservation(reservation, totalAmount, orderName, customData);
+        reservation.confirm();
+        return response;
+    }
+
+    /** 결제 가능 예약 검증 */
+    private void validateReservationPayable(Reservation reservation) {
         if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
             reservation.expire();
             reservedSeatRepository.deleteByReservation(reservation);
             throw new BusinessException(ReservationErrorCode.RESERVATION_EXPIRED);
         }
 
-        reservation.confirm();
+        if (reservation.getStatus() != ReservationStatus.PENDING_PAYMENT) {
+            throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+        }
     }
 
     /**
@@ -121,6 +143,14 @@ public class ReservationService {
      */
     @Transactional
     public void cancel(Long userId, Long reservationId) {
+        Reservation reservation = getOwnedReservation(userId, reservationId);
+        reservation.cancel();
+
+        reservedSeatRepository.deleteByReservation(reservation);
+    }
+
+    /** 본인 예약 조회 */
+    private Reservation getOwnedReservation(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
@@ -128,8 +158,6 @@ public class ReservationService {
             throw new BusinessException(GlobalErrorCode.FORBIDDEN_ACCESS);
         }
 
-        reservation.cancel();
-
-        reservedSeatRepository.deleteByReservation(reservation);
+        return reservation;
     }
 }
