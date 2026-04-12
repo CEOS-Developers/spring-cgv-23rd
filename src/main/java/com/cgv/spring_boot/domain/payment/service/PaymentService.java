@@ -3,6 +3,7 @@ package com.cgv.spring_boot.domain.payment.service;
 import com.cgv.spring_boot.domain.payment.dto.request.PaymentCreateRequest;
 import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
 import com.cgv.spring_boot.domain.payment.entity.Payment;
+import com.cgv.spring_boot.domain.payment.entity.PaymentStatus;
 import com.cgv.spring_boot.domain.payment.exception.PaymentErrorCode;
 import com.cgv.spring_boot.domain.payment.repository.PaymentRepository;
 import com.cgv.spring_boot.domain.reservation.entity.Reservation;
@@ -45,5 +46,18 @@ public class PaymentService {
             payment.markFailed();
             throw e;
         }
+    }
+
+    @Transactional
+    public void cancelReservationPayment(Reservation reservation) {
+        Payment payment = paymentRepository.findByReservationId(reservation.getId())
+                .orElse(null);
+
+        if (payment == null || payment.getStatus() != PaymentStatus.PAID) {
+            return;
+        }
+
+        portOnePaymentClient.cancel(payment.getPaymentId());
+        payment.cancel();
     }
 }

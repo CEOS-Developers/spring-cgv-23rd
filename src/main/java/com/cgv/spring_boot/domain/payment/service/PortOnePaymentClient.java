@@ -4,7 +4,11 @@ import com.cgv.spring_boot.domain.payment.dto.request.PaymentCreateRequest;
 import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
 import com.cgv.spring_boot.domain.payment.exception.PaymentErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -22,6 +26,10 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PortOnePaymentClient {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .findAndRegisterModules()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     private final RestClient.Builder restClientBuilder;
 
     @Value("${payment.base-url}")
@@ -35,7 +43,7 @@ public class PortOnePaymentClient {
 
     public PaymentResponse instantPay(String paymentId, PaymentCreateRequest request) {
         return execute(() -> {
-            ExternalApiResponse<ExternalPaymentData> response = restClient().post()
+            String responseBody = restClient().post()
                     .uri("/payments/{paymentId}/instant", paymentId)
                     .header(HttpHeaders.AUTHORIZATION, bearerToken())
                     .contentType(MediaType.APPLICATION_JSON)
@@ -47,11 +55,36 @@ public class PortOnePaymentClient {
                             request.customData()
                     ))
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {
-                    });
+                    .body(String.class);
+
+            ExternalApiResponse<ExternalPaymentData> response = parseResponse(
+                    responseBody,
+                    new ParameterizedTypeReference<>() {
+                    },
+                    "instantPay"
+            );
 
             return toPaymentResponse(response);
         }, PaymentAction.INSTANT_PAY);
+    }
+
+    public PaymentResponse cancel(String paymentId) {
+        return execute(() -> {
+            String responseBody = restClient().post()
+                    .uri("/payments/{paymentId}/cancel", paymentId)
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken())
+                    .retrieve()
+                    .body(String.class);
+
+            ExternalApiResponse<ExternalPaymentData> response = parseResponse(
+                    responseBody,
+                    new ParameterizedTypeReference<>() {
+                    },
+                    "cancel"
+            );
+
+            return toPaymentResponse(response);
+        }, PaymentAction.CANCEL);
     }
 
     private String bearerToken() {
@@ -66,11 +99,18 @@ public class PortOnePaymentClient {
         synchronized (this) {
             if (apiSecretKey == null) {
                 // storeId 기반 auth 응답에서 API secret key를 한 번만 조회한다.
-                ExternalApiResponse<ExternalAuthData> response = execute(() -> restClient().get()
-                        .uri("/auth/{githubId}", storeId)
-                        .retrieve()
-                        .body(new ParameterizedTypeReference<>() {
-                        }), PaymentAction.AUTH);
+                ExternalApiResponse<ExternalAuthData> response = execute(() -> {
+                            String responseBody = restClient().get()
+                                    .uri("/auth/{githubId}", storeId)
+                                    .retrieve()
+                                    .body(String.class);
+                            return parseResponse(
+                                    responseBody,
+                                    new ParameterizedTypeReference<>() {
+                                    },
+                                    "auth"
+                            );
+                        }, PaymentAction.AUTH);
 
                 if (response == null || response.data() == null || response.data().apiSecretKey() == null) {
                     throw new BusinessException(PaymentErrorCode.INVALID_PAYMENT_RESPONSE);
@@ -105,6 +145,21 @@ public class PortOnePaymentClient {
                 .build();
     }
 
+    private <T> T parseResponse(String responseBody, ParameterizedTypeReference<T> typeReference, String context) {
+        if (responseBody == null || responseBody.isBlank()) {
+            throw new BusinessException(PaymentErrorCode.INVALID_PAYMENT_RESPONSE);
+        }
+
+        try {
+            return OBJECT_MAPPER.readValue(
+                    responseBody,
+                    OBJECT_MAPPER.getTypeFactory().constructType(typeReference.getType())
+            );
+        } catch (JsonProcessingException e) {
+            throw new BusinessException(PaymentErrorCode.INVALID_PAYMENT_RESPONSE);
+        }
+    }
+
     // 외부 API 예외를 도메인 예외로 일관되게 변환
     private <T> T execute(PaymentCall<T> paymentCall, PaymentAction action) {
         try {
@@ -122,6 +177,9 @@ public class PortOnePaymentClient {
         if (statusCode == 404 && action == PaymentAction.INSTANT_PAY) {
             return new BusinessException(PaymentErrorCode.PAYMENT_NOT_FOUND);
         }
+        if (statusCode == 409 && action == PaymentAction.CANCEL) {
+            return new BusinessException(PaymentErrorCode.PAYMENT_NOT_CANCELLABLE);
+        }
         if (statusCode >= 500) {
             return new BusinessException(PaymentErrorCode.PAYMENT_FAILED);
         }
@@ -135,7 +193,8 @@ public class PortOnePaymentClient {
 
     private enum PaymentAction {
         AUTH,
-        INSTANT_PAY
+        INSTANT_PAY,
+        CANCEL
     }
 
     // PortOne 즉시결제 요청 바디
@@ -150,8 +209,10 @@ public class PortOnePaymentClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record ExternalApiResponse<T>(
-            int code,
+            @JsonAlias("status")
+            Integer code,
             String message,
+            @JsonAlias("payload")
             T data
     ) {
     }

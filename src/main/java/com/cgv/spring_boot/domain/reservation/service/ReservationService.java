@@ -145,6 +145,7 @@ public class ReservationService {
     public void cancel(Long userId, Long reservationId) {
         Reservation reservation = getOwnedReservation(userId, reservationId);
         reservation.cancel();
+        paymentService.cancelReservationPayment(reservation);
 
         reservedSeatRepository.deleteByReservation(reservation);
     }
