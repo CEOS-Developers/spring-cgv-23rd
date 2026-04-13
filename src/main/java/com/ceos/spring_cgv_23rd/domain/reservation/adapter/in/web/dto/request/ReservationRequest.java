@@ -1,4 +1,5 @@
-package com.ceos.spring_cgv_23rd.domain.reservation.dto;
+package com.ceos.spring_cgv_23rd.domain.reservation.adapter.in.web.dto.request;
+
 
 import jakarta.validation.constraints.*;
 import lombok.Builder;
@@ -6,10 +7,11 @@ import lombok.Builder;
 import java.time.LocalDate;
 import java.util.List;
 
-public class ReservationRequestDTO {
+public class ReservationRequest {
 
     @Builder
-    public record CreateReservationRequestDTO(
+    public record CreateReservationRequest(
+
             @NotNull(message = "상영 ID가 없습니다.")
             Long screeningId,
 
@@ -19,7 +21,8 @@ public class ReservationRequestDTO {
     }
 
     @Builder
-    public record CreateGuestReservationRequestDTO(
+    public record CreateGuestReservationRequest(
+
             @NotNull(message = "상영 ID가 없습니다.")
             Long screeningId,
 
@@ -44,10 +47,7 @@ public class ReservationRequestDTO {
     }
 
     @Builder
-    public record CancelGuestReservationRequestDTO(
-
-            @NotBlank(message = "예매 번호가 없습니다.")
-            String reservationNumber,
+    public record CancelGuestReservationRequest(
 
             @NotBlank(message = "전화번호가 없습니다.")
             String guestPhone,

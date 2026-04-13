@@ -1,9 +1,7 @@
 package com.ceos.spring_cgv_23rd.domain.screening.adapter.out.persistence.entity;
 
 import com.ceos.spring_cgv_23rd.domain.movie.adapter.out.persistence.entity.MovieEntity;
-import com.ceos.spring_cgv_23rd.domain.screening.exception.ScreeningErrorCode;
 import com.ceos.spring_cgv_23rd.domain.theater.adapter.out.persistence.entity.HallEntity;
-import com.ceos.spring_cgv_23rd.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,20 +44,7 @@ public class ScreeningEntity {
     private Integer price;
 
 
-    // TODO: 삭제
-    public void decreaseRemainingSeats(int count) {
-        if (this.remainingSeats < count) {
-            throw new GeneralException(ScreeningErrorCode.NO_REMAINING_SEATS);
-        }
-
-        this.remainingSeats -= count;
-    }
-
-    // TODO: 삭제
-    public void increaseRemainingSeats(int count) {
-        if (this.remainingSeats + count > this.totalSeats) {
-            throw new GeneralException(ScreeningErrorCode.INVALID_SEAT_COUNT);
-        }
-        this.remainingSeats += count;
+    public void updateRemainingSeats(int remainingSeats) {
+        this.remainingSeats = remainingSeats;
     }
 }

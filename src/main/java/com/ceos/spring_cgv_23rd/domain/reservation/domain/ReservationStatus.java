@@ -1,4 +1,4 @@
-package com.ceos.spring_cgv_23rd.domain.reservation.enums;
+package com.ceos.spring_cgv_23rd.domain.reservation.domain;
 
 public enum ReservationStatus {
     COMPLETED,      // 완료

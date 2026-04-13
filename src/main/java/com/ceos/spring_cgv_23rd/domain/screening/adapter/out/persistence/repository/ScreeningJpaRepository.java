@@ -27,11 +27,12 @@ public interface ScreeningJpaRepository extends JpaRepository<ScreeningEntity, L
             "ORDER BY s.movie.id, s.startAt")
     List<ScreeningEntity> findByTheaterAndDate(Long theaterId, LocalDate date);
 
-    // TODO 삭제
+
     @Query("SELECT s FROM ScreeningEntity s " +
             "JOIN FETCH s.movie " +
             "JOIN FETCH  s.hall h " +
             "JOIN FETCH h.theater " +
+            "JOIN FETCH h.hallType " +
             "WHERE s.id = :screeningId")
     Optional<ScreeningEntity> findWithDetailsById(Long screeningId);
 
