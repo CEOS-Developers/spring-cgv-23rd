@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.global.jwt.domain;
 
-import com.ceos23.cgv_clone.global.domain.BaseEntity;
+import com.ceos23.cgv_clone.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;

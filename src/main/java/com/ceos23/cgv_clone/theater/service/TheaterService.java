@@ -2,7 +2,7 @@ package com.ceos23.cgv_clone.theater.service;
 
 import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.global.exception.CustomException;
-import com.ceos23.cgv_clone.theater.domain.Theater;
+import com.ceos23.cgv_clone.theater.entity.Theater;
 import com.ceos23.cgv_clone.theater.dto.response.TheaterResponse;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;
 import lombok.RequiredArgsConstructor;

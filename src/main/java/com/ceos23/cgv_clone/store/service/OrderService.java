@@ -2,7 +2,7 @@ package com.ceos23.cgv_clone.store.service;
 
 import com.ceos23.cgv_clone.global.exception.CustomException;
 import com.ceos23.cgv_clone.global.response.ErrorCode;
-import com.ceos23.cgv_clone.store.domain.*;
+import com.ceos23.cgv_clone.store.entity.*;
 import com.ceos23.cgv_clone.store.dto.request.OrderRequest;
 import com.ceos23.cgv_clone.store.dto.request.OrderRequest.OrderItemRequest;
 import com.ceos23.cgv_clone.store.dto.response.InventoryResponse;
@@ -10,7 +10,7 @@ import com.ceos23.cgv_clone.store.dto.response.OrderResponse;
 import com.ceos23.cgv_clone.store.repository.InventoryRepository;
 import com.ceos23.cgv_clone.store.repository.OrderRepository;
 import com.ceos23.cgv_clone.store.repository.StoreRepository;
-import com.ceos23.cgv_clone.user.domain.User;
+import com.ceos23.cgv_clone.user.entity.User;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

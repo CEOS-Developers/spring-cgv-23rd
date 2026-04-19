@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.global.jwt;
 
-import com.ceos23.cgv_clone.user.domain.User;
+import com.ceos23.cgv_clone.user.entity.User;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

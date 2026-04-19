@@ -1,8 +1,8 @@
 package com.ceos23.cgv_clone.store.dto.response;
 
-import com.ceos23.cgv_clone.store.domain.Order;
-import com.ceos23.cgv_clone.store.domain.OrderItem;
-import com.ceos23.cgv_clone.store.domain.OrderStatus;
+import com.ceos23.cgv_clone.store.entity.Order;
+import com.ceos23.cgv_clone.store.entity.OrderItem;
+import com.ceos23.cgv_clone.store.entity.OrderStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

@@ -1,7 +1,7 @@
 package com.ceos23.cgv_clone.store.dto.response;
 
-import com.ceos23.cgv_clone.store.domain.Inventory;
-import com.ceos23.cgv_clone.store.domain.MenuType;
+import com.ceos23.cgv_clone.store.entity.Inventory;
+import com.ceos23.cgv_clone.store.entity.MenuType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

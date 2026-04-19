@@ -3,7 +3,7 @@ package com.ceos23.cgv_clone.theater.service;
 import com.ceos23.cgv_clone.global.exception.CustomException;
 import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.movie.repository.MovieRepository;
-import com.ceos23.cgv_clone.theater.domain.Schedule;
+import com.ceos23.cgv_clone.theater.entity.Schedule;
 import com.ceos23.cgv_clone.theater.dto.response.ScheduleResponse;
 import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;

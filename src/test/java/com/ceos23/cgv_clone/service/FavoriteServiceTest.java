@@ -1,15 +1,14 @@
 package com.ceos23.cgv_clone.service;
 
 import com.ceos23.cgv_clone.favorite.dto.response.FavoriteResponse;
-import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.favorite.repository.MovieFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.repository.TheaterFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.service.FavoriteService;
-import com.ceos23.cgv_clone.movie.domain.Movie;
+import com.ceos23.cgv_clone.movie.entity.Movie;
 import com.ceos23.cgv_clone.movie.repository.MovieRepository;
-import com.ceos23.cgv_clone.theater.domain.Theater;
+import com.ceos23.cgv_clone.theater.entity.Theater;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;
-import com.ceos23.cgv_clone.user.domain.User;
+import com.ceos23.cgv_clone.user.entity.User;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

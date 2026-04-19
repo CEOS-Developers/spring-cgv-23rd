@@ -2,7 +2,7 @@ package com.ceos23.cgv_clone.movie.service;
 
 import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.global.exception.CustomException;
-import com.ceos23.cgv_clone.movie.domain.Movie;
+import com.ceos23.cgv_clone.movie.entity.Movie;
 import com.ceos23.cgv_clone.movie.dto.response.MovieResponse;
 import com.ceos23.cgv_clone.movie.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;

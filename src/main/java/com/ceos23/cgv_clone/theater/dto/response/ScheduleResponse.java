@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.theater.dto.response;
 
-import com.ceos23.cgv_clone.theater.domain.Schedule;
+import com.ceos23.cgv_clone.theater.entity.Schedule;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
