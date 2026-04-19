@@ -1,5 +1,6 @@
 package com.ceos23.cgv_clone.global.jwt;
 
+import com.ceos23.cgv_clone.user.entity.Role;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -10,8 +11,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -35,8 +34,6 @@ public class TokenProvider implements InitializingBean {
 
     private Key key;
 
-    private final UserDetailsService userDetailsService;
-
     @Override
     public void afterPropertiesSet() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
@@ -53,10 +50,12 @@ public class TokenProvider implements InitializingBean {
     }
 
     // 토큰 생성
-    public String createAccessToken(Long userId) {
+    public String createAccessToken(Long userId, Role role) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim("type", "access")
+                .claim("role", role.name())
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
@@ -68,6 +67,7 @@ public class TokenProvider implements InitializingBean {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + refreshExpirationMs))
                 .signWith(key)
@@ -88,9 +88,21 @@ public class TokenProvider implements InitializingBean {
                 .getSubject();
     }
 
+    public String getTokenRole(String token) {
+        return Jwts.parser()
+                .verifyWith(((SecretKey) key))
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
+    }
+
     // Authentication 객체 반환
     public Authentication getAuthentication(String token) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(getTokenUserId(token));
+        String userId = getTokenUserId(token);
+        String role = getTokenRole(token);
+
+        CustomUserDetails userDetails = new CustomUserDetails(Long.parseLong(userId), null, Role.valueOf(role));
 
         return new UsernamePasswordAuthenticationToken(userDetails, token, userDetails.getAuthorities());
     }
