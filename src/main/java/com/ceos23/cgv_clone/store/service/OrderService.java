@@ -34,11 +34,40 @@ public class OrderService {
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+        List<OrderItemRequest> items = request.getItems();
 
+        List<Inventory> inventories = validateAndDecreaseStock(store, items);
+        int totalPrice = calculateTotalPrice(inventories, items);
+
+        Order order = Order.builder()
+                .orderStatus(OrderStatus.PAID)
+                .totalPrice(totalPrice)
+                .user(user)
+                .store(store)
+                .build();
+
+        addOrderItems(order, inventories, items);
+        orderRepository.save(order);
+
+        return OrderResponse.from(order);
+    }
+
+    @Transactional(readOnly = true)
+    public List<InventoryResponse> getInventories(Long storeId) {
+        storeRepository.findById(storeId)
+            .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
+
+        List<Inventory> response = inventoryRepository.findAllByStore_Id(storeId);
+
+        return response.stream()
+                .map(InventoryResponse::from)
+                .toList();
+    }
+
+    private List<Inventory> validateAndDecreaseStock(Store store, List<OrderItemRequest> items) {
         List<Inventory> inventories = new ArrayList<>();
-        int totalPrice = 0;
 
-        for (OrderItemRequest item : request.getItems()) {
+        for (OrderItemRequest item : items) {
             Inventory inventory = inventoryRepository.findById(item.getInventoryId())
                     .orElseThrow(() -> new CustomException(ErrorCode.ITEM_NOT_FOUND));
 
@@ -48,44 +77,28 @@ public class OrderService {
             }
 
             inventory.decrease(item.getQuantity());
-            totalPrice += inventory.getMenu().getPrice() * item.getQuantity();
-            // 밑 반복문에서 사용하기 위해서 다시 넣기
             inventories.add(inventory);
         }
 
-        Order order = Order.builder()
-                .orderStatus(OrderStatus.PAID)
-                .totalPrice(totalPrice)
-                .user(user)
-                .store(store)
-                .build();
+        return inventories;
+    }
 
-        orderRepository.save(order);
-
-        List<OrderItemRequest> items = request.getItems();
+    private int calculateTotalPrice(List<Inventory> inventories, List<OrderItemRequest> items) {
+        int totalPrice = 0;
         for (int i = 0; i < items.size(); i++) {
-            OrderItem orderItem = OrderItem.builder()
+            totalPrice += inventories.get(i).getMenu().getPrice() * items.get(i).getQuantity();
+        }
+        return totalPrice;
+    }
+
+    private void addOrderItems(Order order, List<Inventory> inventories, List<OrderItemRequest> items) {
+        for (int i = 0; i < items.size(); i++) {
+            order.addOrderItem(OrderItem.builder()
                     .quantity(items.get(i).getQuantity())
                     .unitPrice(inventories.get(i).getMenu().getPrice())
                     .order(order)
                     .inventory(inventories.get(i))
-                    .build();
-
-            order.addOrderItem(orderItem);
+                    .build());
         }
-
-        return OrderResponse.from(order);
-    }
-
-    @Transactional(readOnly = true)
-    public List<InventoryResponse> getInventories(Long storeId) {
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
-
-        List<Inventory> response = inventoryRepository.findAllByStore_Id(storeId);
-
-        return response.stream()
-                .map(InventoryResponse::from)
-                .toList();
     }
 }

@@ -37,57 +37,14 @@ public class ReservationService {
     public ReservationResponse createReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
-
-        int ageRestriction = schedule.getMovie().getAgeRestriction();
-
-        if (ageRestriction >= 18) {
-            // 1. 나이 검사
-            if (user.getBirthdate() == null) {
-                // 예외처리가 아닌, 생년월일 인증하는 방식으로 변경 필요.
-                throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
-            }
-            int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
-
-            if (userAge < ageRestriction
-            ) {
-                throw new CustomException(ErrorCode.AGE_RESTRICTED);
-            }
-        }
-
-        // 2. 좌석 검사
-        // 2-1. 하나의 요청에 중복 좌석 입력 검사
         List<String> seats = request.getSeats();
-        // HashSet -> 중복 허용하지 않는 자료구조
-        if (seats.size() != new HashSet<>(seats).size()) {
-            throw new CustomException(ErrorCode.INVALID_SEAT);
-        }
 
-        for (String seatStr : request.getSeats()) {
-            // 2-2. 좌석 문자열 검사
-            if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
-                throw new CustomException(ErrorCode.INVALID_SEAT);
-            }
+        validateAgeRestriction(user, schedule.getMovie().getAgeRestriction());
+        validateSeats(seats, schedule);
 
-            char row = seatStr.charAt(0);
-            int col = Integer.parseInt(seatStr.substring(1));
-
-            // 2-3. 좌석 범위 검사
-            if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
-                throw new CustomException(ErrorCode.INVALID_SEAT);
-            }
-
-            // 2-4. 좌석 중복 검사
-            // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
-            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
-                throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
-            }
-        }
-
-        int pricePerSeat = schedule.getScreen().getScreenType().getPrice();
-        int totalPrice = pricePerSeat * request.getSeats().size();
+        int totalPrice = schedule.getScreen().getScreenType().getPrice() * request.getSeats().size();
 
         Reservation reservation = Reservation.builder()
                 .reservedAt(LocalDateTime.now())
@@ -104,12 +61,9 @@ public class ReservationService {
                     .reservation(reservation)
                     .schedule(schedule)
                     .build();
-
-            reservation.addReservationSeat(seat);
         }
 
         reservationRepository.save(reservation);
-
         return ReservationResponse.from(reservation);
     }
 
@@ -133,5 +87,45 @@ public class ReservationService {
         }
 
         reservation.cancel();
+    }
+
+    private void validateAgeRestriction(User user, int ageRestriction) {
+        if (ageRestriction < 18) return;
+
+        if (user.getBirthdate() == null) {
+            throw new CustomException(ErrorCode.USER_BIRTHDATE_NOT_FOUND);
+        }
+
+        int userAge = Period.between(user.getBirthdate(), LocalDate.now()).getYears();
+        if (userAge < ageRestriction) {
+            throw new CustomException(ErrorCode.AGE_RESTRICTED);
+        }
+    }
+
+    private void validateSeats(List<String> seats, Schedule schedule) {
+        if (seats.size() != new HashSet<>(seats).size()) {
+            throw new CustomException(ErrorCode.INVALID_SEAT);
+        }
+
+        for (String seatStr : seats) {
+            // 2-2. 좌석 문자열 검사
+            if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
+                throw new CustomException(ErrorCode.INVALID_SEAT);
+            }
+
+            char row = seatStr.charAt(0);
+            int col = Integer.parseInt(seatStr.substring(1));
+
+            // 2-3. 좌석 범위 검사
+            if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
+                throw new CustomException(ErrorCode.INVALID_SEAT);
+            }
+
+            // 2-4. 좌석 중복 검사
+            // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
+            if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
+                throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
+            }
+        }
     }
 }
