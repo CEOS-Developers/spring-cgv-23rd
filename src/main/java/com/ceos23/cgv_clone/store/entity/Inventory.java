@@ -23,6 +23,9 @@ public class Inventory extends BaseEntity {
     @Column(nullable = false)
     private int quantity; // 항상 1 이상일 것
 
+    @Version
+    private Long version;
+
     @JoinColumn(name = "store_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
     private Store store;

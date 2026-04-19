@@ -46,9 +46,11 @@ public enum ErrorCode {
     // 만료된 리프레쉬 토큰
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "G010", "만료된 리프레쉬 토큰입니다."),
 
+    // 동시 수정 문제
+    CONCURRENT_UPDATE_FAILED(HttpStatus.CONFLICT, "G011" , "동시 수정으로 요청이 실패했습니다."),
+
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G999", "Internal Server Error Exception"),
-
 
     /**
      * ******************************* Custom Error CodeList ****************************************

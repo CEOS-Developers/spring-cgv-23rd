@@ -10,5 +10,5 @@ public interface OrderService {
 
     OrderResponse createOrder(Long userId, Long storeId, OrderRequest request);
 
-    List<InventoryResponse> getInventories(Long userId);
+    List<InventoryResponse> getInventories(Long storeId);
 }
