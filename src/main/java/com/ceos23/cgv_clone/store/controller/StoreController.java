@@ -15,12 +15,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/stores")
 public class StoreController {
 
-    @Qualifier("orderServiceBasic")
     private final OrderService orderService;
+
+    public StoreController(@Qualifier("orderServiceBasic") OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     @GetMapping("/{storeId}/inventories")
     public ApiResponse<List<InventoryResponse>> getInventories(
