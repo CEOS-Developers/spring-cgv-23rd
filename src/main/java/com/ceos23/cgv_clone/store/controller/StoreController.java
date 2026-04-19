@@ -8,6 +8,7 @@ import com.ceos23.cgv_clone.store.dto.response.InventoryResponse;
 import com.ceos23.cgv_clone.store.dto.response.OrderResponse;
 import com.ceos23.cgv_clone.store.service.OrderService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +19,7 @@ import java.util.List;
 @RequestMapping("/api/stores")
 public class StoreController {
 
+    @Qualifier("orderServiceBasic")
     private final OrderService orderService;
 
     @GetMapping("/{storeId}/inventories")
