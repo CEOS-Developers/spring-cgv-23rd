@@ -3,7 +3,16 @@ spring:
     include: secret
 
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    main:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 10
+        pool-name: MainHikariPool
+    lock:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 5
+        pool-name: LockHikariPool
 
   sql:
     init:
