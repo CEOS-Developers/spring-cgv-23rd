@@ -7,16 +7,19 @@ import com.ceos23.cgv_clone.reservation.dto.response.ReservationResponse;
 import com.ceos23.cgv_clone.reservation.service.ReservationService;
 import com.ceos23.cgv_clone.global.jwt.CustomUserDetails;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/reservations")
 public class ReservationController {
 
     private final ReservationService reservationService;
+
+    public ReservationController(@Qualifier("reservationServiceNamed") ReservationService reservationService) {
+        this.reservationService = reservationService;
+    }
 
     @PostMapping
     public ApiResponse<ReservationResponse> createReservation(

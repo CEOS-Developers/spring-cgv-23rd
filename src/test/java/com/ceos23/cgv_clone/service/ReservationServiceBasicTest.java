@@ -9,7 +9,7 @@ import com.ceos23.cgv_clone.reservation.dto.request.ReservationRequest;
 import com.ceos23.cgv_clone.reservation.dto.response.ReservationResponse;
 import com.ceos23.cgv_clone.reservation.repository.ReservationRepository;
 import com.ceos23.cgv_clone.reservation.repository.ReservationSeatRepository;
-import com.ceos23.cgv_clone.reservation.service.ReservationService;
+import com.ceos23.cgv_clone.reservation.service.ReservationServiceBasic;
 import com.ceos23.cgv_clone.theater.entity.Screen;
 import com.ceos23.cgv_clone.theater.entity.ScreenType;
 import com.ceos23.cgv_clone.theater.entity.ScreenTypeCode;
@@ -33,10 +33,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
-class ReservationServiceTest {
+class ReservationServiceBasicTest {
 
     @InjectMocks
-    private ReservationService reservationService;
+    private ReservationServiceBasic reservationServiceBasic;
 
     @Mock
     private UserRepository userRepository;
@@ -104,7 +104,7 @@ class ReservationServiceTest {
         given(reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, 'A', 2, ReservationStatus.CANCELED)).willReturn(false);
 
         // when
-        ReservationResponse response = reservationService.createReservation(userId, request);
+        ReservationResponse response = reservationServiceBasic.createReservation(userId, request);
 
         // then
         assertEquals(30000, response.getTotalPrice());
@@ -141,7 +141,7 @@ class ReservationServiceTest {
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));
 
         // when
-        reservationService.cancelReservation(userId, reservationId);
+        reservationServiceBasic.cancelReservation(userId, reservationId);
 
         // then
         assertEquals(ReservationStatus.CANCELED, reservation.getStatus());

@@ -20,7 +20,7 @@ public class StoreController {
 
     private final OrderService orderService;
 
-    public StoreController(@Qualifier("orderServiceNamed") OrderService orderService) {
+    public StoreController(@Qualifier("orderServicePessimistic") OrderService orderService) {
         this.orderService = orderService;
     }
 

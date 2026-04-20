@@ -5,11 +5,12 @@ import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.store.dto.request.OrderRequest;
 import com.ceos23.cgv_clone.store.dto.response.InventoryResponse;
 import com.ceos23.cgv_clone.store.dto.response.OrderResponse;
-import com.ceos23.cgv_clone.store.repository.LockRepository;
+import com.ceos23.cgv_clone.global.repository.LockRepository;
 import com.ceos23.cgv_clone.store.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.sql.Connection;
 import java.util.List;
 
 @Service("orderServiceNamed")
@@ -25,15 +26,15 @@ public class OrderServiceNamed implements OrderService {
     public OrderResponse createOrder(Long userId, Long storeId, OrderRequest request) {
         String key = "store:" + storeId;
 
-        boolean locked = lockRepository.getLock(key, LOCK_TIMEOUT_SECONDS);
-        if (!locked) {
+        Connection lockConn = lockRepository.acquireLock(key, LOCK_TIMEOUT_SECONDS);
+        if (lockConn == null) {
             throw new CustomException(ErrorCode.CONCURRENT_UPDATE_FAILED);
         }
 
         try {
             return inner.createOrder(userId, storeId, request);
         } finally {
-            lockRepository.releaseLock(key);
+            lockRepository.releaseLock(lockConn, key);
         }
     }
 
