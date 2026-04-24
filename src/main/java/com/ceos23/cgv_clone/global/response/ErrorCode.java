@@ -89,6 +89,12 @@ public enum ErrorCode {
     // 이미 취소된 예약
     ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "RES004", "해당 예매는 이미 취소되었습니다."),
 
+    // 예약 대기 상태가 아닐 경우에 취소
+    INVALID_RESERVATION_STATUS(HttpStatus.BAD_REQUEST, "RES005" , "해당 좌석은 대기상태가 아닙니다."),
+
+    // 예약 대기 시간 만료
+    RESERVATION_EXPIRED(HttpStatus.BAD_REQUEST, "RES006" , "예약 대기시간이 만료되었습니다." ),
+
     // 상점 미존재
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "STO001", "해당 매점을 찾을 수 없습니다."),
 
