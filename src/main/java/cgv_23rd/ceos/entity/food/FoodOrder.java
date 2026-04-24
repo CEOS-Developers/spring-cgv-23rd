@@ -40,10 +40,18 @@ public class FoodOrder extends BaseEntity {
         return FoodOrder.builder()
                 .user(user)
                 .theater(theater)
-                .status(FoodOrderStatus.완료)
+                .status(FoodOrderStatus.대기)
                 .totalPrice(0)
                 .foodOrderItems(new ArrayList<>())
                 .build();
+    }
+
+    public void confirm() {
+        this.status = FoodOrderStatus.완료;
+    }
+
+    public void cancel() {
+        this.status = FoodOrderStatus.취소;
     }
 
     public void addItem(Food food, int quantity) {

@@ -31,4 +31,13 @@ public class PaymentService {
                 paymentId // Path Parameter 바인딩
         );
     }
+
+    public PaymentResponse cancelPayment(String paymentId) {
+        return paymentRestTemplate.postForObject(
+                "/payments/{paymentId}/cancel",
+                null,
+                PaymentResponse.class,
+                paymentId
+        );
+    }
 }
