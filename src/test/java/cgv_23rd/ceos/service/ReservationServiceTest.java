@@ -66,7 +66,7 @@ class ReservationServiceTest {
         given(movieScreenRepository.findById(movieScreenId)).willReturn(Optional.of(movieScreen));
         given(seatRepository.findByIdWithLock(1L)).willReturn(Optional.of(seat1));
         given(seatRepository.findByIdWithLock(2L)).willReturn(Optional.of(seat2));
-        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_Status(any(), any(), any()))
+        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))
                 .willReturn(false);
 
         // when
@@ -100,7 +100,7 @@ class ReservationServiceTest {
         given(seatRepository.findByIdWithLock(1L)).willReturn(Optional.of(seat));
 
         // 이미 좌석이 예약된 상황으로 가정
-        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_Status(any(), any(), any()))
+        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))
                 .willReturn(true);
 
         // when & then

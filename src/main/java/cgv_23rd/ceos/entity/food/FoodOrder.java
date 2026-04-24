@@ -15,6 +15,11 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PRIVATE)
+@Table(
+        indexes = {
+                @Index(name = "idx_food_order_status_created_at", columnList = "status, createdAt")
+        }
+)
 public class FoodOrder extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

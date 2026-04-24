@@ -48,6 +48,9 @@ public abstract class ControllerTestSupport {
     protected ReservationService reservationService;
 
     @MockitoBean
+    protected ReservationPaymentFacade reservationPaymentFacade;
+
+    @MockitoBean
     protected FoodOrderService foodOrderService;
 
     @MockitoBean

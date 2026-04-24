@@ -1,6 +1,7 @@
 package cgv_23rd.ceos.controller;
 
 import cgv_23rd.ceos.controller.support.ControllerTestSupport;
+import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
 import cgv_23rd.ceos.dto.reservation.request.ReservationRequestDto;
 import cgv_23rd.ceos.dto.reservation.response.ReservationResponseDto;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
@@ -56,7 +57,22 @@ class ReservationControllerTest extends ControllerTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("영화 예매 취소 성공"));
 
-        verify(reservationService).cancelReservation(1L, 1L);
+        verify(reservationPaymentFacade).cancelReservation(1L, 1L);
+    }
+
+    @Test
+    @DisplayName("영화 결제 성공")
+    void processPaymentSuccess() throws Exception {
+        given(reservationPaymentFacade.processPayment(1L, 1L))
+                .willReturn(new PaymentResultDto(true, "결제가 완료되었습니다."));
+
+        mockMvc.perform(post("/api/reservations/{reservationId}/payments", 1L)
+                        .with(authenticatedUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("영화 결제 성공"))
+                .andExpect(jsonPath("$.result.success").value(true));
+
+        verify(reservationPaymentFacade).processPayment(1L, 1L);
     }
 
     @Test

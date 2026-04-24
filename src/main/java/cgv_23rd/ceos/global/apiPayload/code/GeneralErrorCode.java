@@ -64,6 +64,9 @@ public enum GeneralErrorCode implements BaseErrorCode {
 
     // 결제 에러
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_4001", "결제에 실패했습니다."),
+    PAYMENT_NOT_READY(HttpStatus.BAD_REQUEST, "PAYMENT_4002", "결제를 진행할 수 없는 상태입니다."),
+    PAYMENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "PAYMENT_4091", "이미 결제 처리된 예매입니다."),
+    PAYMENT_NOT_CANCELLABLE(HttpStatus.CONFLICT, "PAYMENT_4092", "취소할 수 없는 결제 상태입니다."),
     PAYMENT_SERVER_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_5001", "결제 처리 중 서버 오류가 발생했습니다.")
 
     ;

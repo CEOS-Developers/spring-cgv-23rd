@@ -19,6 +19,11 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE) // 빌더용, 외부 생성 방지
 @Builder(access = AccessLevel.PRIVATE)
+@Table(
+        indexes = {
+                @Index(name = "idx_reservation_status_created_at", columnList = "status, createdAt")
+        }
+)
 public class Reservation extends BaseEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,6 +42,9 @@ public class Reservation extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
 
+    @Column(length = 100)
+    private String paymentId;
+
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
@@ -51,16 +59,31 @@ public class Reservation extends BaseEntity {
                 .movieScreen(movieScreen)
                 .status(ReservationStatus.대기)
                 .totalPrice(0)
+                .paymentId(null)
                 .reservationSeats(new ArrayList<>())
                 .build();
     }
 
+    public void assignPaymentId(String paymentId) {
+        if (this.status != ReservationStatus.대기) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY);
+        }
+        this.paymentId = paymentId;
+    }
+
     public void confirm() {
+        if (this.status != ReservationStatus.대기) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_ALREADY_PROCESSED);
+        }
+
+        if (this.paymentId == null || this.paymentId.isBlank()) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "결제 식별자가 없는 예매입니다.");
+        }
+
         this.status = ReservationStatus.완료;
     }
 
-    // 예매 취소 편의 메서드
-    public void cancel(LocalDateTime now) {
+    public void validateCancelable(LocalDateTime now) {
         if (this.status == ReservationStatus.취소) {
             throw new GeneralException(GeneralErrorCode.RESERVATION_ALREADY_CANCELED);
         }
@@ -68,9 +91,17 @@ public class Reservation extends BaseEntity {
         if (this.movieScreen.getStartAt().isBefore(now)) {
             throw new GeneralException(GeneralErrorCode.MOVIE_ALREADY_STARTED);
         }
+    }
 
+    // 예매 취소 편의 메서드
+    public void cancel(LocalDateTime now) {
+        validateCancelable(now);
         this.status = ReservationStatus.취소;
         this.reservationSeats.clear();
+    }
+
+    public boolean isOwnedBy(Long userId) {
+        return this.user.getId().equals(userId);
     }
 
     public void addSeat(Seat seat) {

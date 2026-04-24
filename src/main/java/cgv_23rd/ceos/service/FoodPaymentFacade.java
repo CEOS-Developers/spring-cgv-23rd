@@ -28,7 +28,12 @@ public class FoodPaymentFacade {
 
         try {
             // 외부 결제 서버 API 호출
-            PaymentResponse response = paymentService.requestInstantPayment(paymentId, orderName, order.getTotalPrice());
+            PaymentResponse response = paymentService.requestInstantPayment(
+                    paymentId,
+                    orderName,
+                    order.getTotalPrice(),
+                    "{\"orderId\":" + order.getId() + "}"
+            );
 
             if (response != null && response.data() != null && "PAID".equals(response.data().paymentStatus())) {
                 try {

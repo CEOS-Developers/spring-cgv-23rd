@@ -87,9 +87,14 @@ public class ReservationService {
         reservation.confirm();
     }
 
+    @Transactional
+    public void assignPaymentId(Reservation reservation, String paymentId) {
+        reservation.assignPaymentId(paymentId);
+    }
+
     // 결제 실패 시 예약 취소 (보상 트랜잭션)
     @Transactional
-    public void cancelReservation(Reservation reservation) {
+    public void rollbackReservation(Reservation reservation) {
         reservation.cancel(LocalDateTime.now());
     }
 
@@ -99,19 +104,25 @@ public class ReservationService {
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
     }
 
+    @Transactional
+    public Reservation getReservationWithLock(Long reservationId) {
+        return reservationRepository.findByIdWithLock(reservationId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
+    }
+
+    @Transactional
+    public Reservation getOwnedReservationWithLock(Long userId, Long reservationId) {
+        Reservation reservation = getReservationWithLock(reservationId);
+        validateOwner(userId, reservation);
+        return reservation;
+    }
+
     // 2. 영화 예매 취소
     public void cancelReservation(Long userId, Long reservationId) {
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
 
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
-
-        //예매 유저와 예매 취소 유저가 동일한지 확인
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
-        }
-
+        Reservation reservation = getOwnedReservationWithLock(userId, reservationId);
         reservation.cancel(LocalDateTime.now());
     }
 
@@ -136,5 +147,14 @@ public class ReservationService {
                         .reservationAt(res.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private void validateOwner(Long userId, Reservation reservation) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
+
+        if (!reservation.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
     }
 }

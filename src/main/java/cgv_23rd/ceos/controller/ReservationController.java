@@ -41,9 +41,11 @@ public class ReservationController {
     @PostMapping("/{reservationId}/payments")
     @Operation(summary = "영화 예매 결제 API", description = "예매한 영화에 대해 결제를 진행함")
     public ApiResponse<PaymentResultDto> processPayment(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PathVariable Long reservationId) {
 
-        PaymentResultDto result = reservationPaymentFacade.processPayment(reservationId);
+        Long userId = userDetails.getUser().getId();
+        PaymentResultDto result = reservationPaymentFacade.processPayment(userId, reservationId);
         return ApiResponse.onSuccess("영화 결제 성공",result);
     }
 
@@ -55,7 +57,7 @@ public class ReservationController {
             @PathVariable Long reservationId) {
 
         Long userId = userDetails.getUser().getId();
-        reservationService.cancelReservation(userId, reservationId);
+        reservationPaymentFacade.cancelReservation(userId, reservationId);
 
         return ApiResponse.onSuccess("영화 예매 취소 성공");
     }
