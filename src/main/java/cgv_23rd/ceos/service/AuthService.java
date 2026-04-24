@@ -65,8 +65,7 @@ public class AuthService {
             backoff = @Backoff(delay = 50)
     )
     public LoginResponseDto login(LoginRequestDto requestDto) {
-        User user = userRepository.findByEmail(requestDto.email())
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.INVALID_LOGIN));
+        User user = getUserByEmail(requestDto.email());
 
         if (!passwordEncoder.matches(requestDto.password(), user.getPassword())) {
             throw new GeneralException(GeneralErrorCode.INVALID_LOGIN);
@@ -122,11 +121,16 @@ public class AuthService {
 
     @Recover
     public LoginResponseDto recoverLogin(Exception e, LoginRequestDto requestDto) {
-        throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "토큰 저장 충돌이 발생했습니다. 다시 시도해주세요.");
+        throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "토큰 저장 충돌이 발생했습니다.");
     }
 
     @Recover
     public ReissueResponseDto recoverReissue(ObjectOptimisticLockingFailureException e, ReissueRequestDto requestDto) {
-        throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "토큰 갱신 충돌이 발생했습니다. 다시 시도해주세요.");
+        throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "토큰 갱신 충돌이 발생했습니다.");
+    }
+
+    private User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.INVALID_LOGIN));
     }
 }

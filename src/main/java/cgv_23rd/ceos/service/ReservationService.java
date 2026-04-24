@@ -92,8 +92,6 @@ public class ReservationService {
     @Transactional(readOnly = true)
     public List<ReservationResponseDto> getReservationList(Long userId) {
         validateUserExists(userId);
-        List<Reservation> reservations = reservationRepository.findAllByUserIdWithDetails(userId);
-
         return reservationRepository.findAllByUserIdWithDetails(userId).stream()
                 .map(this::toReservationResponse)
                 .toList();

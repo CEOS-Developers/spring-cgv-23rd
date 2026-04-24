@@ -33,18 +33,15 @@ public class FoodOrderService {
     // 1. 음식 주문
     public Long createFoodOrder(Long userId, FoodOrderRequestDto requestDto) {
         User user = getUser(userId);
-
-        Theater theater = theaterRepository.findById(requestDto.theaterId())
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
+        Theater theater = getTheater(requestDto.theaterId());
 
         FoodOrder foodOrder = FoodOrder.create(user, theater);
 
         for (FoodOrderItemRequestDto itemDto : requestDto.items()) {
-            Food food = foodRepository.findById(itemDto.foodId())
-                    .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_NOT_FOUND));
+            Food food = getFood(itemDto.foodId());
 
             // 재고 엔티티를 락 걸고 조회하여 직접 차감
-            TheaterFood theaterFood = theaterFoodRepository.findByTheaterAndFoodWithLock(theater, food)
+            theaterFoodRepository.findByTheaterAndFoodWithLock(theater, food)
                     .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_FOOD_NOT_FOUND));
 
             // 주문에 항목 추가
@@ -97,6 +94,16 @@ public class FoodOrderService {
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
+    }
+
+    private Theater getTheater(Long theaterId) {
+        return theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
+    }
+
+    private Food getFood(Long foodId) {
+        return foodRepository.findById(foodId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_NOT_FOUND));
     }
 
     private void validateUserExists(Long userId) {

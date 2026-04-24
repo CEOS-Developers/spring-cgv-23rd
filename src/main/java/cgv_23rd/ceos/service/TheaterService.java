@@ -61,11 +61,8 @@ public class TheaterService {
     // 3. 영화관 찜
     @Transactional
     public void likeTheater(Long userId, Long theaterId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND, "유저 조회 불가"));
-
-        Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND, "영화관 조회 불가"));
+        User user = getUser(userId);
+        Theater theater = getTheater(theaterId);
 
         if (theaterLikeRepository.findByUserAndTheater(user, theater) != null) {
             return;
@@ -80,11 +77,8 @@ public class TheaterService {
 
     @Transactional
     public void unlikeTheater(Long userId, Long theaterId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND, "유저 조회 불가"));
-
-        Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND, "영화관 조회 불가"));
+        User user = getUser(userId);
+        Theater theater = getTheater(theaterId);
 
         TheaterLike theaterLike = theaterLikeRepository.findByUserAndTheater(user, theater);
         if (theaterLike != null) {
@@ -92,5 +86,14 @@ public class TheaterService {
         }
     }
 
-}
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND, "유저 조회 불가"));
+    }
 
+    private Theater getTheater(Long theaterId) {
+        return theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND, "영화관 조회 불가"));
+    }
+
+}

@@ -106,11 +106,8 @@ public class MovieService {
     // 5. 영화 찜
     @Transactional
     public void likeMovie(Long userId, Long movieId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
+        User user = getUser(userId);
+        Movie movie = getMovie(movieId);
 
         if (movieLikeRepository.findMovieLikeByUserAndMovie(user, movie) != null) {
             return;
@@ -125,11 +122,8 @@ public class MovieService {
 
     @Transactional
     public void unlikeMovie(Long userId, Long movieId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
+        User user = getUser(userId);
+        Movie movie = getMovie(movieId);
 
         MovieLike movieLike = movieLikeRepository.findMovieLikeByUserAndMovie(user, movie);
         if (movieLike != null) {
@@ -137,5 +131,14 @@ public class MovieService {
         }
     }
 
+    private User getUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
+    }
+
+    private Movie getMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
+    }
 
 }
