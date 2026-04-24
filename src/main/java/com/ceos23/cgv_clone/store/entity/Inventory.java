@@ -48,4 +48,8 @@ public class Inventory extends BaseEntity {
 
         this.quantity -= quantity;
     }
+
+    public void increase(int quantity) {
+        this.quantity += quantity;
+    }
 }

@@ -39,4 +39,12 @@ public class StoreController {
     ) {
         return ApiResponse.ok(SuccessCode.INSERT_SUCCESS, orderService.createOrder(userDetails.getUserId(), storeId, request));
     }
+
+    @PostMapping("/orders/{orderId}/cancel")
+    public ApiResponse<OrderResponse> cancelOrder(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long orderId
+    ) {
+        return ApiResponse.ok(SuccessCode.UPDATE_SUCCESS, orderService.cancelOrder(userDetails.getUserId(), orderId));
+    }
 }

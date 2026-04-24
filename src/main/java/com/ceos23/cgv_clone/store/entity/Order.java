@@ -22,6 +22,9 @@ public class Order extends BaseEntity {
     @Column(name = "order_id")
     private Long id;
 
+    @Column(nullable = false, unique = true)
+    private String paymentId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus orderStatus;
@@ -41,7 +44,8 @@ public class Order extends BaseEntity {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @Builder
-    public Order(OrderStatus orderStatus, int totalPrice, User user, Store store) {
+    public Order(String paymentId, OrderStatus orderStatus, int totalPrice, User user, Store store) {
+        this.paymentId = paymentId;
         this.orderStatus = orderStatus;
         this.totalPrice = totalPrice;
         this.user = user;
@@ -50,5 +54,17 @@ public class Order extends BaseEntity {
 
     public void addOrderItem(OrderItem item) {
         this.orderItems.add(item);
+    }
+
+    public void markPaid() {
+        this.orderStatus = OrderStatus.PAID;
+    }
+
+    public void markCanceled() {
+        this.orderStatus = OrderStatus.CANCELED;
+    }
+
+    public void markFailed() {
+        this.orderStatus = OrderStatus.FAILED;
     }
 }
