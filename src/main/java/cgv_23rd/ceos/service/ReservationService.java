@@ -32,8 +32,8 @@ public class ReservationService {
     private final SeatRepository seatRepository;
 
     // 1. 영화 예매
-    public void createReservation(Long userId, ReservationRequestDto requestDto) {
-        // 좌석 없는 예메 방지
+    public Long createReservation(Long userId, ReservationRequestDto requestDto) {
+        // 좌석 없는 예매 방지
         if (requestDto.seatIds() == null || requestDto.seatIds().isEmpty()) {
             throw new GeneralException(GeneralErrorCode.RESERVATION_SEAT_EMPTY);
         }
@@ -50,7 +50,7 @@ public class ReservationService {
         MovieScreen movieScreen = movieScreenRepository.findById(requestDto.movieScreenId())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIESCREEN_NOT_FOUND));
 
-        Reservation reservation = Reservation.create(user, movieScreen,LocalDateTime.now());
+        Reservation reservation = Reservation.create(user, movieScreen, LocalDateTime.now());
 
         List<Long> sortedSeatIds = requestDto.seatIds().stream()
                 .sorted()
@@ -61,8 +61,8 @@ public class ReservationService {
                     .orElseThrow(() -> new GeneralException(GeneralErrorCode.SEAT_NOT_FOUND));
 
             boolean isAlreadyReserved = reservationSeatRepository
-                    .existsByMovieScreenIdAndSeatIdAndReservation_Status(
-                            movieScreen.getId(), seatId, ReservationStatus.완료
+                    .existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(
+                            movieScreen.getId(), seatId, List.of(ReservationStatus.완료, ReservationStatus.대기)
                     );
 
             if (isAlreadyReserved) {
@@ -77,6 +77,26 @@ public class ReservationService {
         } catch (DataIntegrityViolationException e) {
             throw new GeneralException(GeneralErrorCode.RESERVATION_SEAT_DUPLICATION);
         }
+
+        // 결제창으로 넘어가기 위해 생성된 예약 정보를 반환
+        return reservation.getId();
+    }
+
+    @Transactional
+    public void confirmReservation(Reservation reservation) {
+        reservation.confirm();
+    }
+
+    // 결제 실패 시 예약 취소 (보상 트랜잭션)
+    @Transactional
+    public void cancelReservation(Reservation reservation) {
+        reservation.cancel(LocalDateTime.now());
+    }
+
+    @Transactional(readOnly = true)
+    public Reservation getReservation(Long reservationId) {
+        return reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
     }
 
     // 2. 영화 예매 취소

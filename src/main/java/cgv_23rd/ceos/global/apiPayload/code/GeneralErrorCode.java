@@ -52,8 +52,6 @@ public enum GeneralErrorCode implements BaseErrorCode {
     RESERVATION_SEAT_DUPLICATION(HttpStatus.BAD_REQUEST,"RESERVATION_4002", "이미 예약된 좌석입니다."),
     MOVIE_ALREADY_STARTED(HttpStatus.BAD_REQUEST,"RESERVATION_4003","이미 상영이 시작된 회차는 예매/취소할 수 없습니다."),
 
-
-
     // 리뷰 에러
     REVIEW_ALREADY_EXISTS(HttpStatus.BAD_REQUEST, "REVIEW_4001", "이미 해당 영화에 대한 리뷰를 작성했습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "REVIEW_4041", "리뷰를 찾을 수 없습니다."),
@@ -62,7 +60,11 @@ public enum GeneralErrorCode implements BaseErrorCode {
     FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_4041", "해당 음식을 찾을 수 없습니다."),
     THEATER_FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_4042", "해당 극장에서 판매하지 않는 음식입니다."),
     OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "FOOD_4001", "음식 재고가 부족합니다."),
-    FOOD_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_ORDER_4041", "주문 내역을 찾을 수 없습니다.")
+    FOOD_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_ORDER_4041", "주문 내역을 찾을 수 없습니다."),
+
+    // 결제 에러
+    PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_4001", "결제에 실패했습니다."),
+    PAYMENT_SERVER_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_5001", "결제 처리 중 서버 오류가 발생했습니다.")
 
     ;
 

@@ -41,7 +41,7 @@ public class Reservation extends BaseEntity {
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
     public static Reservation create(User user, MovieScreen movieScreen, LocalDateTime now) {
-        // 1. 상영 시작 여부 검사 로직을 엔티티 내부로 이동
+        // 상영 시작 여부 검사 로직을 엔티티 내부로 이동
         if (movieScreen.getStartAt().isBefore(now)) {
             throw new GeneralException(GeneralErrorCode.MOVIE_ALREADY_STARTED);
         }
@@ -49,10 +49,14 @@ public class Reservation extends BaseEntity {
         return Reservation.builder()
                 .user(user)
                 .movieScreen(movieScreen)
-                .status(ReservationStatus.완료)
+                .status(ReservationStatus.대기)
                 .totalPrice(0)
                 .reservationSeats(new ArrayList<>())
                 .build();
+    }
+
+    public void confirm() {
+        this.status = ReservationStatus.완료;
     }
 
     // 예매 취소 편의 메서드
