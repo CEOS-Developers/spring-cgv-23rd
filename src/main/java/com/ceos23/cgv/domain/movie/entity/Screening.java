@@ -35,4 +35,15 @@ public class Screening extends BaseTimeEntity {
 
     @Column(nullable = false)
     private Boolean isMorning; //조조영화 여부 (영화마다 기준이 다르다?)
+
+    public static Screening create(Movie movie, Theater theater, LocalDateTime startTime,
+                                   LocalDateTime endTime, Boolean isMorning) {
+        return Screening.builder()
+                .movie(movie)
+                .theater(theater)
+                .startTime(startTime)
+                .endTime(endTime)
+                .isMorning(isMorning)
+                .build();
+    }
 }

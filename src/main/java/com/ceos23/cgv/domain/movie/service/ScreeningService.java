@@ -29,21 +29,27 @@ public class ScreeningService {
      */
     @Transactional
     public Screening createScreening(ScreeningCreateRequest request) {
-        Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        Theater theater = theaterRepository.findById(request.theaterId())
-                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
-
-        Screening screening = Screening.builder()
-                .movie(movie)
-                .theater(theater)
-                .startTime(request.startTime())
-                .endTime(request.endTime())
-                .isMorning(request.isMorning())
-                .build();
+        Movie movie = findMovie(request.movieId());
+        Theater theater = findTheater(request.theaterId());
+        Screening screening = Screening.create(
+                movie,
+                theater,
+                request.startTime(),
+                request.endTime(),
+                request.isMorning()
+        );
 
         return screeningRepository.save(screening);
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
+    }
+
+    private Theater findTheater(Long theaterId) {
+        return theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
     }
 
     /**

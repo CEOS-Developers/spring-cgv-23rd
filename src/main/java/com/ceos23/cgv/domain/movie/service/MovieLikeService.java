@@ -29,27 +29,27 @@ public class MovieLikeService {
      */
     @Transactional
     public String toggleMovieLike(Long userId, Long movieId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        // 기존에 찜을 눌렀는지 확인
+        User user = findUser(userId);
+        Movie movie = findMovie(movieId);
         Optional<MovieLike> existingLike = movieLikeRepository.findByUserIdAndMovieId(userId, movieId);
 
         if (existingLike.isPresent()) {
-            // 이미 누른 상태라면 -> 찜 취소 (삭제)
             movieLikeRepository.delete(existingLike.get());
             return "찜이 취소되었습니다.";
         } else {
-            // 안 누른 상태라면 -> 찜 생성 (저장)
-            MovieLike newLike = MovieLike.builder()
-                    .user(user)
-                    .movie(movie)
-                    .build();
-            movieLikeRepository.save(newLike);
+            movieLikeRepository.save(MovieLike.create(user, movie));
             return "찜이 추가되었습니다.";
         }
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 
     /**

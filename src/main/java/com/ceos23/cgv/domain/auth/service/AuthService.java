@@ -2,16 +2,20 @@ package com.ceos23.cgv.domain.auth.service;
 
 import com.ceos23.cgv.domain.auth.dto.*;
 import com.ceos23.cgv.domain.user.entity.User;
-import com.ceos23.cgv.domain.user.enums.Role;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import com.ceos23.cgv.global.security.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -28,24 +32,30 @@ public class AuthService {
      */
     @Transactional
     public UserResponse signup(SignupRequest request) {
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new IllegalArgumentException("이미 가입되어 있는 이메일입니다.");
-        }
-        if (userRepository.existsByNickname(request.nickname())) {
-            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
-        }
+        validateSignupRequest(request);
 
-        User user = User.builder()
-                .name(request.name())
-                .email(request.email())
-                .nickname(request.nickname())
-                .password(passwordEncoder.encode(request.password()))
-                .role(Role.ROLE_USER)
-                .build();
-
-        User savedUser = userRepository.save(user);
+        User savedUser = userRepository.save(createUser(request));
 
         return new UserResponse(savedUser.getId(), savedUser.getEmail(), savedUser.getNickname());
+    }
+
+    private void validateSignupRequest(SignupRequest request) {
+        if (userRepository.findByEmail(request.email()).isPresent()) {
+            throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        if (userRepository.existsByNickname(request.nickname())) {
+            throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+        }
+    }
+
+    private User createUser(SignupRequest request) {
+        return User.create(
+                request.name(),
+                request.email(),
+                request.nickname(),
+                passwordEncoder.encode(request.password())
+        );
     }
 
     /**
@@ -53,20 +63,14 @@ public class AuthService {
      */
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(request.email(), request.password());
-
-        Authentication authentication = authenticationManager.authenticate(authenticationToken);
+        Authentication authentication = authenticate(request.email(), request.password());
         Long userId = Long.parseLong(authentication.getName());
 
-        String accessToken = tokenProvider.createAccessToken(userId, authentication);
-        String refreshToken = tokenProvider.createRefreshToken(userId);
+        TokenResponse tokenResponse = issueTokens(userId, authentication);
+        User user = findUser(userId);
+        user.updateRefreshToken(tokenResponse.refreshToken());
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
-        user.updateRefreshToken(refreshToken);
-
-        return new TokenResponse(accessToken, refreshToken);
+        return tokenResponse;
     }
 
     /**
@@ -76,34 +80,54 @@ public class AuthService {
     public TokenResponse reissue(ReissueRequest request) {
         String refreshToken = request.refreshToken();
 
-        // 1. Refresh Token 자체의 유효성 검증
-        if (!tokenProvider.validateAccessToken(refreshToken)) {
-            throw new IllegalArgumentException("유효하지 않거나 만료된 Refresh Token 입니다.");
-        }
-
-        // 2. 토큰에서 유저 ID 추출
+        validateRefreshToken(refreshToken);
         Long userId = Long.parseLong(tokenProvider.getTokenUserId(refreshToken));
+        User user = findUser(userId);
+        validateStoredRefreshToken(user, refreshToken);
 
-        // 3. DB에서 유저를 찾고, DB에 저장된 토큰과 클라이언트가 보낸 토큰이 일치하는지 대조
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+        Authentication authentication = createAuthentication(user);
+        TokenResponse tokenResponse = issueTokens(userId, authentication);
+        user.updateRefreshToken(tokenResponse.refreshToken());
 
-        if (!refreshToken.equals(user.getRefreshToken())) {
-            throw new IllegalArgumentException("토큰 정보가 일치하지 않습니다. (탈취 의심)");
+        return tokenResponse;
+    }
+
+    private Authentication authenticate(String email, String password) {
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(email, password);
+
+        return authenticationManager.authenticate(authenticationToken);
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private void validateRefreshToken(String refreshToken) {
+        if (!tokenProvider.validateAccessToken(refreshToken)) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
+    }
 
-        // 4. 검증을 통과했다면 새로운 토큰들을 생성
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                String.valueOf(user.getId()), "",
-                java.util.Collections.singleton(new org.springframework.security.core.authority.SimpleGrantedAuthority(user.getRole().name()))
+    private void validateStoredRefreshToken(User user, String refreshToken) {
+        if (!refreshToken.equals(user.getRefreshToken())) {
+            throw new CustomException(ErrorCode.REFRESH_TOKEN_MISMATCH);
+        }
+    }
+
+    private Authentication createAuthentication(User user) {
+        return new UsernamePasswordAuthenticationToken(
+                String.valueOf(user.getId()),
+                "",
+                Collections.singleton(new SimpleGrantedAuthority(user.getRole().name()))
         );
+    }
 
-        String newAccessToken = tokenProvider.createAccessToken(userId, authentication);
-        String newRefreshToken = tokenProvider.createRefreshToken(userId); // RTR 사용 (리프레쉬 토큰도 새로 발급)
+    private TokenResponse issueTokens(Long userId, Authentication authentication) {
+        String accessToken = tokenProvider.createAccessToken(userId, authentication);
+        String refreshToken = tokenProvider.createRefreshToken(userId);
 
-        // 5. DB의 Refresh Token 업데이트
-        user.updateRefreshToken(newRefreshToken);
-
-        return new TokenResponse(newAccessToken, newRefreshToken);
+        return new TokenResponse(accessToken, refreshToken);
     }
 }

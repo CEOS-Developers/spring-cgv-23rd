@@ -4,7 +4,6 @@ import com.ceos23.cgv.domain.cinema.dto.TheaterCreateRequest;
 import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.cinema.entity.Theater;
 import com.ceos23.cgv.domain.cinema.enums.Region;
-import com.ceos23.cgv.domain.cinema.enums.TheaterType;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.cinema.repository.TheaterRepository;
 import com.ceos23.cgv.global.exception.CustomException;
@@ -35,7 +34,7 @@ public class CinemaService {
      */
     public Cinema getCinemaDetails(Long cinemaId) {
         return cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 영화관을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
     }
 
     /**
@@ -44,7 +43,7 @@ public class CinemaService {
     public List<Theater> getTheatersByCinemaId(Long cinemaId) {
         // 먼저 영화관이 존재하는지 검증
         if (!cinemaRepository.existsById(cinemaId)) {
-            throw new IllegalArgumentException("해당 영화관을 찾을 수 없습니다.");
+            throw new CustomException(ErrorCode.CINEMA_NOT_FOUND);
         }
         return theaterRepository.findByCinemaId(cinemaId);
     }
@@ -54,11 +53,7 @@ public class CinemaService {
      */
     @Transactional
     public Cinema createCinema(String name, Region region) {
-        Cinema cinema = Cinema.builder()
-                .name(name)
-                .region(region)
-                .build();
-
+        Cinema cinema = Cinema.create(name, region);
         return cinemaRepository.save(cinema);
     }
 
@@ -67,20 +62,17 @@ public class CinemaService {
      */
     @Transactional
     public Theater createTheater(Long cinemaId, TheaterCreateRequest request) {
-        // 1. 어느 지점(Cinema)에 만들지 먼저 조회
         Cinema cinema = cinemaRepository.findById(cinemaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
 
-        // 2. 상영관(Theater) 객체 생성 및 연관관계 설정 (request에서 값을 바로 꺼냅니다)
-        Theater theater = Theater.builder()
-                .cinema(cinema)
-                .name(request.name())
-                .type(request.type())
-                .maxRow(request.maxRow())
-                .maxCol(request.maxCol())
-                .build();
+        Theater theater = Theater.create(
+                cinema,
+                request.name(),
+                request.type(),
+                request.maxRow(),
+                request.maxCol()
+        );
 
-        // 3. DB에 저장
         return theaterRepository.save(theater);
     }
 }

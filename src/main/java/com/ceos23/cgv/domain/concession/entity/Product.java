@@ -37,4 +37,17 @@ public class Product extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProductCategory category;
+
+    public static Product create(String name, int price, String description, String origin,
+                                 String ingredient, Boolean pickupPossible, ProductCategory category) {
+        return Product.builder()
+                .name(name)
+                .price(price)
+                .description(description)
+                .origin(origin)
+                .ingredient(ingredient)
+                .pickupPossible(pickupPossible)
+                .category(category)
+                .build();
+    }
 }

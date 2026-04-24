@@ -6,8 +6,6 @@ import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "photos")
 @Getter
@@ -32,4 +30,12 @@ public class Photo extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id")
     private Movie movie;
+
+    public static Photo create(String name, Movie movie, Person person) {
+        return Photo.builder()
+                .name(name)
+                .movie(movie)
+                .person(person)
+                .build();
+    }
 }

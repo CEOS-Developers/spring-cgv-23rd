@@ -1,5 +1,7 @@
 package com.ceos23.cgv.domain.cinema.enums;
 
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +32,6 @@ public enum Region {
                 return region;
             }
         }
-        throw new IllegalArgumentException("지원하지 않는 지역 이름입니다: " + value);
+        throw new CustomException(ErrorCode.UNSUPPORTED_REGION);
     }
 }

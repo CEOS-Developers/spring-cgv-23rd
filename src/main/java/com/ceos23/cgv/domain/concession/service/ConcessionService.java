@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,61 +48,75 @@ public class ConcessionService {
      */
     @Transactional
     public FoodOrder createOrder(FoodOrderRequest request) {
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Cinema cinema = cinemaRepository.findById(request.cinemaId())
-                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
-
-        int calculatedTotalPrice = 0;
-
-        FoodOrder foodOrder = FoodOrder.builder()
-                .user(user)
-                .cinema(cinema)
-                .totalPrice(0)
-                .build();
+        User user = findUser(request.userId());
+        Cinema cinema = findCinema(request.cinemaId());
+        FoodOrder foodOrder = FoodOrder.create(user, cinema);
         foodOrderRepository.save(foodOrder);
 
-        // 쿼리 최적화: 주문한 상품의 ID만 추출하여 한 번에 DB에서 조회 (IN 쿼리 발생)
+        Map<Long, Product> productMap = loadProductMap(request);
+        List<OrderItem> orderItems = createOrderItems(request, cinema, foodOrder, productMap);
+        orderItemRepository.saveAll(orderItems);
+
+        foodOrder.updateTotalPrice(calculateTotalPrice(orderItems));
+
+        return foodOrder;
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Cinema findCinema(Long cinemaId) {
+        return cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
+    }
+
+    private Map<Long, Product> loadProductMap(FoodOrderRequest request) {
         List<Long> productIds = request.orderItems().stream()
                 .map(FoodOrderRequest.OrderItemRequest::productId)
                 .toList();
 
-        // 조회한 상품 리스트를 <ID, Product> 형태의 Map으로 변환하여 매핑 성능 향상
-        Map<Long, Product> productMap = productRepository.findAllById(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, p -> p));
+        return productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, product -> product));
+    }
 
-        // saveAll()을 사용하기 위해 빈 리스트 생성
-        List<OrderItem> orderItemsToSave = new ArrayList<>();
+    private List<OrderItem> createOrderItems(FoodOrderRequest request, Cinema cinema,
+                                             FoodOrder foodOrder, Map<Long, Product> productMap) {
+        return request.orderItems().stream()
+                .map(itemReq -> createOrderItem(foodOrder, cinema.getId(), productMap, itemReq))
+                .toList();
+    }
 
-        for (FoodOrderRequest.OrderItemRequest itemReq : request.orderItems()) {
-            // DB 조회 대신 메모리(Map)에서 꺼내어 사용
-            Product product = productMap.get(itemReq.productId());
-            if (product == null) {
-                throw new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
-            }
+    private OrderItem createOrderItem(FoodOrder foodOrder, Long cinemaId,
+                                      Map<Long, Product> productMap,
+                                      FoodOrderRequest.OrderItemRequest itemReq) {
+        Product product = getRequiredProduct(productMap, itemReq.productId());
+        decreaseInventoryStock(cinemaId, product.getId(), itemReq.quantity());
 
-            Inventory inventory = inventoryRepository.findByCinemaIdAndProductId(cinema.getId(), product.getId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.INVENTORY_SHORTAGE));
+        return OrderItem.create(foodOrder, product, itemReq.quantity());
+    }
 
-            inventory.removeStock(itemReq.quantity());
-
-            calculatedTotalPrice += (product.getPrice() * itemReq.quantity());
-
-            OrderItem orderItem = OrderItem.builder()
-                    .foodOrder(foodOrder)
-                    .product(product)
-                    .quantity(itemReq.quantity())
-                    .build();
-
-            orderItemsToSave.add(orderItem);
+    private Product getRequiredProduct(Map<Long, Product> productMap, Long productId) {
+        Product product = productMap.get(productId);
+        if (product == null) {
+            throw new CustomException(ErrorCode.PRODUCT_NOT_FOUND);
         }
 
-        orderItemRepository.saveAll(orderItemsToSave);
+        return product;
+    }
 
-        // 더티 체킹으로 총액 자동 업데이트
-        foodOrder.updateTotalPrice(calculatedTotalPrice);
+    private void decreaseInventoryStock(Long cinemaId, Long productId, int quantity) {
+        Inventory inventory = inventoryRepository.findByCinemaIdAndProductId(cinemaId, productId)
+                .orElseThrow(() -> new CustomException(ErrorCode.INVENTORY_SHORTAGE));
 
-        return foodOrder;
+        inventory.removeStock(quantity);
+    }
+
+    private int calculateTotalPrice(List<OrderItem> orderItems) {
+        return orderItems.stream()
+                .mapToInt(orderItem -> orderItem.getProduct().getPrice() * orderItem.getQuantity())
+                .sum();
     }
 
     /**
@@ -113,16 +126,7 @@ public class ConcessionService {
     public Product createProduct(String name, int price, String description,
                                  String origin, String ingredient,
                                  Boolean pickupPossible, ProductCategory category) {
-        Product product = Product.builder()
-                .name(name)
-                .price(price)
-                .description(description)
-                .origin(origin)
-                .ingredient(ingredient)
-                .pickupPossible(pickupPossible)
-                .category(category)
-                .build();
-
+        Product product = Product.create(name, price, description, origin, ingredient, pickupPossible, category);
         return productRepository.save(product);
     }
 
@@ -132,4 +136,5 @@ public class ConcessionService {
     public List<FoodOrder> getOrdersByUserId(Long userId) {
         // N+1 문제를 방지하는 페치 조인 메서드 호출
         return foodOrderRepository.findByUserIdWithFetchJoin(userId);
-    }}
+    }
+}

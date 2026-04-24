@@ -48,6 +48,25 @@ public class User extends BaseTimeEntity {
     @Column(length = 500)
     private String refreshToken;
 
+    public static User create(String name, String email, String nickname, String encodedPassword) {
+        return User.builder()
+                .name(name)
+                .email(email)
+                .nickname(nickname)
+                .password(encodedPassword)
+                .role(Role.ROLE_USER)
+                .build();
+    }
+
+    public static User createWithoutPassword(String name, String email, String nickname) {
+        return User.builder()
+                .name(name)
+                .email(email)
+                .nickname(nickname)
+                .role(Role.ROLE_USER)
+                .build();
+    }
+
     // 토큰 업데이트 및 삭제용 메서드
     public void updateRefreshToken(String refreshToken) {
         this.refreshToken = refreshToken;

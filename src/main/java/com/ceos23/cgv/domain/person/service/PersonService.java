@@ -30,13 +30,14 @@ public class PersonService {
      */
     @Transactional
     public Person createPerson(PersonCreateRequest request) {
-        Person person = Person.builder()
-                .type(request.type())
-                .name(request.name())
-                .englishName(request.englishName())
-                .birthDate(request.birthDate())
-                .award(request.award())
-                .build();
+        Person person = Person.create(
+                request.type(),
+                request.name(),
+                request.englishName(),
+                request.birthDate(),
+                request.award()
+        );
+
         return personRepository.save(person);
     }
 
@@ -45,19 +46,21 @@ public class PersonService {
      */
     @Transactional
     public WorkParticipation addWorkParticipation(WorkParticipationRequest request) {
-        Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        Person person = personRepository.findById(request.personId())
-                .orElseThrow(() -> new IllegalArgumentException("인물(배우/감독)을 찾을 수 없습니다."));
-
-        WorkParticipation participation = WorkParticipation.builder()
-                .movie(movie)
-                .person(person)
-                .role(request.role())
-                .build();
+        Movie movie = findMovie(request.movieId());
+        Person person = findPerson(request.personId());
+        WorkParticipation participation = WorkParticipation.create(movie, person, request.role());
 
         return workParticipationRepository.save(participation);
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
+    }
+
+    private Person findPerson(Long personId) {
+        return personRepository.findById(personId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PERSON_NOT_FOUND));
     }
 
     /**

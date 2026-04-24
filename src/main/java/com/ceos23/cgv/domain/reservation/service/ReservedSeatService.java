@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,27 +27,38 @@ public class ReservedSeatService {
 
     @Transactional
     public List<ReservedSeat> createReservedSeats(ReservedSeatRequest request) {
-
-        Reservation reservation = reservationRepository.findById(request.reservationId())
-                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
-
-        Screening screening = screeningRepository.findById(request.screeningId())
-                .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
-
-        List<ReservedSeat> reservedSeats = request.seats().stream()
-                .map(seatInfo -> ReservedSeat.builder()
-                        .reservation(reservation)
-                        .screening(screening)
-                        .seatRow(seatInfo.row())
-                        .seatCol(seatInfo.col())
-                        .build())
-                .collect(Collectors.toList());
+        Reservation reservation = findReservation(request.reservationId());
+        Screening screening = findScreening(request.screeningId());
+        List<ReservedSeat> reservedSeats = createReservedSeats(request, reservation, screening);
 
         try {
             return reservedSeatRepository.saveAll(reservedSeats);
         } catch (DataIntegrityViolationException e) {
             throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
+    }
+
+    private Reservation findReservation(Long reservationId) {
+        return reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+    }
+
+    private Screening findScreening(Long screeningId) {
+        return screeningRepository.findById(screeningId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
+    }
+
+    private List<ReservedSeat> createReservedSeats(ReservedSeatRequest request,
+                                                   Reservation reservation,
+                                                   Screening screening) {
+        return request.seats().stream()
+                .map(seatInfo -> ReservedSeat.create(
+                        reservation,
+                        screening,
+                        seatInfo.row(),
+                        seatInfo.col()
+                ))
+                .toList();
     }
 
     public List<ReservedSeat> getReservedSeatsByScreeningId(Long screeningId) {

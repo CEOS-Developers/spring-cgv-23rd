@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,39 +26,31 @@ public class InventoryService {
 
     @Transactional
     public Inventory updateInventory(InventoryUpdateRequest request) {
-        Cinema cinema = cinemaRepository.findById(request.cinemaId())
+        Cinema cinema = findCinema(request.cinemaId());
+        Product product = findProduct(request.productId());
+
+        return inventoryRepository.findByCinemaIdAndProductId(request.cinemaId(), request.productId())
+                .map(inventory -> updateExistingInventory(inventory, request.quantity()))
+                .orElseGet(() -> createInventory(cinema, product, request.quantity()));
+    }
+
+    private Cinema findCinema(Long cinemaId) {
+        return cinemaRepository.findById(cinemaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
-        Product product = productRepository.findById(request.productId())
+    }
+
+    private Product findProduct(Long productId) {
+        return productRepository.findById(productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
+    }
 
-        Optional<Inventory> existingInventory = inventoryRepository.findByCinemaIdAndProductId(
-                request.cinemaId(), request.productId()
-        );
+    private Inventory updateExistingInventory(Inventory inventory, int quantity) {
+        inventory.changeStockBy(quantity);
+        return inventory;
+    }
 
-        if (existingInventory.isPresent()) {
-            Inventory inventory = existingInventory.get();
-            int newStock = inventory.getStockQuantity() + request.quantity();
-
-            if (newStock < 1) {
-                throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
-            }
-
-            // 상태만 변경하면 트랜잭션 종료 시 UPDATE 쿼리 자동 발생
-            inventory.updateStock(newStock);
-
-            return inventory;
-        } else {
-            // 처음 입고되는 상품일 경우
-            if (request.quantity() < 1) {
-                throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
-            }
-            Inventory newInventory = Inventory.builder()
-                    .cinema(cinema)
-                    .product(product)
-                    .stockQuantity(request.quantity())
-                    .build();
-            return inventoryRepository.save(newInventory);
-        }
+    private Inventory createInventory(Cinema cinema, Product product, int quantity) {
+        return inventoryRepository.save(Inventory.create(cinema, product, quantity));
     }
 
     public List<Inventory> getInventoriesByCinemaId(Long cinemaId) {

@@ -29,30 +29,29 @@ public class PhotoService {
      */
     @Transactional
     public Photo createPhoto(PhotoCreateRequest request) {
-        Movie movie = null;
-        if (request.movieId() != null) {
-            movie = movieRepository.findById(request.movieId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-        }
-
-        Person person = null;
-        if (request.personId() != null) {
-            person = personRepository.findById(request.personId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.PERSON_NOT_FOUND));
-        }
-
-        // 방어 로직: 둘 다 null이면 사진을 어디에 연결할지 알 수 없으므로 에러 처리
-        if (movie == null && person == null) {
-            throw new IllegalArgumentException("영화 ID 또는 인물 ID 중 하나는 필수입니다.");
-        }
-
-        Photo photo = Photo.builder()
-                .movie(movie)
-                .person(person)
-                .name(request.name())
-                .build();
+        Movie movie = findMovieOrNull(request.movieId());
+        Person person = findPersonOrNull(request.personId());
+        Photo photo = Photo.create(request.name(), movie, person);
 
         return photoRepository.save(photo);
+    }
+
+    private Movie findMovieOrNull(Long movieId) {
+        if (movieId == null) {
+            return null;
+        }
+
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
+    }
+
+    private Person findPersonOrNull(Long personId) {
+        if (personId == null) {
+            return null;
+        }
+
+        return personRepository.findById(personId)
+                .orElseThrow(() -> new CustomException(ErrorCode.PERSON_NOT_FOUND));
     }
 
     /**

@@ -2,6 +2,8 @@ package com.ceos23.cgv.domain.user.service;
 
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,21 +19,18 @@ public class UserService {
      * 회원 가입
      */
     @Transactional
-    public User join(String name, String email,String nickname) {
-        // 1. 닉네임 중복 검증
-        if (userRepository.existsByNickname(nickname)) {
-            throw new IllegalArgumentException("이미 사용 중인 닉네임입니다.");
-        }
+    public User join(String name, String email, String nickname) {
+        validateNickname(nickname);
 
-        // 2. 새로운 유저 객체 생성 (Badge는 엔티티에서 설정한 기본값 NORMAL)
-        User newUser = User.builder()
-                .name(name)
-                .email(email)
-                .nickname(nickname)
-                .build();
+        User newUser = User.createWithoutPassword(name, email, nickname);
 
-        // 3. DB에 저장 후 반환
         return userRepository.save(newUser);
+    }
+
+    private void validateNickname(String nickname) {
+        if (userRepository.existsByNickname(nickname)) {
+            throw new CustomException(ErrorCode.NICKNAME_ALREADY_EXISTS);
+        }
     }
 
     /**
@@ -39,6 +38,6 @@ public class UserService {
      */
     public User getUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

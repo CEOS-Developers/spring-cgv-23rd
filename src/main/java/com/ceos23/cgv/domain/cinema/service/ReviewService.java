@@ -29,21 +29,21 @@ public class ReviewService {
      */
     @Transactional
     public Review createReview(ReviewCreateRequest request) {
-        User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        Review review = Review.builder()
-                .user(user)
-                .movie(movie)
-                .type(request.type())
-                .content(request.content())
-                .likeCount(0)
-                .build();
+        User user = findUser(request.userId());
+        Movie movie = findMovie(request.movieId());
+        Review review = Review.create(user, movie, request.type(), request.content());
 
         return reviewRepository.save(review);
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 
     /**

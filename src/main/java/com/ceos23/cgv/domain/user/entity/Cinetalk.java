@@ -36,4 +36,14 @@ public class Cinetalk extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cinema_id")
     private Cinema cinema;
+
+    public static Cinetalk create(User user, String content, Movie movie, Cinema cinema) {
+        return Cinetalk.builder()
+                .user(user)
+                .content(content)
+                .likeCount(0)
+                .movie(movie)
+                .cinema(cinema)
+                .build();
+    }
 }

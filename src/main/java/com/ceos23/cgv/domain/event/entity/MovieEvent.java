@@ -23,4 +23,11 @@ public class MovieEvent {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
+
+    public static MovieEvent link(Event event, Movie movie) {
+        return MovieEvent.builder()
+                .event(event)
+                .movie(movie)
+                .build();
+    }
 }

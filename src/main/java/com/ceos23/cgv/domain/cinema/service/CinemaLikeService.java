@@ -29,27 +29,27 @@ public class CinemaLikeService {
      */
     @Transactional
     public String toggleCinemaLike(Long userId, Long cinemaId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Cinema cinema = cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
-
-        // 기존에 자주 가는 극장으로 등록했는지 확인
+        User user = findUser(userId);
+        Cinema cinema = findCinema(cinemaId);
         Optional<CinemaLike> existingLike = cinemaLikeRepository.findByUserIdAndCinemaId(userId, cinemaId);
 
         if (existingLike.isPresent()) {
-            // 이미 등록된 상태라면 -> 찜 취소 (삭제)
             cinemaLikeRepository.delete(existingLike.get());
             return "자주 가는 극장이 취소되었습니다.";
         } else {
-            // 안 등록된 상태라면 -> 찜 생성 (저장)
-            CinemaLike newLike = CinemaLike.builder()
-                    .user(user)
-                    .cinema(cinema)
-                    .build();
-            cinemaLikeRepository.save(newLike);
+            cinemaLikeRepository.save(CinemaLike.create(user, cinema));
             return "자주 가는 극장으로 등록되었습니다.";
         }
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Cinema findCinema(Long cinemaId) {
+        return cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
     }
 
     /**

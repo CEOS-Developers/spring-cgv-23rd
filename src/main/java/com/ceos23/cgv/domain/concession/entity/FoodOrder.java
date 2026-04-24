@@ -6,8 +6,6 @@ import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "food_orders")
 @Getter
@@ -30,6 +28,14 @@ public class FoodOrder extends BaseTimeEntity {
 
     @Column(nullable = false)
     private int totalPrice;
+
+    public static FoodOrder create(User user, Cinema cinema) {
+        return FoodOrder.builder()
+                .user(user)
+                .cinema(cinema)
+                .totalPrice(0)
+                .build();
+    }
 
     // 총 결제 금액을 업데이트하는 메서드
     public void updateTotalPrice(int totalPrice) {

@@ -15,6 +15,10 @@ public enum ErrorCode {
 
     // Domain: User & Cinetalk
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 유저입니다."),
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "U002", "이미 가입되어 있는 이메일입니다."),
+    NICKNAME_ALREADY_EXISTS(HttpStatus.CONFLICT, "U003", "이미 사용 중인 닉네임입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "U004", "유효하지 않거나 만료된 Refresh Token 입니다."),
+    REFRESH_TOKEN_MISMATCH(HttpStatus.UNAUTHORIZED, "U005", "토큰 정보가 일치하지 않습니다. (탈취 의심)"),
 
     // Domain: Movie & Screening
     MOVIE_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "존재하지 않는 영화입니다."),
@@ -27,15 +31,23 @@ public enum ErrorCode {
     // Domain: Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "예매 정보를 찾을 수 없습니다."),
     SEAT_ALREADY_RESERVED(HttpStatus.CONFLICT, "R002", "이미 예매가 완료된 좌석입니다. 다른 좌석을 선택해 주세요."),
+    RESERVATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "R003", "본인의 예매 내역만 취소할 수 있습니다."),
+    RESERVATION_ALREADY_CANCELED(HttpStatus.CONFLICT, "R004", "이미 취소 처리된 예매입니다."),
+    INVALID_COUPON_CODE(HttpStatus.BAD_REQUEST, "R005", "유효하지 않은 쿠폰 코드입니다."),
 
     // Domain: Concession & Inventory
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "존재하지 않는 매점 상품입니다."),
-    INVENTORY_SHORTAGE(HttpStatus.BAD_REQUEST, "S002", "상품의 재고가 부족하거나 최소 1개 이상이어야 합니다."),
+    INVENTORY_SHORTAGE(HttpStatus.BAD_REQUEST, "S002", "상품의 재고가 부족합니다."),
+    INVALID_STOCK_QUANTITY(HttpStatus.BAD_REQUEST, "S003", "재고는 최소 1개 이상이어야 합니다."),
 
     // Domain: Person, Event, Photo
     PERSON_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "인물을 찾을 수 없습니다."),
     EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "E001", "이벤트를 찾을 수 없습니다."),
-    PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "PH001", "사진을 찾을 수 없습니다.");
+    PHOTO_NOT_FOUND(HttpStatus.NOT_FOUND, "PH001", "사진을 찾을 수 없습니다."),
+    PHOTO_TARGET_REQUIRED(HttpStatus.BAD_REQUEST, "PH002", "사진은 최소한 영화(movieId) 또는 인물(personId) 중 하나 이상의 대상에 등록되어야 합니다."),
+
+    // Domain: Region
+    UNSUPPORTED_REGION(HttpStatus.BAD_REQUEST, "RG001", "지원하지 않는 지역 이름입니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -1,6 +1,65 @@
 # spring-cgv-23rd
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+<details>
+<summary>리팩토링 내역 및 설계 의도</summary>
+
+## 리팩토링 개요
+
+기능 동작과 API 요청/응답 형식을 유지하면서, 서비스에 몰려 있던 유스케이스 흐름과 도메인 규칙을 점진적으로 분리하는 방향으로 진행했습니다. 큰 아키텍처 전환 대신 현재 프로젝트 규모에 맞춰 Entity factory, 도메인 메서드, 정책 클래스, 전역 예외 처리 정리를 적용했습니다.
+
+## 주요 변경 사항
+
+### 1. Service 책임 축소와 유스케이스 흐름 정리
+- 변경 내용: `ReservationService`, `ConcessionService`, `InventoryService`, `PhotoService`, `MovieService`, `CinemaService`, `EventService`, `PersonService`, `UserService` 등에서 조회, 검증, 생성, 저장 흐름을 private 메서드로 분리했습니다.
+- 리팩토링 이유: 하나의 Service 메서드에 권한 체크, 검증, 엔티티 생성, 저장, 계산이 함께 있으면 변경 지점이 불명확해지기 때문입니다.
+- 기대 효과: Service는 유스케이스 흐름을 조율하고, 세부 규칙은 이름 있는 메서드나 도메인 객체로 이동해 읽기와 변경이 쉬워집니다.
+
+### 2. 도메인 객체의 생성과 규칙 응집
+- 변경 내용: `Reservation.create`, `FoodOrder.create`, `OrderItem.create`, `Inventory.create`, `Photo.create`, `Movie.create`, `User.create` 등 Entity 정적 factory를 추가했습니다. `Reservation.validateCancelableBy`, `Inventory.changeStockBy`, `Inventory.updateStock`처럼 상태 변경 규칙도 도메인 메서드로 모았습니다.
+- 리팩토링 이유: Service에서 builder를 직접 조립하면 생성 기본값과 상태 규칙이 여러 곳으로 퍼질 수 있기 때문입니다.
+- 기대 효과: 엔티티 생성 규칙과 상태 변경 조건이 한 곳에 모여, 이후 필드나 정책이 바뀌어도 수정 범위를 좁힐 수 있습니다.
+
+### 3. 예외 코드 기반 응답 통일
+- 변경 내용: 직접 `IllegalArgumentException`, `IllegalStateException`을 던지던 흐름을 `CustomException`과 `ErrorCode` 기반으로 바꿨습니다. 회원, 예약, 쿠폰, 사진 대상, 지역, 재고 수량 등에 필요한 에러 코드를 추가했습니다.
+- 리팩토링 이유: 문자열 예외는 API 응답 형식과 상태 코드를 일관되게 유지하기 어렵고, 클라이언트가 에러를 안정적으로 분기하기 어렵기 때문입니다.
+- 기대 효과: 예외 발생 시 도메인별 에러 코드와 HTTP status가 명확해지고, 응답 형식이 전역 핸들러를 통해 통일됩니다.
+
+### 4. 역직렬화 예외와 전역 예외 처리 보강
+- 변경 내용: `PhotoCreateRequest`, `Region.from`에서 발생하는 `CustomException`이 Jackson 역직렬화 중 `HttpMessageNotReadableException`으로 감싸질 수 있어, `GlobalExceptionHandler`에서 cause chain을 확인해 원래 `CustomException` 응답으로 변환하도록 했습니다. `IllegalArgumentException` 처리도 `INVALID_INPUT_VALUE` 기반 응답으로 통일했습니다.
+- 리팩토링 이유: 요청 본문 변환 중 발생한 도메인 예외가 500으로 내려가면 실제 클라이언트 오류를 서버 오류처럼 전달할 수 있기 때문입니다.
+- 기대 효과: 잘못된 사진 대상, 지원하지 않는 지역 값 등도 의도한 에러 코드(`PH002`, `RG001`)로 응답할 수 있습니다.
+
+### 5. 쿠폰 할인 정책 분리
+- 변경 내용: `ReservationService` 안에 있던 `WELCOME_CGV`, `VIP_HALF_PRICE` 할인 규칙을 `CouponDiscountPolicy`로 분리했습니다.
+- 리팩토링 이유: 쿠폰 할인은 예약 저장 흐름보다 가격 정책에 가까운 도메인 규칙이므로, Service가 직접 조건문을 계속 갖고 있으면 확장과 테스트가 어려워집니다.
+- 기대 효과: 예약 Service는 가격 계산 흐름만 조율하고, 쿠폰 규칙은 작은 순수 정책 객체로 테스트하기 쉬워졌습니다.
+
+### 6. 매점 주문과 재고 처리 의도 개선
+- 변경 내용: `ConcessionService`에서 상품 Map 로딩, 필수 상품 조회, 재고 차감, 주문 항목 생성을 `loadProductMap`, `getRequiredProduct`, `decreaseInventoryStock`, `createOrderItem`으로 분리했습니다. `Inventory`에서는 재고 부족과 잘못된 재고 수량을 각각 `INVENTORY_SHORTAGE`, `INVALID_STOCK_QUANTITY`로 구분했습니다.
+- 리팩토링 이유: 주문 생성은 조회, 검증, 재고 차감, 주문 항목 생성이 섞이기 쉬운 흐름이어서, 단계별 의도를 드러내는 이름이 필요했습니다.
+- 기대 효과: 주문 처리 흐름을 따라가기 쉬워지고, 재고 관련 실패 사유도 더 정확히 표현됩니다.
+
+### 7. Gradle wrapper 복구와 테스트 보정
+- 변경 내용: 누락되어 있던 `gradle/wrapper/gradle-wrapper.jar`를 복구하고 `.gitignore`에서 wrapper jar가 추적되도록 예외를 추가했습니다. `ConcessionServiceTest`, `InventoryServiceTest`, `ReservationServiceTest`는 리팩토링된 서비스 흐름과 에러 코드에 맞게 보정했습니다.
+- 리팩토링 이유: wrapper jar가 없으면 `./gradlew test` 실행 자체가 어려워지고, 리팩토링 후 테스트가 실제 서비스 의존성과 맞지 않으면 회귀 검증이 약해지기 때문입니다.
+- 기대 효과: 로컬에서 Gradle wrapper 기반 테스트 실행이 가능해졌고, 변경된 도메인 규칙을 테스트가 따라가도록 정리되었습니다.
+
+## 리팩토링 기준
+
+- 기능 동작과 API 요청/응답 형식은 유지했습니다.
+- 큰 구조 전환보다 현재 구조 안에서 Service, Entity, Policy, Exception의 책임을 조금씩 분리했습니다.
+- 도메인 규칙은 가능하면 도메인 메서드나 정책 클래스로 모았습니다.
+- 예외는 가능한 한 `ErrorCode`를 통해 응답 코드와 메시지를 일관되게 관리했습니다.
+
+</details>
+
+<details>
+<summary>이전 README 내용</summary>
+
+# spring-cgv-23rd
+CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
+
 ## ❓EntityManager는 누가 생성하고, DB와의 연결은 어떻게 이루어질까요?
 
 ### EntityManager는 누가 생성할까?
@@ -769,4 +828,6 @@ https://www.erdcloud.com/d/PhXPysc9AfrTJbSYq
   <img width="673" height="552" alt="Image" src="https://github.com/user-attachments/assets/ad9cbc21-fbb3-4c9f-9783-73f240caf68d" />
 
 </div>
+</details>
+
 </details>

@@ -81,6 +81,52 @@ class ReservationServiceTest {
     }
 
     @Test
+    @DisplayName("WELCOME_CGV 쿠폰을 적용하면 총 예매 금액에서 3000원이 할인된다")
+    void createReservation_Success_WelcomeCouponDiscount() {
+        // Given
+        Long userId = 1L;
+        Long screeningId = 1L;
+        User user = User.builder().id(userId).nickname("우혁").build();
+        Screening screening = createScreening(screeningId, TheaterType.NORMAL);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(screeningRepository.findById(screeningId)).willReturn(Optional.of(screening));
+        given(reservationRepository.save(any(Reservation.class))).willAnswer(i -> i.getArgument(0));
+
+        // When
+        Reservation reservation = reservationService.createReservation(
+                userId,
+                screeningId,
+                2,
+                Payment.APP_CARD,
+                "WELCOME_CGV"
+        );
+
+        // Then
+        assertThat(reservation.getPrice()).isEqualTo(27000);
+    }
+
+    @Test
+    @DisplayName("잘못된 쿠폰 코드로 예매하면 INVALID_COUPON_CODE 예외가 발생한다")
+    void createReservation_Fail_InvalidCouponCode() {
+        // Given
+        Long userId = 1L;
+        Long screeningId = 1L;
+        User user = User.builder().id(userId).nickname("우혁").build();
+        Screening screening = createScreening(screeningId, TheaterType.NORMAL);
+
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(screeningRepository.findById(screeningId)).willReturn(Optional.of(screening));
+
+        // When & Then
+        CustomException exception = assertThrows(CustomException.class, () -> {
+            reservationService.createReservation(userId, screeningId, 2, Payment.APP_CARD, "NOT_EXIST");
+        });
+
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_COUPON_CODE);
+    }
+
+    @Test
     @DisplayName("존재하지 않는 상영일정으로 예매 시 SCREENING_NOT_FOUND 예외가 발생한다")
     void createReservation_Fail_ScreeningNotFound() {
         // Given
@@ -99,5 +145,17 @@ class ReservationServiceTest {
         });
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SCREENING_NOT_FOUND);
+    }
+
+    private Screening createScreening(Long screeningId, TheaterType theaterType) {
+        Movie movie = Movie.builder().id(1L).title("테스트 영화").build();
+        Theater theater = Theater.builder().id(1L).name("1관").type(theaterType).build();
+
+        return Screening.builder()
+                .id(screeningId)
+                .movie(movie)
+                .theater(theater)
+                .isMorning(false)
+                .build();
     }
 }

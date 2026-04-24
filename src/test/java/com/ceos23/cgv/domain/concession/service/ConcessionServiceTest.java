@@ -4,9 +4,10 @@ import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.concession.dto.FoodOrderRequest;
 import com.ceos23.cgv.domain.concession.entity.FoodOrder;
-import com.ceos23.cgv.domain.concession.entity.OrderItem;
+import com.ceos23.cgv.domain.concession.entity.Inventory;
 import com.ceos23.cgv.domain.concession.entity.Product;
 import com.ceos23.cgv.domain.concession.repository.FoodOrderRepository;
+import com.ceos23.cgv.domain.concession.repository.InventoryRepository;
 import com.ceos23.cgv.domain.concession.repository.OrderItemRepository;
 import com.ceos23.cgv.domain.concession.repository.ProductRepository;
 import com.ceos23.cgv.domain.user.entity.User;
@@ -27,7 +28,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +43,8 @@ class ConcessionServiceTest {
     private CinemaRepository cinemaRepository;
     @Mock
     private ProductRepository productRepository;
+    @Mock
+    private InventoryRepository inventoryRepository;
 
     @InjectMocks
     private ConcessionService concessionService;
@@ -57,6 +59,10 @@ class ConcessionServiceTest {
         // 팝콘(5,000원)과 콜라(3,000원) 엔티티 모킹
         Product popcorn = Product.builder().id(1L).name("달콤 팝콘").price(5000).build();
         Product cola = Product.builder().id(2L).name("콜라").price(3000).build();
+        Inventory popcornInventory = Inventory.builder()
+                .id(1L).cinema(cinema).product(popcorn).stockQuantity(10).build();
+        Inventory colaInventory = Inventory.builder()
+                .id(2L).cinema(cinema).product(cola).stockQuantity(10).build();
 
         // 팝콘 2개, 콜라 1개 주문 요청 (기대 총액 = 5000*2 + 3000*1 = 13000원)
         FoodOrderRequest request = new FoodOrderRequest(
@@ -69,8 +75,9 @@ class ConcessionServiceTest {
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(cinemaRepository.findById(1L)).willReturn(Optional.of(cinema));
-        given(productRepository.findById(1L)).willReturn(Optional.of(popcorn));
-        given(productRepository.findById(2L)).willReturn(Optional.of(cola));
+        given(productRepository.findAllById(List.of(1L, 2L))).willReturn(List.of(popcorn, cola));
+        given(inventoryRepository.findByCinemaIdAndProductId(1L, 1L)).willReturn(Optional.of(popcornInventory));
+        given(inventoryRepository.findByCinemaIdAndProductId(1L, 2L)).willReturn(Optional.of(colaInventory));
 
         // save 메서드 호출 시 인자로 넘어온 엔티티를 그대로 반환하도록 처리
         given(foodOrderRepository.save(any(FoodOrder.class))).willAnswer(invocation -> invocation.getArgument(0));
@@ -83,8 +90,7 @@ class ConcessionServiceTest {
         assertThat(savedOrder.getUser().getNickname()).isEqualTo("우혁");
 
         verify(foodOrderRepository).save(any(FoodOrder.class));
-        // 상품 종류가 2가지(팝콘, 콜라)이므로 OrderItem은 2번 저장되어야 함
-        verify(orderItemRepository, times(2)).save(any(OrderItem.class));
+        verify(orderItemRepository).saveAll(any());
     }
 
     @Test
@@ -102,9 +108,7 @@ class ConcessionServiceTest {
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(cinemaRepository.findById(1L)).willReturn(Optional.of(cinema));
-
-        // 상품 조회 시 Optional.empty() 반환
-        given(productRepository.findById(999L)).willReturn(Optional.empty());
+        given(productRepository.findAllById(List.of(999L))).willReturn(List.of());
 
         // When (실행) & Then (검증)
         CustomException exception = assertThrows(CustomException.class, () -> {

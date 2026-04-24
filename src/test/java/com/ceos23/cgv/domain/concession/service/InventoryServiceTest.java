@@ -87,7 +87,7 @@ class InventoryServiceTest {
     }
 
     @Test
-    @DisplayName("처음 입고되는 상품의 수량이 1 미만(0 또는 음수)이면 INVENTORY_SHORTAGE 예외가 발생한다")
+    @DisplayName("처음 입고되는 상품의 수량이 1 미만(0 또는 음수)이면 INVALID_STOCK_QUANTITY 예외가 발생한다")
     void updateInventory_Fail_NewShortage() {
         // Given (준비)
         InventoryUpdateRequest request = new InventoryUpdateRequest(1L, 1L, 0); // 0개 입고 요청
@@ -105,6 +105,6 @@ class InventoryServiceTest {
             inventoryService.updateInventory(request);
         });
 
-        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVENTORY_SHORTAGE);
+        assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.INVALID_STOCK_QUANTITY);
     }
 }

@@ -32,4 +32,15 @@ public class Person {
 
     @Column(columnDefinition = "TEXT")
     private String award; //수상내역
+
+    public static Person create(PersonType type, String name, String englishName,
+                                LocalDate birthDate, String award) {
+        return Person.builder()
+                .type(type)
+                .name(name)
+                .englishName(englishName)
+                .birthDate(birthDate)
+                .award(award)
+                .build();
+    }
 }
