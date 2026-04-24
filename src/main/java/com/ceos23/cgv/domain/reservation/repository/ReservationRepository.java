@@ -7,4 +7,6 @@ import java.util.Optional;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
     // 예매 번호로 예매 내역 조회
     Optional<Reservation> findBySaleNumber(String saleNumber);
+
+    Optional<Reservation> findByPaymentId(String paymentId);
 }

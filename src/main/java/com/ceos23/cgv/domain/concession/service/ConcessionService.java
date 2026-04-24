@@ -7,26 +7,28 @@ import com.ceos23.cgv.domain.concession.entity.FoodOrder;
 import com.ceos23.cgv.domain.concession.entity.Inventory;
 import com.ceos23.cgv.domain.concession.entity.OrderItem;
 import com.ceos23.cgv.domain.concession.entity.Product;
+import com.ceos23.cgv.domain.concession.enums.FoodOrderStatus;
 import com.ceos23.cgv.domain.concession.enums.ProductCategory;
 import com.ceos23.cgv.domain.concession.repository.FoodOrderRepository;
 import com.ceos23.cgv.domain.concession.repository.InventoryRepository;
 import com.ceos23.cgv.domain.concession.repository.OrderItemRepository;
 import com.ceos23.cgv.domain.concession.repository.ProductRepository;
+import com.ceos23.cgv.domain.payment.service.PaymentService;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Slf4j
 public class ConcessionService {
 
     private final ProductRepository productRepository;
@@ -35,6 +37,26 @@ public class ConcessionService {
     private final UserRepository userRepository;
     private final CinemaRepository cinemaRepository;
     private final InventoryRepository inventoryRepository;
+    private final PaymentService paymentService;
+    private final TransactionTemplate transactionTemplate;
+
+    public ConcessionService(ProductRepository productRepository,
+                             FoodOrderRepository foodOrderRepository,
+                             OrderItemRepository orderItemRepository,
+                             UserRepository userRepository,
+                             CinemaRepository cinemaRepository,
+                             InventoryRepository inventoryRepository,
+                             PaymentService paymentService,
+                             PlatformTransactionManager transactionManager) {
+        this.productRepository = productRepository;
+        this.foodOrderRepository = foodOrderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.userRepository = userRepository;
+        this.cinemaRepository = cinemaRepository;
+        this.inventoryRepository = inventoryRepository;
+        this.paymentService = paymentService;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     /**
      * [GET] 매점의 모든 상품 목록 조회
@@ -46,20 +68,70 @@ public class ConcessionService {
     /**
      * [POST] 매점 상품 주문하기 (복합 로직)
      */
-    @Transactional
     public FoodOrder createOrder(FoodOrderRequest request) {
+        FoodOrder pendingOrder = transactionTemplate.execute(status ->
+                createPendingOrder(request)
+        );
+
+        try {
+            paymentService.requestInstantPayment(pendingOrder);
+        } catch (CustomException e) {
+            cancelPendingOrder(pendingOrder.getPaymentId());
+            throw e;
+        } catch (RuntimeException e) {
+            cancelPendingOrder(pendingOrder.getPaymentId());
+            throw new CustomException(ErrorCode.PAYMENT_FAILED);
+        }
+
+        try {
+            return transactionTemplate.execute(status -> completePaidOrder(pendingOrder.getPaymentId()));
+        } catch (RuntimeException e) {
+            compensatePaidOrder(pendingOrder.getPaymentId());
+            throw e;
+        }
+    }
+
+    private FoodOrder createPendingOrder(FoodOrderRequest request) {
         User user = findUser(request.userId());
         Cinema cinema = findCinema(request.cinemaId());
-        FoodOrder foodOrder = FoodOrder.create(user, cinema);
+        FoodOrder foodOrder = FoodOrder.create(user, cinema, paymentService.createFoodOrderPaymentId());
         foodOrderRepository.save(foodOrder);
 
         Map<Long, Product> productMap = loadProductMap(request);
-        List<OrderItem> orderItems = createOrderItems(request, cinema, foodOrder, productMap);
+        List<OrderItem> orderItems = createOrderItems(request, foodOrder, productMap);
         orderItemRepository.saveAll(orderItems);
 
         foodOrder.updateTotalPrice(calculateTotalPrice(orderItems));
 
         return foodOrder;
+    }
+
+    private FoodOrder completePaidOrder(String paymentId) {
+        FoodOrder foodOrder = findOrderByPaymentId(paymentId);
+        foodOrder.validatePending();
+
+        List<OrderItem> orderItems = orderItemRepository.findByFoodOrderId(foodOrder.getId());
+        decreaseInventoryStocks(foodOrder.getCinema().getId(), orderItems);
+        foodOrder.completePayment();
+
+        return foodOrder;
+    }
+
+    private void cancelPendingOrder(String paymentId) {
+        transactionTemplate.executeWithoutResult(status -> {
+            FoodOrder foodOrder = findOrderByPaymentId(paymentId);
+            foodOrder.cancel();
+        });
+    }
+
+    private void compensatePaidOrder(String paymentId) {
+        try {
+            paymentService.cancelPayment(paymentId);
+        } catch (RuntimeException e) {
+            log.error("매점 외부 결제 취소 보상 처리에 실패했습니다. paymentId={}", paymentId, e);
+        }
+
+        cancelPendingOrder(paymentId);
     }
 
     private User findUser(Long userId) {
@@ -72,6 +144,11 @@ public class ConcessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
     }
 
+    private FoodOrder findOrderByPaymentId(String paymentId) {
+        return foodOrderRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FOOD_ORDER_NOT_FOUND));
+    }
+
     private Map<Long, Product> loadProductMap(FoodOrderRequest request) {
         List<Long> productIds = request.orderItems().stream()
                 .map(FoodOrderRequest.OrderItemRequest::productId)
@@ -81,18 +158,16 @@ public class ConcessionService {
                 .collect(Collectors.toMap(Product::getId, product -> product));
     }
 
-    private List<OrderItem> createOrderItems(FoodOrderRequest request, Cinema cinema,
-                                             FoodOrder foodOrder, Map<Long, Product> productMap) {
+    private List<OrderItem> createOrderItems(FoodOrderRequest request, FoodOrder foodOrder,
+                                             Map<Long, Product> productMap) {
         return request.orderItems().stream()
-                .map(itemReq -> createOrderItem(foodOrder, cinema.getId(), productMap, itemReq))
+                .map(itemReq -> createOrderItem(foodOrder, productMap, itemReq))
                 .toList();
     }
 
-    private OrderItem createOrderItem(FoodOrder foodOrder, Long cinemaId,
-                                      Map<Long, Product> productMap,
+    private OrderItem createOrderItem(FoodOrder foodOrder, Map<Long, Product> productMap,
                                       FoodOrderRequest.OrderItemRequest itemReq) {
         Product product = getRequiredProduct(productMap, itemReq.productId());
-        decreaseInventoryStock(cinemaId, product.getId(), itemReq.quantity());
 
         return OrderItem.create(foodOrder, product, itemReq.quantity());
     }
@@ -106,8 +181,14 @@ public class ConcessionService {
         return product;
     }
 
+    private void decreaseInventoryStocks(Long cinemaId, List<OrderItem> orderItems) {
+        orderItems.forEach(orderItem ->
+                decreaseInventoryStock(cinemaId, orderItem.getProduct().getId(), orderItem.getQuantity())
+        );
+    }
+
     private void decreaseInventoryStock(Long cinemaId, Long productId, int quantity) {
-        Inventory inventory = inventoryRepository.findByCinemaIdAndProductId(cinemaId, productId)
+        Inventory inventory = inventoryRepository.findByCinemaIdAndProductIdForUpdate(cinemaId, productId)
                 .orElseThrow(() -> new CustomException(ErrorCode.INVENTORY_SHORTAGE));
 
         inventory.removeStock(quantity);
@@ -122,12 +203,11 @@ public class ConcessionService {
     /**
      * [POST] 새로운 매점 상품 등록 (관리자용)
      */
-    @Transactional
     public Product createProduct(String name, int price, String description,
                                  String origin, String ingredient,
                                  Boolean pickupPossible, ProductCategory category) {
         Product product = Product.create(name, price, description, origin, ingredient, pickupPossible, category);
-        return productRepository.save(product);
+        return transactionTemplate.execute(status -> productRepository.save(product));
     }
 
     /**
@@ -135,6 +215,6 @@ public class ConcessionService {
      */
     public List<FoodOrder> getOrdersByUserId(Long userId) {
         // N+1 문제를 방지하는 페치 조인 메서드 호출
-        return foodOrderRepository.findByUserIdWithFetchJoin(userId);
+        return foodOrderRepository.findByUserIdAndStatusWithFetchJoin(userId, FoodOrderStatus.COMPLETED);
     }
 }

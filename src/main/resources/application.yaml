@@ -23,3 +23,8 @@ spring:
 jwt:
   secret: cGUxq8+7npM2ivr6ge6xjVttZDAod9XD+Qlbyn1jFqUajswLXoFHfbHXdn75FGhPDw1aEAwkwpcfJl8SaFafHA==
   token-validity-in-seconds: 3600
+
+payment:
+  base-url: https://ceos.diggindie.com
+  store-id: whc9999
+  api-secret-key: ${PAYMENT_API_SECRET_KEY:}

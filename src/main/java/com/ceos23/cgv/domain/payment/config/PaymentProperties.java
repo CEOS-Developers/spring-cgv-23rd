@@ -1,0 +1,17 @@
+package com.ceos23.cgv.domain.payment.config;
+
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Getter
+@Setter
+@Component
+@ConfigurationProperties(prefix = "payment")
+public class PaymentProperties {
+
+    private String baseUrl;
+    private String storeId;
+    private String apiSecretKey;
+}

@@ -34,11 +34,17 @@ public enum ErrorCode {
     RESERVATION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "R003", "본인의 예매 내역만 취소할 수 있습니다."),
     RESERVATION_ALREADY_CANCELED(HttpStatus.CONFLICT, "R004", "이미 취소 처리된 예매입니다."),
     INVALID_COUPON_CODE(HttpStatus.BAD_REQUEST, "R005", "유효하지 않은 쿠폰 코드입니다."),
+    PAYMENT_FAILED(HttpStatus.BAD_GATEWAY, "R006", "결제 처리에 실패했습니다."),
+    PAYMENT_CANCEL_FAILED(HttpStatus.BAD_GATEWAY, "R007", "결제 취소에 실패했습니다."),
+    PAYMENT_NOT_COMPLETED(HttpStatus.CONFLICT, "R008", "결제 완료 상태의 예매만 취소할 수 있습니다."),
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "R009", "결제 정보를 찾을 수 없습니다."),
 
     // Domain: Concession & Inventory
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "존재하지 않는 매점 상품입니다."),
     INVENTORY_SHORTAGE(HttpStatus.BAD_REQUEST, "S002", "상품의 재고가 부족합니다."),
     INVALID_STOCK_QUANTITY(HttpStatus.BAD_REQUEST, "S003", "재고는 최소 1개 이상이어야 합니다."),
+    FOOD_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "S004", "매점 주문 정보를 찾을 수 없습니다."),
+    FOOD_ORDER_NOT_PENDING(HttpStatus.CONFLICT, "S005", "결제 대기 상태의 매점 주문만 완료할 수 있습니다."),
 
     // Domain: Person, Event, Photo
     PERSON_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "인물을 찾을 수 없습니다."),
@@ -52,4 +58,8 @@ public enum ErrorCode {
     private final HttpStatus status;
     private final String code;
     private final String message;
+
+    public String getDescription() {
+        return message;
+    }
 }
