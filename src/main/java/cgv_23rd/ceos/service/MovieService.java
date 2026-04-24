@@ -119,7 +119,7 @@ public class MovieService {
         try {
             movieLikeRepository.save(MovieLike.of(user, movie));
         } catch (DataIntegrityViolationException e) {
-            // 이미 찜한 상태면 idempotent 하게 성공 처리
+            return;
         }
     }
 

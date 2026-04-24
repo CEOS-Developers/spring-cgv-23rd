@@ -74,6 +74,7 @@ public class TheaterService {
         try {
             theaterLikeRepository.save(TheaterLike.of(user, theater));
         } catch (DataIntegrityViolationException e) {
+            return;
         }
     }
 
