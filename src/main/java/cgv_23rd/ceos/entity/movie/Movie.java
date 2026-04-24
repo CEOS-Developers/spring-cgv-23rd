@@ -2,6 +2,8 @@ package cgv_23rd.ceos.entity.movie;
 
 import cgv_23rd.ceos.entity.enums.MovieStatus;
 import cgv_23rd.ceos.entity.like.MovieLike;
+import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
+import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,9 +13,9 @@ import java.util.List;
 
 @Entity
 @Getter
-@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder(access = AccessLevel.PRIVATE)
 public class Movie {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -56,6 +58,44 @@ public class Movie {
                 .reservationRate(0.0)
                 .averageRating(0.0)
                 .reviewCount(0)
+                .build();
+    }
+
+    public static Movie create(String title, String description, LocalDate openDate, LocalDate closeDate) {
+        if (closeDate.isBefore(openDate)) {
+            throw new GeneralException(GeneralErrorCode.INVALID_MOVIE_DATE);
+        }
+
+        Movie movie = Movie.builder()
+                .title(title)
+                .description(description)
+                .openDate(openDate)
+                .closeDate(closeDate)
+                .build();
+
+        movie.calculateStatus(LocalDate.now()); // 초기 상태 결정
+        movie.initStatistics(); // 통계 객체 강제 생성
+        return movie;
+    }
+
+    public void calculateStatus(LocalDate today) {
+        if (today.isBefore(this.openDate)) this.status = MovieStatus.예정;
+        else if (today.isAfter(this.closeDate)) this.status = MovieStatus.종료;
+        else this.status = MovieStatus.상영중;
+    }
+
+    // 3. 리뷰 등록 시 통계 업데이트를 엔티티가 관리
+    public void registerReview(double rating) {
+        if (this.movieStatistics != null) {
+            this.movieStatistics.addReviewRating(rating);
+        }
+    }
+
+    private void initStatistics() {
+        this.movieStatistics = MovieStatistics.builder()
+                .movie(this)
+                .reviewCount(0)
+                .averageRating(0.0)
                 .build();
     }
 }

@@ -48,10 +48,8 @@ public class ReviewService {
 
         reviewRepository.save(review);
 
-        MovieStatistics statistics = movie.getMovieStatistics();
-        if(statistics != null){
-            statistics.addReviewRating(requestDto.rate());
-        }
+        // 리뷰 등록 후 영화 통계 업데이트 (업데이트는 영화 엔티티 담당)
+        movie.registerReview(requestDto.rate());
     }
 
     // 2. 특정 영화 리뷰 조회

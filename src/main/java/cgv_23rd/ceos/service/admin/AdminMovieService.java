@@ -14,7 +14,6 @@ import cgv_23rd.ceos.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
@@ -45,35 +44,14 @@ public class AdminMovieService {
     // 1. 영화 생성
     @Transactional
     public Long createMovie(MovieRequestDto requestDto){
+        Movie movie = Movie.create(
+                requestDto.title(),
+                requestDto.description(),
+                requestDto.openDate(),
+                requestDto.closeDate()
+        );
 
-        if (requestDto.closeDate().isBefore(requestDto.openDate())) {
-            throw new GeneralException(GeneralErrorCode.INVALID_MOVIE_DATE);
-        }
-
-        LocalDate today = LocalDate.now();
-        MovieStatus calculatedStatus;
-
-        if (today.isBefore(requestDto.openDate())) {
-            calculatedStatus = MovieStatus.예정;
-        } else if (today.isAfter(requestDto.closeDate())) {
-            calculatedStatus = MovieStatus.종료;
-        } else {
-            calculatedStatus = MovieStatus.상영중;
-        }
-
-        Movie movie = Movie.builder()
-                .title(requestDto.title())
-                .description(requestDto.description())
-                .status(calculatedStatus)
-                .openDate(requestDto.openDate())
-                .closeDate(requestDto.closeDate())
-                .build();
-
-        movie.createDefaultStatistics();
-
-        movieRepository.save(movie);
-
-        return movie.getId();
+        return movieRepository.save(movie).getId();
     }
 
     // 1. 극장별 상영 시간표 등록
