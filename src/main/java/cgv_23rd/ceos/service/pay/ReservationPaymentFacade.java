@@ -1,4 +1,4 @@
-package cgv_23rd.ceos.service;
+package cgv_23rd.ceos.service.pay;
 
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
@@ -6,6 +6,7 @@ import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import cgv_23rd.ceos.entity.reservation.Reservation;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
+import cgv_23rd.ceos.service.ReservationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

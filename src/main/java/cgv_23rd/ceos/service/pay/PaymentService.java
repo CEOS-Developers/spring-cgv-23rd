@@ -1,10 +1,10 @@
-package cgv_23rd.ceos.service;
+package cgv_23rd.ceos.service.pay;
 
 import cgv_23rd.ceos.dto.payment.request.InstantPaymentRequest;
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
-import cgv_23rd.ceos.global.config.PaymentProperties;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
+import cgv_23rd.ceos.global.config.PaymentProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;

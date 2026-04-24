@@ -6,7 +6,7 @@ import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
 import cgv_23rd.ceos.global.apiPayload.ApiResponse;
 import cgv_23rd.ceos.global.security.UserDetailsImpl;
 import cgv_23rd.ceos.service.FoodOrderService;
-import cgv_23rd.ceos.service.FoodPaymentFacade;
+import cgv_23rd.ceos.service.pay.FoodPaymentFacade;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

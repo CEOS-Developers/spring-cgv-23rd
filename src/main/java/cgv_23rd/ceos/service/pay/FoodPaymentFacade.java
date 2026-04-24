@@ -1,10 +1,11 @@
-package cgv_23rd.ceos.service;
+package cgv_23rd.ceos.service.pay;
 
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
+import cgv_23rd.ceos.service.FoodOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
