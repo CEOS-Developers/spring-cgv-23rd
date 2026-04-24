@@ -3,6 +3,7 @@ package com.ceos23.cgv_clone.reservation.service;
 import com.ceos23.cgv_clone.global.exception.CustomException;
 import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.reservation.dto.request.ReservationRequest;
+import com.ceos23.cgv_clone.reservation.dto.response.PendingReservationResponse;
 import com.ceos23.cgv_clone.reservation.dto.response.ReservationResponse;
 import com.ceos23.cgv_clone.reservation.entity.Reservation;
 import com.ceos23.cgv_clone.reservation.entity.ReservationSeat;
@@ -15,7 +16,6 @@ import com.ceos23.cgv_clone.user.entity.User;
 import com.ceos23.cgv_clone.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -24,9 +24,14 @@ import java.time.Period;
 import java.util.HashSet;
 import java.util.List;
 
+import static java.time.LocalDate.now;
+import static java.time.format.DateTimeFormatter.BASIC_ISO_DATE;
+import static java.util.UUID.randomUUID;
+import static org.springframework.transaction.annotation.Propagation.*;
+
 @Service
 @RequiredArgsConstructor
-public class ReservationServiceNamedInner implements ReservationService{
+public class ReservationServiceNamedInner{
 
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
@@ -34,9 +39,8 @@ public class ReservationServiceNamedInner implements ReservationService{
     private final ReservationSeatRepository reservationSeatRepository;
 
     // 영화 예매
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public ReservationResponse createReservation(Long userId, ReservationRequest request) {
+    @Transactional(propagation = REQUIRES_NEW)
+    public PendingReservationResponse prepareReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Schedule schedule = scheduleRepository.findById(request.getScheduleId())
@@ -47,11 +51,13 @@ public class ReservationServiceNamedInner implements ReservationService{
         validateSeats(seats, schedule);
 
         int totalPrice = schedule.getScreen().getScreenType().getPrice() * request.getSeats().size();
+        String paymentId = generatePaymentId();
 
         Reservation reservation = Reservation.builder()
                 .reservedAt(LocalDateTime.now())
                 .totalPrice(totalPrice)
-                .status(ReservationStatus.RESERVED)
+                .status(ReservationStatus.PENDING)
+                .paymentId(paymentId)
                 .user(user)
                 .schedule(schedule)
                 .build();
@@ -67,30 +73,70 @@ public class ReservationServiceNamedInner implements ReservationService{
         }
 
         reservationRepository.save(reservation);
+
+        String orderName = buildOrderName(reservation);
+
+        return new PendingReservationResponse(reservation.getId(), orderName, totalPrice, reservation.getReservedAt(), request.getSeats(), schedule.getMovie().getName());
+    }
+
+    @Transactional(propagation = REQUIRES_NEW)
+    public ReservationResponse confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        reservation.confirmReservation();
         return ReservationResponse.from(reservation);
     }
 
     // 예매 취소
-    @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void cancelReservation(Long userId, Long reservationId) {
+    @Transactional(propagation = REQUIRES_NEW)
+    public String cancelReservation(Long userId, Long reservationId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        // 1. 예매했던 id랑 사용자 id 일치 확인
+        verifyCancel(user, reservation);
+
+
+        reservation.cancel();
+        return reservation.getPaymentId();
+    }
+
+    @Transactional(readOnly = true, propagation = REQUIRES_NEW)
+    public PendingReservation loadForPayment(Long userId, Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyPendingReservation(userId, reservation);
+
+        String orderName = buildOrderName(reservation);
+
+        return new PendingReservation(reservation.getId(), reservation.getPaymentId(), orderName, reservation.getTotalPrice());
+    }
+
+    private void verifyCancel(User user, Reservation reservation) {
         if (!reservation.getUser().getId().equals(user.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
         }
 
-        // 2. 예매 내역이 취소상태인지 확인
         if (reservation.getStatus().equals(ReservationStatus.CANCELED)) {
             throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
         }
+    }
 
-        reservation.cancel();
+    private void verifyPendingReservation(Long userId, Reservation reservation) {
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
+        }
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+        // 5분 경과 후 스케쥴러가 잡지 못했는데, 다른 유저가 들어와서 결제 시도하면 문제 생기므로 추가 검증.
+        if (reservation.getReservedAt().plusMinutes(5).isBefore(LocalDateTime.now())) {
+            throw new CustomException(ErrorCode.RESERVATION_EXPIRED);
+        }
     }
 
     private void validateAgeRestriction(User user, int ageRestriction) {
@@ -131,5 +177,16 @@ public class ReservationServiceNamedInner implements ReservationService{
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }
         }
+    }
+
+    private String buildOrderName(Reservation reservation) {
+        List<String> seats = reservation.getReservationSeats().stream()
+                .map(s -> s.getSeatRow() + String.valueOf(s.getSeatCol()))
+                .toList();
+        return reservation.getSchedule().getMovie().getName() + " " + String.join(", ", seats);
+    }
+
+    private String generatePaymentId() {
+        return now().format(BASIC_ISO_DATE) + "_" + randomUUID().toString().substring(0, 8);
     }
 }

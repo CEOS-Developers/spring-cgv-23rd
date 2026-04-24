@@ -25,7 +25,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationServiceBasic implements ReservationService{
+public class ReservationServiceBasic{
 
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
@@ -33,7 +33,6 @@ public class ReservationServiceBasic implements ReservationService{
     private final ReservationSeatRepository reservationSeatRepository;
 
     // 영화 예매
-    @Override
     @Transactional
     public ReservationResponse createReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
@@ -70,7 +69,6 @@ public class ReservationServiceBasic implements ReservationService{
     }
 
     // 예매 취소
-    @Override
     @Transactional
     public void cancelReservation(Long userId, Long reservationId) {
         User user = userRepository.findById(userId)

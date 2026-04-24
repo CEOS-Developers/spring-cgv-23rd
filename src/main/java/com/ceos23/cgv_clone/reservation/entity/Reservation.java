@@ -35,6 +35,8 @@ public class Reservation extends BaseEntity {
     @Column(nullable = false)
     private ReservationStatus status;
 
+    @Column(nullable = false, unique = true)
+    private String paymentId;
 
     @JoinColumn(name = "user_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -48,16 +50,21 @@ public class Reservation extends BaseEntity {
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
     @Builder
-    public Reservation(LocalDateTime reservedAt, int totalPrice, ReservationStatus status, User user, Schedule schedule) {
+    public Reservation(LocalDateTime reservedAt, int totalPrice, ReservationStatus status, String paymentId, User user, Schedule schedule) {
         this.reservedAt = reservedAt;
         this.totalPrice = totalPrice;
         this.status = status;
+        this.paymentId = paymentId;
         this.user = user;
         this.schedule = schedule;
     }
 
     public void addReservationSeat(ReservationSeat seat) {
         this.reservationSeats.add(seat);
+    }
+
+    public void confirmReservation() {
+        this.status = ReservationStatus.RESERVED;
     }
 
     public void cancel() {
