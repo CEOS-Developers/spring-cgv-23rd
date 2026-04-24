@@ -27,6 +27,10 @@ spring:
       hibernate:
         format_sql: true
 
+payment:
+  base-url: 'https://ceos.diggindie.com/'
+  store-id: 'Jong0128'
+
 logging:
   level:
     org.hibernate.SQL: debug
