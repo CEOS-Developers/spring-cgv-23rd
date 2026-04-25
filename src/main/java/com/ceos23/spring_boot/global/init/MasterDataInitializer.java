@@ -26,7 +26,7 @@ import java.util.List;
 
 @Slf4j
 @Component
-//@Profile("local") // 로컬 환경에서만 동작하도록 제한 (운영 DB 오염 방지)
+@Profile("local")
 @RequiredArgsConstructor
 public class MasterDataInitializer implements CommandLineRunner {
 
@@ -103,7 +103,7 @@ public class MasterDataInitializer implements CommandLineRunner {
         menuRepository.saveAll(List.of(popcorn, popcornL, cola, colaL));
 
         // [연관 데이터]
-        // 6. 재고(Inventory) 세팅 (극장 + 메뉴 참조)
+        // 6. 재고(Inventory) 세팅
         Inventory popcornInventory = Inventory.builder().theater(theater).menu(popcorn).stock(10).build();
         Inventory popcornLInventory = Inventory.builder().theater(theater).menu(popcornL).stock(20).build();
 
@@ -111,13 +111,12 @@ public class MasterDataInitializer implements CommandLineRunner {
         Inventory colaLInventory = Inventory.builder().theater(theater).menu(colaL).stock(30).build();
         inventoryRepository.saveAll(List.of(popcornInventory, popcornLInventory, colaInventory, colaLInventory));
 
-        // 7. 좌석 템플릿(SeatTemplate) 세팅 (상영관타입 + 좌석등급 참조)
-        // 호출하는 곳에서는 이렇게 깔끔하게 한 줄씩만 씁니다.
+        // 7. 좌석 템플릿(SeatTemplate) 세팅
         createSeats(standardType, 'O', 15, economy, vip); // A~O열, 15번까지 (15x15)
         createSeats(imaxType, 'T', 20, economy, vip);     // A~T열, 20번까지 (20x20)
         createSeats(threeDType, 'O', 15, economy, vip);   // A~O열, 15번까지 (15x15)
 
-        // 8. 상영관(Screen) 생성 (극장 + 상영관타입 참조)
+        // 8. 상영관(Screen) 생성
         List<Theater> theaters = List.of(theater, theater2);
         List<ScreenType> screenTypes = List.of(standardType, imaxType, threeDType);
         List<Movie> movies = List.of(movie, movie2);
@@ -128,13 +127,13 @@ public class MasterDataInitializer implements CommandLineRunner {
             // 상영관 타입별로 순회
             for (ScreenType type : screenTypes) {
 
-                // 1. 상영관 및 좌석 생성 (Service 호출)
-                String screenName = type.getName() + "관"; // 예: "STANDARD관", "IMAX관"
+                // 1. 상영관 및 좌석 생성
+                String screenName = type.getName() + "관"; // "STANDARD관", "IMAX관"
                 screenService.createScreenWithSeats(
                         new ScreenCreateCommand(t.getId(), type.getId(), screenName)
                 );
 
-                // 2. 방금 생성된 상영관 엔티티 조회 (Schedule에 연결하기 위함)
+                // 2. 방금 생성된 상영관 엔티티 조회
                 // Theater와 상영관 이름으로 정확히 찾아옵니다.
                 Screen savedScreen = screenRepository.findByNameAndTheater(screenName, t)
                         .orElseThrow(() -> new RuntimeException("상영관 생성 실패"));
@@ -152,7 +151,6 @@ public class MasterDataInitializer implements CommandLineRunner {
                             .build();
                     scheduleRepository.save(schedule);
 
-                    // 다음 영화는 이전 영화 시작 4시간 뒤에 배치
                     startTime = startTime.plusHours(4);
                 }
 
@@ -163,7 +161,7 @@ public class MasterDataInitializer implements CommandLineRunner {
         log.info("마스터 데이터 초기화 완료!");
     }
 
-    // 좌석을 찍어내는 메서드
+    // 좌석 생성 메서드
     private void createSeats(ScreenType type, char maxRow, int maxCol,SeatGrade economy, SeatGrade vip) {
         List<SeatTemplate> templates = new ArrayList<>();
 

@@ -49,16 +49,19 @@ public class PaymentService {
         try {
             PaymentData response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
 
-            if ("PAID".equals(response.paymentStatus())) {
-                reservationService.confirmPayment(paymentId);
-                return PaymentDataInfo.from(response);
-            } else {
-                reservationService.cancelReservation(paymentId);
+            if (!"PAID".equals(response.paymentStatus()))
                 throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
-            }
-        } catch (Exception e) {
+
+            reservationService.confirmPayment(paymentId);
+            return PaymentDataInfo.from(response);
+
+        } catch (BusinessException be) {
             reservationService.cancelReservation(paymentId);
-            throw e;
+            throw be;
+
+        }catch (Exception e) {
+            reservationService.cancelReservation(paymentId);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
 

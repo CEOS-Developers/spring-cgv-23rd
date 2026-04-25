@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    active: local
   datasource:
     url: jdbc:mysql://localhost:3306/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
     username: root

@@ -50,33 +50,44 @@ public class ReservationService {
 
         Long screenId = schedule.getScreen().getId();
 
-        List<Seat> seats = seatRepository.findAllByIdInAndScreenIdAndDeletedAtIsNull(command.seatIds(), screenId);
-        if (seats.size() != command.seatIds().size()) {
+        List<Seat> seats = getValidSeats(command.seatIds(), screenId);
+
+        validateSeatNotReserved(schedule.getId(), command.seatIds());
+
+        Reservation reservation = Reservation.create(user, schedule, seats);
+
+        reservationRepository.save(reservation);
+
+        String orderName = getOrderName(schedule, seats);
+
+        return ReservationInfo.from(reservation, reservation.getReservedSeats(), orderName);
+    }
+
+    private List<Seat> getValidSeats(List<Long> seatIds, Long screenId) {
+        List<Seat> seats = seatRepository.findAllByIdInAndScreenIdAndDeletedAtIsNull(seatIds, screenId);
+        if (seats.size() != seatIds.size()) {
             throw new BusinessException(ErrorCode.INVALID_SEAT);
         }
+        return seats;
+    }
 
+    private void validateSeatNotReserved(Long scheduleId, List<Long> seatIds) {
         boolean isAlreadyOccupied = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatusIn(
-                schedule.getId(),
-                command.seatIds(),
+                scheduleId,
+                seatIds,
                 List.of(ReservationStatus.PAID, ReservationStatus.PENDING)
         );
 
         if (isAlreadyOccupied) {
             throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
+    }
 
-        String paymentId = generatePaymentId();
-
-        Reservation reservation = Reservation.create(paymentId, user, schedule, seats);
-
-        reservationRepository.save(reservation);
-
+    private String getOrderName(Schedule schedule, List<Seat> seats) {
         String movieTitle = schedule.getMovie().getTitle();
         int seatCount = seats.size();
 
-        String orderName = movieTitle + " " + seatCount + "매";
-
-        return ReservationInfo.from(reservation, reservation.getReservedSeats(), orderName);
+        return movieTitle + " " + seatCount + "매";
     }
 
     @Transactional
@@ -97,11 +108,5 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
         reservation.validateCancelable();
-    }
-
-    private String generatePaymentId() {
-        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String uuid = UUID.randomUUID().toString().substring(0, 8);
-        return prefix + "_" + uuid;
     }
 }

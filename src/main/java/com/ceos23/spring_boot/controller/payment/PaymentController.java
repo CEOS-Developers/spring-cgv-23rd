@@ -23,7 +23,7 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @Operation(
-            summary = "결제 및 예매 확정",
+            summary = "결제 및 예매",
             description = "선택한 좌석에 분산 락을 걸어 선점하고, 결제를 진행한 뒤 예매를 최종 확정합니다."
     )
     @PostMapping("/api/payments/instant")

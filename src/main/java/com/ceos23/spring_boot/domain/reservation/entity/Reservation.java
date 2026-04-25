@@ -15,8 +15,10 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -59,7 +61,9 @@ public class Reservation extends BaseTimeEntity {
         this.totalPrice = totalPrice;
     }
 
-    public static Reservation create(String paymentId, User user, Schedule schedule, List<Seat> seats) {
+    public static Reservation create(User user, Schedule schedule, List<Seat> seats) {
+        String paymentId = generatePaymentId();
+
         Reservation reservation = Reservation.builder()
                 .paymentId(paymentId)
                 .user(user)
@@ -79,6 +83,12 @@ public class Reservation extends BaseTimeEntity {
         return reservation;
     }
 
+    private static String generatePaymentId() {
+        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String uuid = UUID.randomUUID().toString().substring(0, 8);
+        return prefix + "_" + uuid;
+    }
+
     private void addReservedSeat(ReservedSeat reservedSeat) {
         this.reservedSeats.add(reservedSeat);
         reservedSeat.updateReservation(this);
@@ -90,9 +100,6 @@ public class Reservation extends BaseTimeEntity {
             throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
 
         LocalDateTime currentTime = LocalDateTime.now();
-
-        if (ReservationStatus.CANCELED == this.status)
-            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
 
         if (currentTime.isAfter(schedule.getStartTime().minusMinutes(15)))
             throw new BusinessException(ErrorCode.CANCELLATION_DEADLINE_PASSED);
