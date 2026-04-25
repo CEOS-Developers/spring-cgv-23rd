@@ -2,7 +2,9 @@ package com.ceos.spring_boot.domain.store.entity;
 
 import com.ceos.spring_boot.domain.cinema.entity.Cinema;
 import com.ceos.spring_boot.domain.user.entity.User;
+import com.ceos.spring_boot.global.codes.ErrorCode;
 import com.ceos.spring_boot.global.entity.BaseEntity;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -39,6 +41,30 @@ public class Order extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
+
+    public static Order create(User user, Cinema cinema) {
+        return Order.builder()
+                .user(user)
+                .cinema(cinema)
+                .status(OrderStatus.PENDING)
+                .totalPrice(0)
+                .orderItems(new ArrayList<>())
+                .build();
+    }
+
+    public void complete() {
+        if (this.status != OrderStatus.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_PAYMENT_STATUS);
+        }
+        this.status = OrderStatus.COMPLETED;
+    }
+
+    public void cancel() {
+        if (this.status == OrderStatus.CANCELLED) {
+            throw new BusinessException(ErrorCode.ALREADY_CANCELLED_PAYMENT);
+        }
+        this.status = OrderStatus.CANCELLED;
+    }
 
     public void addOrderItem(OrderItem orderItem) {
         this.orderItems.add(orderItem);

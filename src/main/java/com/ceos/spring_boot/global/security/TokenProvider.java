@@ -25,7 +25,7 @@ public class TokenProvider implements InitializingBean {
 
     private Key key;
     private final String secret;
-    private final UserDetailsService userDetailsService;
+    private final CustomUserDetailsService userDetailsService;
     private final long tokenValidityInMilliseconds;
 
     private static final String AUTHORITIES_KEY = "auth";
@@ -33,7 +33,7 @@ public class TokenProvider implements InitializingBean {
     public TokenProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.token-validity-in-seconds}") long tokenValidityInSeconds,
-            UserDetailsService userDetailsService) {
+            CustomUserDetailsService userDetailsService) {
         this.secret = secret;
         this.tokenValidityInMilliseconds = tokenValidityInSeconds * 1000; // 컴퓨터(자바)가 시간을 계산하는 기본 단위 = 밀리초
         this.userDetailsService = userDetailsService;
@@ -101,7 +101,7 @@ public class TokenProvider implements InitializingBean {
         UserDetails userDetails = userDetailsService.loadUserByUsername(getTokenUserId(token));
 
         // 인증 객체 반환
-        return new UsernamePasswordAuthenticationToken(userDetails, token, userDetails.getAuthorities());
+        return new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
     }
 
     /**

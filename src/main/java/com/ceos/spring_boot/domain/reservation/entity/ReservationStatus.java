@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ReservationStatus {
+    PAYMENT_PENDING("결제 대기"),
     CONFIRMED("예매 완료"),
     CANCELED("예매 취소");
 

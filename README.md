@@ -179,3 +179,160 @@
 
 - 의존성: 인증 서비스에 장애가 발생하면 서비스 로그인 불가능
 - 복잡한 구현
+
+# 동시성 문제
+
+- 동시성 문제: 여러 프로세스나 스레드가 동일한 공유 자원(메모리, DB 데이터, 파일 등)에 동시에 접근하여 조작할 때, 접근 순서나 타이밍에 따라 예상치 못한 결과가 발생하는 현상
+
+  → 공유 자원이 있는 곳이라면 어디에서든 생길 수 있음
+
+- 동시성 관련 발생 문제
+    - **Race Condition(경쟁 상태)**
+        - 두 개 이상의 프로세스가 공통 자원을 병행적으로 읽거나 쓸 때, 마지막에 작업을 수행한 프로세스의 결과가 최종 상태를 결정짓는 상황
+    - **Deadlock(교착 상태)**
+        - 두 개 이상의 프로세스가 각자 가지고 있는 자원을 무한히 대기하며, 서로의 자원을 점유하기 위해 기다리는 상태
+    - **Starvation(기아 상태)**
+        - 특정 프로세스의 우선순위가 낮아 필요한 자원을 계속해서 할당받지 못하고 무한정 기다리는 상태
+- OS 레벨에서의 해결책
+    - 공유 자원의 독점을 보장하기 위해 **Critical Section(임계 구역)**을 보호하는 메커니즘을 사용
+        - Mutex (뮤텍스)
+            - 한 번에 하나의 스레드만 자원을 점유할 수 있게 하는 **Locking** 메커니즘
+        - Semaphore (세마포어)
+            - 공유 자원에 접근할 수 있는 스레드의 수를 제어하는 **Signaling** 메커니즘
+        - Monitor(모니터)
+            - Mutex와 Condition Variable을 결합한 고수준 동기화 도구
+- Spring에서 동시성 문제 해결
+    - synchronized(Java 내부 구현)
+        - 방법: 메서드나 블록 단위로 사용해 한 번에 하나의 스레드만 진입하도록 보장
+        - 한계: 인스턴스 단위로 Lock이 걸리기 때문에, 서버가 2대 이상인 분산 환경에서는 동시성을 보장하지 못함
+
+        ```java
+        public class StockService {
+            private Long stockCount = 100L;
+        
+            // synchronized를 통해 한 번에 하나의 스레드만 접근 허용
+            public synchronized void decrease(Long quantity) {
+                if (stockCount >= quantity) {
+                    stockCount -= quantity;
+                }
+            }
+        }
+        ```
+
+    - DB Lock
+        - **비관적 락(Pessimistic Lock)**
+            - 데이터를 읽을 때부터 물리적인 Lock을 걸어 다른 트랜잭션의 접근을 차단
+            - **장점:** 데이터 충돌이 잦을 때 정합성을 확실히 보장
+            - **단점:** 성능 저하 및 데드락 위험
+
+            ```java
+            public interface StockRepository extends JpaRepository<Stock, Long> {
+                @Lock(LockModeType.PESSIMISTIC_WRITE)
+                @Query("select s from Stock s where s.id = :id")
+                Stock findByIdWithPessimisticLock(Long id);
+            }
+            ```
+
+        - **낙관적 락(Optimistic Lock)**
+            - Lock을 걸지 않고, 수정 시점에 내가 읽은 버전이 맞는지 확인
+            - **장점:** 물리적 Lock이 없어 성능상 이점
+            - **단점:** 충돌 발생 시 개발자가 직접 재시도 로직을 작성
+
+            ```java
+            @Entity
+            public class Stock {
+                @Id @GeneratedValue
+                private Long id;
+            
+                @Version // 버전 관리용 필드
+                private Long version;
+            
+                private Long quantity;
+            }
+            ```
+
+        - **Named Lock**
+            - 데이터 자체에 락을 거는 것이 아니라, 별도의 공간에 존재하는 이름(String)을 점유하는 방식
+                - 데이터와 상관없이 임의의 이름을 지정하여 락 설정
+            - 과정
+                - 사용자가 `A`라는 이름으로 락을 요청
+                - DB는 `A`라는 이름이 이미 점유 중인지 확인
+                - 점유 중이 아니라면 해당 세션이 락을 획득하고 작업을 수행
+                - 작업이 끝나면 반드시 락을 해제
+            - 주의사항:
+                - 락을 획득하고 유지하는 동안 DB 커넥션을 계속 점유 → 커넥션 풀 고갈
+                - 트랜잭션이 종료된다고 해서 락이 자동으로 해제되지 않는 경우 → 명시적으로 해제
+    - **Redis(분산 락)**
+        - 여러 대의 서버가 하나의 공통된 저장소(Redis)를 바라보게 하여 Lock을 획득하는 방식
+            - **Lettuce**
+                - 스핀 락(Spin Lock) 방식으로 구현
+                - 장점: 별도의 라이브러리 설치 없이 Spring 기본 설정만으로 구현 가능
+                - 단점: 실패 시 반복적으로 시도(spin) → Redis 부하
+                    - 타임아웃 부재: 락을 획득한 서버가 죽으면 락이 영원히 해제되지 않는 위험이 있어 만료 시간 직접 계산 필요
+            - **Redisson**
+                - Pub/Sub 기반으로 구현하여 스핀 락의 단점을 보완 + 효율적인 Lock 획득을 지원
+                - 장점: 불필요한 재시도 로직이 없어 Redis 서버가 쾌적
+                    - Watchdog 기능: 락 점유 시간이 길어질 경우 자동으로 연장해 주어, 비즈니스 로직 도중 락이 풀리는 불상사를 방지
+                    - 락 타임아웃 제공: 락 획득 대기 시간을 설정할 수 있어 무한 대기를 방지
+
+                ```java
+                public void withdraw(String lockKey) {
+                    RLock lock = redissonClient.getLock(lockKey);
+                
+                    try {
+                        // waitTime: 락 획득을 위해 대기할 시간
+                        // leaseTime: 락 점유 시간 (이후 자동 해제)
+                        boolean available = lock.tryLock(10, 2, TimeUnit.SECONDS);
+                
+                        if (available) {
+                            // 비즈니스 로직 수행
+                        }
+                    } catch (InterruptedException e) {
+                        // 예외 처리
+                    } finally {
+                        if (lock.isHeldByCurrentThread()) {
+                            lock.unlock();
+                        }
+                    }
+                }
+                ```
+<img width="726" height="265" alt="Image" src="https://github.com/user-attachments/assets/0fffd449-cdc5-4b6b-b3ce-b35a28d46526" />
+
+# Client
+
+### RestTemplate
+
+- Spring 3부터 지원된 가장 오래된 동기 방식의 HTTP 클라이언트
+- 장점:
+    - 오래된 만큼 자료가 방대하고 사용법이 직관적
+    - Spring 프로젝트라면 별도의 의존성 추가 없이 바로 사용 가능
+- 단점:
+    - Blocking I/O 방식이라 요청을 보내고 응답이 올 때까지 스레드가 대기
+    - 직관적이지 않은 사용법
+    - Template 클래스에 너무 많은 HTTP 기능이 노출
+
+### OpenFeign
+
+- Netflix에서 개발하고 Spring Cloud가 관리하는 클라이언트
+- 장점:
+    - 가독성 → 비즈니스 로직과 HTTP 호출 로직이 완벽히 분리
+    - Spring MVC 어노테이션(`@GetMapping` 등)을 그대로 사용할 수 있어 러닝 커브가 낮음
+    - Ribbon(로드밸런싱), Hystrix(서킷 브레이커) 등 Spring Cloud 생태계와 결합이 매우 쉬움
+- 단점:
+    - 기본적으로 동기 방식으로 동작
+    - HTTP 상세 설정(타임아웃 등)을 커스터마이징하려면 별도의 설정 클래스가 필요
+
+### WebClient
+
+- Spring 5에서 도입된 클라이언트
+- 장점:
+    - 비차단(Non-Blocking): `WebClient`는 비동기 처리에 특화되어 적은 스레드로 많은 요청 처리
+- 단점:
+    - `WebClient`는 Reactor(Flux, Mono) 개념을 알아야 하므로 러닝 커브가 높음
+
+### RestClient
+
+- `RestTemplate`의 동기 방식 장점과 `WebClient`의 현대적인 Fluent API 디자인을 결합한 최적의 대안
+- 함수형 인터페이스 (Fluent API): 빌더 패턴과 유사한 체이닝 방식을 통해 가독성이 좋음
+- 동기식 처리 (Synchronous): 결제와 같이 순차적 실행과 결과 확인이 중요한 비즈니스 로직에 적합
+- 선언적 에러 핸들링: `.onStatus()` 메서드를 통해 HTTP 상태 코드별 예외 처리를 직관적으로 구현 가능

@@ -8,6 +8,8 @@ import lombok.*;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @Table(
         name = "movie_likes",
         uniqueConstraints = {
@@ -33,10 +35,10 @@ public class MovieLike extends BaseEntity {
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
 
-    @Builder
-    public MovieLike(User user, Movie movie) {
-        this.user = user;
-        this.movie = movie;
+    public static MovieLike create(User user, Movie movie) {
+        return MovieLike.builder()
+                .user(user)
+                .movie(movie)
+                .build();
     }
-
 }

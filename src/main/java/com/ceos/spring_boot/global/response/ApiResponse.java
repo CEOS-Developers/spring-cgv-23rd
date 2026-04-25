@@ -9,26 +9,27 @@ import lombok.Getter;
 public class ApiResponse<T> {
 
     // API 응답
-    private T response;
+    @Schema(description = "실제 응답 데이터")
+    private T data;
 
     @Schema(description = "상태코드 ", example = "200")
-    private int statusCode;
+    private int code;
 
     @Schema(description = "상영 코드 메시지", example = "GET_SUCCESS")
     private String message;
 
     @Builder
-    public ApiResponse(T response, int statusCode, String message) {
-        this.response = response;
-        this.statusCode = statusCode;
+    public ApiResponse(T data, int code, String message) {
+        this.data = data;
+        this.code = code;
         this.message = message;
     }
 
 
-    public static <T> ApiResponse<T> of(T response, SuccessCode successCode) {
+    public static <T> ApiResponse<T> of(T data, SuccessCode successCode) {
         return ApiResponse.<T>builder()
-                .response(response)
-                .statusCode(successCode.getStatusCode())
+                .data(data)
+                .code(successCode.getStatusCode())
                 .message(successCode.getMessage())
                 .build();
     }

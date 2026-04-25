@@ -16,28 +16,33 @@ import java.util.List;
 @Getter
 public class CustomUserDetails implements UserDetails {
 
-    private final User user;
+    // 엔티티가 아닌 필요한 필드만 가져와 최적화
+    private final Long id;
+    private final String password;
+    private final String role;
 
     public CustomUserDetails(User user) {
-        this.user = user;
+        this.id = user.getId();
+        this.password = user.getPassword();
+        this.role = user.getRole().name();
     }
 
     /**
-     * 사용자가 가진 권한(Role) 목록을 반환
-     * ex: ROLE_USER, ROLE_ADMIN
+     * 필드로 저장된 role 문자열을 바탕으로 권한 객체 생성
      */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(user.getRole().name())); // 권한 이름을 가져와서 Security 권한 객체로 변환
+        return List.of(new SimpleGrantedAuthority(role));
     }
 
     @Override
-    public String getUsername() { // user_id 반환
-        return String.valueOf(user.getId());
+    public String getUsername() {
+        return String.valueOf(id);
     }
 
-    @Override public String getPassword() { // 암호화된 비밀번호 반환
-        return user.getPassword();
+    @Override
+    public String getPassword() {
+        return password;
     }
 
     @Override public boolean isAccountNonExpired() { // 계정 만료 여부 반환

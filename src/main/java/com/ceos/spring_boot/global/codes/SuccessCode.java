@@ -20,6 +20,15 @@ public enum SuccessCode {
     // 수정 성공
     UPDATE_SUCCESS(204, "UPDATE_SUCCESS"),
 
+    // 결제 성공
+    PAYMENT_SUCCESS(200, "PAYMENT_SUCCESS"),
+
+    // 결제 취소 성공
+    CANCEL_SUCCESS(200, "CANCEL_SUCCESS"),
+
+    // 결제 조회 성공
+    GET_PAYMENT_SUCCESS(200, "GET_PAYMENT_SUCCESS"),
+
     ;
 
     private final int statusCode;

@@ -10,6 +10,7 @@ import com.ceos.spring_boot.domain.schedule.dto.ScheduleResponse;
 import com.ceos.spring_boot.domain.schedule.entity.Schedule;
 import com.ceos.spring_boot.domain.schedule.repository.ScheduleRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +28,16 @@ public class ScheduleService {
     @Transactional
     public ScheduleResponse createSchedule(ScheduleRequest request) {
         Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.MOVIE_NOT_FOUND_ERROR.getMessage()));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND_ERROR));
         Screen screen = screenRepository.findById(request.screenId())
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.SCREEN_NOT_FOUND_ERROR.getMessage()));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCREEN_NOT_FOUND_ERROR));
 
         // 종료 시간 계산 (시작 시간 + 러닝타임)
         LocalDateTime endAt = request.startAt().plusMinutes(movie.getRunningTime());
 
         // 시간 중복 검증
         if (!scheduleRepository.findOverlappingSchedules(screen.getId(), request.startAt(), endAt).isEmpty()) {
-            throw new IllegalArgumentException(ErrorCode.ALREADY_SCREEN_SCHEDULE_ERROR.getMessage());
+            throw new BusinessException(ErrorCode.ALREADY_SCREEN_SCHEDULE_ERROR);
         }
 
         Schedule schedule = Schedule.builder()

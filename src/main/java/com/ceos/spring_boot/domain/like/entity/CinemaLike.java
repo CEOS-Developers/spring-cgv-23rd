@@ -1,6 +1,7 @@
 package com.ceos.spring_boot.domain.like.entity;
 
 import com.ceos.spring_boot.domain.cinema.entity.Cinema;
+import com.ceos.spring_boot.domain.movie.entity.Movie;
 import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -8,6 +9,8 @@ import lombok.*;
 
 @Entity
 @Getter
+@Builder
+@AllArgsConstructor
 @Table(
         name = "cinema_likes",
         uniqueConstraints = {
@@ -33,9 +36,10 @@ public class CinemaLike extends BaseEntity {
     @JoinColumn(name = "cinema_id", nullable = false)
     private Cinema cinema;
 
-    @Builder
-    public CinemaLike(User user, Cinema cinema) {
-        this.user = user;
-        this.cinema = cinema;
+    public static CinemaLike create(User user, Cinema cinema) {
+        return CinemaLike.builder()
+                .user(user)
+                .cinema(cinema)
+                .build();
     }
 }

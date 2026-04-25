@@ -13,6 +13,7 @@ import com.ceos.spring_boot.domain.movie.repository.MovieRepository;
 import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.domain.user.repository.UserRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,58 +33,44 @@ public class LikeService {
 
     public MovieLikeResponse toggleMovieLike(Long userId, Long movieId) {
 
-        // 사용자 및 영화 존재 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.USER_NOT_FOUND_ERROR.getMessage()));
-
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.MOVIE_NOT_FOUND_ERROR.getMessage()));
-
-        // 이미 찜했는지 조회
+        // 이미 찜 했는지 조회
         Optional<MovieLike> movieLike = movieLikeRepository.findByUserIdAndMovieId(userId, movieId);
 
-        boolean isLiked;
-
+        // 이미 찜 상태면 찜 취소(토글 방법)
         if (movieLike.isPresent()) {
             movieLikeRepository.delete(movieLike.get());
-            isLiked = false; // 삭제되었으므로 false
-        } else {
-            MovieLike newLike = MovieLike.builder()
-                    .user(user)
-                    .movie(movie)
-                    .build();
-            movieLikeRepository.save(newLike);
-            isLiked = true; // 저장되었으므로 true
+            return MovieLikeResponse.of(userId, movieId, false);
         }
-        return MovieLikeResponse.of(userId,movieId,isLiked);
+
+        // 찜 기능 성능 최적화: getReferenceById 활용
+        // getReferenceById는 실제 DB 조회를 하지 않고 프록시 객체만 생성하여 연관관계를 맺음
+        User user = userRepository.getReferenceById(userId);
+
+        Movie movie = movieRepository.findById(movieId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MOVIE_NOT_FOUND_ERROR));
+
+        movieLikeRepository.save(MovieLike.create(user, movie));
+
+        return MovieLikeResponse.of(userId, movieId, true);
     }
 
 
     public CinemaLikeResponse toggleCinemaLike(Long userId, Long cinemaId) {
 
-        // 사용자 및 영화관 존재 확인
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.USER_NOT_FOUND_ERROR.getMessage()));
-
-        Cinema cinema = cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.CINEMA_NOT_FOUND_ERROR.getMessage()));
-
-        // 이미 찜했는지 조회
         Optional<CinemaLike> cinemaLike = cinemaLikeRepository.findByUserIdAndCinemaId(userId, cinemaId);
-
-        boolean isLiked;
 
         if (cinemaLike.isPresent()) {
             cinemaLikeRepository.delete(cinemaLike.get());
-            isLiked = false; // 삭제되었으므로 false
-        } else {
-            CinemaLike newLike = CinemaLike.builder()
-                    .user(user)
-                    .cinema(cinema)
-                    .build();
-            cinemaLikeRepository.save(newLike);
-            isLiked = true; // 저장되었으므로 true
+            return CinemaLikeResponse.of(userId, cinemaId, false);
         }
-        return CinemaLikeResponse.of(userId,cinemaId,isLiked);
+
+        User user = userRepository.getReferenceById(userId);
+
+        Cinema cinema = cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CINEMA_NOT_FOUND_ERROR));
+
+        cinemaLikeRepository.save(CinemaLike.create(user, cinema));
+
+        return CinemaLikeResponse.of(userId, cinemaId, true);
     }
 }
