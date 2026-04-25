@@ -11,17 +11,18 @@ public class ReservationPersistenceMapper {
 
     //  Entity → Domain
     public Reservation toDomain(ReservationEntity entity, List<Long> seatIds) {
-        return Reservation.builder()
-                .id(entity.getId())
-                .userId(entity.getUserId())
-                .guestId(entity.getGuestId())
-                .screeningId(entity.getScreeningId())
-                .reservationNumber(entity.getReservationNumber())
-                .status(entity.getStatus())
-                .totalPrice(entity.getTotalPrice())
-                .createdAt(entity.getCreatedAt())
-                .seatIds(seatIds)
-                .build();
+        return Reservation.restore(
+                entity.getId(),
+                entity.getUserId(),
+                entity.getGuestId(),
+                entity.getScreeningId(),
+                entity.getReservationNumber(),
+                entity.getPaymentId(),
+                entity.getStatus(),
+                entity.getTotalPrice(),
+                seatIds,
+                entity.getCreatedAt()
+        );
     }
 
     // Domain → Entity
@@ -31,6 +32,7 @@ public class ReservationPersistenceMapper {
                     domain.getGuestId(),
                     domain.getScreeningId(),
                     domain.getReservationNumber(),
+                    domain.getPaymentId(),
                     domain.getStatus(),
                     domain.getTotalPrice()
             );
@@ -39,6 +41,7 @@ public class ReservationPersistenceMapper {
                 domain.getUserId(),
                 domain.getScreeningId(),
                 domain.getReservationNumber(),
+                domain.getPaymentId(),
                 domain.getStatus(),
                 domain.getTotalPrice()
         );

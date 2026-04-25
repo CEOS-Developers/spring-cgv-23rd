@@ -16,4 +16,13 @@ public class Guest {
     private String phone;
     private LocalDate birth;
     private String password;
+
+    public static Guest createGuest(String name, String phone, LocalDate birth, String encodedPassword) {
+        return Guest.builder()
+                .name(name)
+                .phone(phone)
+                .birth(birth)
+                .password(encodedPassword)
+                .build();
+    }
 }

@@ -21,6 +21,16 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 100
 
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+
+pg:
+  base-url: ${PG_BASE_URL}
+  store-id: ${PG_STORE_ID}
+  api-secret: ${PG_API_SECRET}
+
 jwt:
   secret: ${JWT_SECRET_KEY}
   access-token-expiration: ${JWT_ACCESSTOKEN_EXPIRATION}

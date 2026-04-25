@@ -9,7 +9,8 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "reservation", indexes = {
-        @Index(name = "idx_reservation_screening_status", columnList = "screening_id, status")
+        @Index(name = "idx_reservation_screening_status", columnList = "screening_id, status"),
+        @Index(name = "uk_reservation_payment_id", columnList = "payment_id", unique = true)
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -32,6 +33,9 @@ public class ReservationEntity extends BaseEntity {
     @Column(name = "reservation_number", nullable = false, unique = true)
     private String reservationNumber;
 
+    @Column(name = "payment_id")
+    private String paymentId;
+
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private ReservationStatus status;
@@ -41,23 +45,27 @@ public class ReservationEntity extends BaseEntity {
 
 
     private ReservationEntity(Long userId, Long guestId, Long screeningId,
-                              String reservationNumber, ReservationStatus status, Integer totalPrice) {
+                              String reservationNumber, String paymentId,
+                              ReservationStatus status, Integer totalPrice) {
         this.userId = userId;
         this.guestId = guestId;
         this.screeningId = screeningId;
         this.reservationNumber = reservationNumber;
+        this.paymentId = paymentId;
         this.status = status;
         this.totalPrice = totalPrice;
     }
 
     public static ReservationEntity createForUser(Long userId, Long screeningId,
-                                                  String reservationNumber, ReservationStatus status, Integer totalPrice) {
-        return new ReservationEntity(userId, null, screeningId, reservationNumber, status, totalPrice);
+                                                  String reservationNumber, String paymentId,
+                                                  ReservationStatus status, Integer totalPrice) {
+        return new ReservationEntity(userId, null, screeningId, reservationNumber, paymentId, status, totalPrice);
     }
 
     public static ReservationEntity createForGuest(Long guestId, Long screeningId,
-                                                   String reservationNumber, ReservationStatus status, Integer totalPrice) {
-        return new ReservationEntity(null, guestId, screeningId, reservationNumber, status, totalPrice);
+                                                   String reservationNumber, String paymentId,
+                                                   ReservationStatus status, Integer totalPrice) {
+        return new ReservationEntity(null, guestId, screeningId, reservationNumber, paymentId, status, totalPrice);
     }
 
     public void updateStatus(ReservationStatus status) {
