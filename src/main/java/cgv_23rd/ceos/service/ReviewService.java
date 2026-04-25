@@ -7,7 +7,7 @@ import cgv_23rd.ceos.entity.movie.Review;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
-import cgv_23rd.ceos.repository.MovieRepository;
+import cgv_23rd.ceos.repository.movie.MovieRepository;
 import cgv_23rd.ceos.repository.ReviewRepository;
 import cgv_23rd.ceos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

@@ -9,7 +9,7 @@ import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.repository.TheaterLikeRepository;
-import cgv_23rd.ceos.repository.TheaterRepository;
+import cgv_23rd.ceos.repository.theater.TheaterRepository;
 import cgv_23rd.ceos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;

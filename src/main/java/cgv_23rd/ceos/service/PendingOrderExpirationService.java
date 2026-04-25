@@ -2,9 +2,9 @@ package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
-import cgv_23rd.ceos.repository.FoodOrderRepository;
-import cgv_23rd.ceos.repository.ReservationRepository;
-import cgv_23rd.ceos.repository.ReservationSeatRepository;
+import cgv_23rd.ceos.repository.food.FoodOrderRepository;
+import cgv_23rd.ceos.repository.reservation.ReservationRepository;
+import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

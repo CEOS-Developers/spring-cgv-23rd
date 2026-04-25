@@ -10,7 +10,7 @@ import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.global.jwt.JwtUtil;
-import cgv_23rd.ceos.repository.RefreshTokenRepository;
+import cgv_23rd.ceos.repository.auth.RefreshTokenRepository;
 import cgv_23rd.ceos.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;

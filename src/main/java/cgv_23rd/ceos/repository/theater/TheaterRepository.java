@@ -1,4 +1,4 @@
-package cgv_23rd.ceos.repository;
+package cgv_23rd.ceos.repository.theater;
 
 import cgv_23rd.ceos.entity.enums.Region;
 import cgv_23rd.ceos.entity.theater.Theater;
