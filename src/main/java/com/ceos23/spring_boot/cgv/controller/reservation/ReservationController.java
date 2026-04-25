@@ -28,8 +28,7 @@ public class ReservationController {
         Reservation reservation = reservationService.createReservation(
                 userDetails.getUserId(),
                 request.screeningId(),
-                request.seatTemplateIds(),
-                request.paymentId()
+                request.seatTemplateIds()
         );
 
         return ReservationResponse.of(
@@ -56,6 +55,19 @@ public class ReservationController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Reservation reservation = reservationService.getReservation(reservationId, userDetails.getUserId());
+
+        return ReservationResponse.of(
+                reservation,
+                reservationService.getReservationSeats(reservation)
+        );
+    }
+
+    @PostMapping("/{reservationId}/confirm-payment")
+    public ReservationResponse confirmPayment(
+            @PathVariable Long reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Reservation reservation = reservationService.confirmPayment(reservationId, userDetails.getUserId());
 
         return ReservationResponse.of(
                 reservation,

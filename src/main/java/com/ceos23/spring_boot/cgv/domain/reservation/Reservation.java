@@ -34,6 +34,9 @@ public class Reservation {
     @Column(nullable = false)
     private LocalDateTime reservedAt;
 
+    @Column
+    private LocalDateTime expiresAt;
+
     @Column(name = "payment_id", nullable = false, unique = true, updatable = false, length = 100)
     private String paymentId;
 
@@ -45,19 +48,57 @@ public class Reservation {
     @JoinColumn(name = "screening_id", nullable = false)
     private Screening screening;
 
-    public Reservation(User user, Screening screening, String paymentId) {
+    public Reservation(User user, Screening screening, String paymentId, LocalDateTime expiresAt) {
         this.user = user;
         this.screening = screening;
         this.paymentId = paymentId;
-        this.status = ReservationStatus.RESERVED;
+        this.status = ReservationStatus.PENDING_PAYMENT;
         this.reservedAt = LocalDateTime.now();
+        this.expiresAt = expiresAt;
     }
 
-    public void cancel() {
+    public void confirmPayment(LocalDateTime now) {
+        if (status == ReservationStatus.CONFIRMED) {
+            throw new ConflictException(ErrorCode.ALREADY_CONFIRMED_RESERVATION);
+        }
+
         if (status == ReservationStatus.CANCELED) {
             throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
         }
 
+        if (status == ReservationStatus.EXPIRED || isExpired(now)) {
+            this.status = ReservationStatus.EXPIRED;
+            throw new ConflictException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
+        }
+
+        this.status = ReservationStatus.CONFIRMED;
+        this.expiresAt = null;
+    }
+
+    public void cancel(LocalDateTime now) {
+        if (status == ReservationStatus.CANCELED) {
+            throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
+        if (status == ReservationStatus.EXPIRED || isExpired(now)) {
+            this.status = ReservationStatus.EXPIRED;
+            throw new ConflictException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
+        }
+
         this.status = ReservationStatus.CANCELED;
+        this.expiresAt = null;
+    }
+
+    public boolean expire(LocalDateTime now) {
+        if (status != ReservationStatus.PENDING_PAYMENT || !isExpired(now)) {
+            return false;
+        }
+
+        this.status = ReservationStatus.EXPIRED;
+        return true;
+    }
+
+    public boolean isExpired(LocalDateTime now) {
+        return expiresAt != null && !expiresAt.isAfter(now);
     }
 }

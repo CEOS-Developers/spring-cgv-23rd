@@ -9,7 +9,7 @@ public record PaymentResponse(
         String orderName,
         Long amount,
         String detail,
-        LocalDateTime paidAt
+        LocalDateTime requestedAt
 ) {
     public static PaymentResponse from(PaymentLog paymentLog) {
         return new PaymentResponse(

@@ -17,9 +17,11 @@ import com.ceos23.spring_boot.cgv.repository.reservation.ReservationSeatReposito
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
 import com.ceos23.spring_boot.cgv.service.payment.PaymentCreateCommand;
 import com.ceos23.spring_boot.cgv.service.payment.PaymentService;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReservationService {
 
     private static final long STANDARD_TICKET_PRICE = 14_000L;
+    private static final long PAYMENT_HOLD_MINUTES = 5L;
 
     private final UserRepository userRepository;
     private final ScreeningRepository screeningRepository;
@@ -44,49 +47,78 @@ public class ReservationService {
     public Reservation createReservation(
             Long userId,
             Long screeningId,
-            List<Long> seatTemplateIds,
-            String paymentId
+            List<Long> seatTemplateIds
     ) {
+        expireOverdueReservations();
         validateSeatRequest(seatTemplateIds);
 
+        LocalDateTime now = LocalDateTime.now();
         User user = findUserById(userId);
         Screening screening = findScreeningByIdWithLock(screeningId);
         List<SeatTemplate> seatTemplates = findSeatTemplatesByIds(seatTemplateIds);
 
         validateSeatBelongsToScreening(screening, seatTemplates);
-        validateAlreadyReserved(screening, seatTemplates);
+        validateAlreadyReserved(screening, seatTemplates, now);
 
-        paymentService.requestPayment(createPaymentCommand(paymentId, screening, seatTemplates));
-
-        Reservation reservation = reservationRepository.save(new Reservation(user, screening, paymentId));
+        String paymentId = generatePaymentId();
+        Reservation reservation = reservationRepository.save(
+                new Reservation(user, screening, paymentId, now.plusMinutes(PAYMENT_HOLD_MINUTES))
+        );
         saveReservationSeats(reservation, screening, seatTemplates);
+        paymentService.startPayment(createPaymentCommand(paymentId, screening, seatTemplates));
 
         return reservation;
     }
 
+    @Transactional
     public List<Reservation> getReservations(Long userId) {
+        expireOverdueReservations();
         findUserById(userId);
         return reservationRepository.findAllByUserId(userId);
     }
 
+    @Transactional
     public Reservation getReservation(Long reservationId, Long userId) {
+        expireOverdueReservations();
         return findReservationByIdAndUserId(reservationId, userId);
     }
 
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
+        expireOverdueReservations();
         Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
-
-        if (reservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
-        }
-
+        reservation.cancel(LocalDateTime.now());
         paymentService.cancelPayment(reservation.getPaymentId());
-        reservation.cancel();
+        releaseReservationSeats(reservation);
+    }
+
+    @Transactional
+    public Reservation confirmPayment(Long reservationId, Long userId) {
+        expireOverdueReservations();
+        Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
+        reservation.confirmPayment(LocalDateTime.now());
+        paymentService.completePayment(reservation.getPaymentId());
+        return reservation;
     }
 
     public List<ReservationSeat> getReservationSeats(Reservation reservation) {
         return reservationSeatRepository.findAllByReservation(reservation);
+    }
+
+    @Transactional
+    public void expireOverdueReservations() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Reservation> overdueReservations = reservationRepository.findAllByStatusAndExpiresAtBefore(
+                ReservationStatus.PENDING_PAYMENT,
+                now
+        );
+
+        for (Reservation reservation : overdueReservations) {
+            if (reservation.expire(now)) {
+                paymentService.expirePayment(reservation.getPaymentId());
+                releaseReservationSeats(reservation);
+            }
+        }
     }
 
     private void validateSeatRequest(List<Long> seatTemplateIds) {
@@ -161,6 +193,10 @@ public class ReservationService {
         return "screeningId=" + screening.getId() + ", seats=" + seatNumbers;
     }
 
+    private String generatePaymentId() {
+        return UUID.randomUUID().toString();
+    }
+
     private List<ReservationSeat> createReservationSeats(
             Reservation reservation,
             Screening screening,
@@ -185,16 +221,27 @@ public class ReservationService {
         }
     }
 
-    private void validateAlreadyReserved(Screening screening, List<SeatTemplate> seatTemplates) {
+    private void validateAlreadyReserved(
+            Screening screening,
+            List<SeatTemplate> seatTemplates,
+            LocalDateTime now
+    ) {
         List<Long> reservedSeatTemplateIds =
-                reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
+                reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
                         screening,
                         seatTemplates,
-                        ReservationStatus.RESERVED
+                        ReservationStatus.CONFIRMED,
+                        ReservationStatus.PENDING_PAYMENT,
+                        now
                 );
 
         if (!reservedSeatTemplateIds.isEmpty()) {
             throw new ConflictException(ErrorCode.ALREADY_RESERVED_SEAT);
         }
+    }
+
+    private void releaseReservationSeats(Reservation reservation) {
+        reservationSeatRepository.deleteAllByReservation(reservation);
+        reservationSeatRepository.flush();
     }
 }

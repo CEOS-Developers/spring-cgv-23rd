@@ -20,7 +20,7 @@ public class PaymentService {
     private final ReservationRepository reservationRepository;
 
     @Transactional
-    public PaymentLog requestPayment(PaymentCreateCommand command) {
+    public PaymentLog startPayment(PaymentCreateCommand command) {
         try {
             return paymentLogRepository.saveAndFlush(new PaymentLog(
                     command.paymentId(),
@@ -34,10 +34,22 @@ public class PaymentService {
     }
 
     @Transactional
+    public PaymentLog completePayment(String paymentId) {
+        PaymentLog paymentLog = findPaymentById(paymentId);
+        paymentLog.complete();
+        return paymentLog;
+    }
+
+    @Transactional
     public PaymentLog cancelPayment(String paymentId) {
         PaymentLog paymentLog = findPaymentById(paymentId);
         paymentLog.cancel();
         return paymentLog;
+    }
+
+    @Transactional
+    public void expirePayment(String paymentId) {
+        findPaymentById(paymentId).expire();
     }
 
     public PaymentLog getPayment(String paymentId, Long userId) {

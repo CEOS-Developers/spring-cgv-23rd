@@ -52,14 +52,32 @@ public class PaymentLog extends BaseEntity {
         this.orderName = orderName;
         this.amount = amount;
         this.detail = detail;
+        this.status = PaymentStatus.READY;
+    }
+
+    public void complete() {
+        if (status != PaymentStatus.READY) {
+            throw new ConflictException(ErrorCode.PAYMENT_NOT_COMPLETABLE);
+        }
+
         this.status = PaymentStatus.PAID;
     }
 
     public void cancel() {
-        if (status != PaymentStatus.PAID) {
+        if (status == PaymentStatus.EXPIRED) {
+            throw new ConflictException(ErrorCode.PAYMENT_WINDOW_EXPIRED);
+        }
+
+        if (status != PaymentStatus.READY && status != PaymentStatus.PAID) {
             throw new ConflictException(ErrorCode.PAYMENT_NOT_CANCELLABLE);
         }
 
         this.status = PaymentStatus.CANCELLED;
+    }
+
+    public void expire() {
+        if (status == PaymentStatus.READY) {
+            this.status = PaymentStatus.EXPIRED;
+        }
     }
 }

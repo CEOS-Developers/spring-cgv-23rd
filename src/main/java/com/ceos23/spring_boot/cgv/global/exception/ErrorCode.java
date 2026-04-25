@@ -23,8 +23,11 @@ public enum ErrorCode {
     INVALID_SEAT_FOR_SCREENING(HttpStatus.BAD_REQUEST, "RESERVATION_402", "해당 상영관에서 선택할 수 없는 좌석입니다."),
     ALREADY_RESERVED_SEAT(HttpStatus.CONFLICT, "RESERVATION_409", "이미 예매된 좌석입니다."),
     ALREADY_CANCELED_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_410", "이미 취소된 예매입니다."),
+    ALREADY_CONFIRMED_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_411", "이미 결제가 완료된 예매입니다."),
+    PAYMENT_WINDOW_EXPIRED(HttpStatus.CONFLICT, "RESERVATION_412", "결제 가능 시간이 만료되었습니다."),
     DUPLICATE_PAYMENT_ID(HttpStatus.CONFLICT, "PAYMENT_409", "이미 사용 중인 paymentId입니다."),
     PAYMENT_NOT_CANCELLABLE(HttpStatus.CONFLICT, "PAYMENT_410", "현재 상태에서는 결제를 취소할 수 없습니다."),
+    PAYMENT_NOT_COMPLETABLE(HttpStatus.CONFLICT, "PAYMENT_411", "현재 상태에서는 결제를 완료할 수 없습니다."),
     INSUFFICIENT_MENU_STOCK(HttpStatus.BAD_REQUEST, "STORE_STOCK_400", "구매 가능한 재고가 부족합니다.");
 
     private final HttpStatus httpStatus;

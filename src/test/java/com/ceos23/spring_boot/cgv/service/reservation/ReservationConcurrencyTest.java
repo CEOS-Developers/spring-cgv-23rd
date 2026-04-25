@@ -10,6 +10,8 @@ import com.ceos23.spring_boot.cgv.domain.cinema.SeatTemplate;
 import com.ceos23.spring_boot.cgv.domain.movie.Movie;
 import com.ceos23.spring_boot.cgv.domain.movie.Screening;
 import com.ceos23.spring_boot.cgv.domain.payment.PaymentLog;
+import com.ceos23.spring_boot.cgv.domain.payment.PaymentStatus;
+import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
 import com.ceos23.spring_boot.cgv.domain.reservation.ReservationSeat;
 import com.ceos23.spring_boot.cgv.domain.reservation.ReservationStatus;
 import com.ceos23.spring_boot.cgv.domain.user.User;
@@ -92,7 +94,7 @@ class ReservationConcurrencyTest {
     }
 
     @Test
-    @DisplayName("only one request can reserve the same seat at the same time")
+    @DisplayName("only one request can start payment for the same seat at the same time")
     void createReservation_allowsOnlyOneReservationForSameSeat() throws Exception {
         User user1 = userRepository.save(new User("user1", "user1@example.com", "password", UserRole.USER));
         User user2 = userRepository.save(new User("user2", "user2@example.com", "password", UserRole.USER));
@@ -116,11 +118,11 @@ class ReservationConcurrencyTest {
         AtomicInteger conflictCount = new AtomicInteger();
 
         Future<Void> firstRequest = executorService.submit(
-                reserveSeatTask(user1.getId(), screening.getId(), seatTemplate.getId(), "pay-user1",
+                reserveSeatTask(user1.getId(), screening.getId(), seatTemplate.getId(),
                         readyLatch, startLatch, successCount, conflictCount)
         );
         Future<Void> secondRequest = executorService.submit(
-                reserveSeatTask(user2.getId(), screening.getId(), seatTemplate.getId(), "pay-user2",
+                reserveSeatTask(user2.getId(), screening.getId(), seatTemplate.getId(),
                         readyLatch, startLatch, successCount, conflictCount)
         );
 
@@ -132,25 +134,30 @@ class ReservationConcurrencyTest {
         executorService.shutdown();
 
         List<ReservationSeat> reservationSeats = reservationSeatRepository.findAll();
+        List<Reservation> reservations = reservationRepository.findAll();
         List<PaymentLog> paymentLogs = paymentLogRepository.findAll();
-        List<Long> reservedSeatIds = reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
+        List<Long> activeSeatIds = reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
                 screening,
                 List.of(seatTemplate),
-                ReservationStatus.RESERVED
+                ReservationStatus.CONFIRMED,
+                ReservationStatus.PENDING_PAYMENT,
+                LocalDateTime.now()
         );
 
         assertThat(successCount.get()).isEqualTo(1);
         assertThat(conflictCount.get()).isEqualTo(1);
         assertThat(reservationSeats).hasSize(1);
+        assertThat(reservations).hasSize(1);
+        assertThat(reservations.get(0).getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
         assertThat(paymentLogs).hasSize(1);
-        assertThat(reservedSeatIds).containsExactly(seatTemplate.getId());
+        assertThat(paymentLogs.get(0).getStatus()).isEqualTo(PaymentStatus.READY);
+        assertThat(activeSeatIds).containsExactly(seatTemplate.getId());
     }
 
     private Callable<Void> reserveSeatTask(
             Long userId,
             Long screeningId,
             Long seatTemplateId,
-            String paymentId,
             CountDownLatch readyLatch,
             CountDownLatch startLatch,
             AtomicInteger successCount,
@@ -161,7 +168,7 @@ class ReservationConcurrencyTest {
             assertThat(startLatch.await(5, TimeUnit.SECONDS)).isTrue();
 
             try {
-                reservationService.createReservation(userId, screeningId, List.of(seatTemplateId), paymentId);
+                reservationService.createReservation(userId, screeningId, List.of(seatTemplateId));
                 successCount.incrementAndGet();
             } catch (ConflictException exception) {
                 conflictCount.incrementAndGet();

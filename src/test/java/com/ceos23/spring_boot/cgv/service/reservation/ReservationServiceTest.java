@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.ceos23.spring_boot.cgv.domain.cinema.Cinema;
@@ -103,34 +105,42 @@ class ReservationServiceTest {
 
         seatTemplate2 = new SeatTemplate("A", 2, seatLayout);
         ReflectionTestUtils.setField(seatTemplate2, "id", 2L);
+
+        lenient().when(reservationRepository.findAllByStatusAndExpiresAtBefore(
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
     }
 
     @Test
-    @DisplayName("create reservation success")
+    @DisplayName("create reservation success creates pending payment hold")
     void createReservation_success() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L, 2L)))
                 .willReturn(List.of(seatTemplate1, seatTemplate2));
-        given(reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
-                screening,
-                List.of(seatTemplate1, seatTemplate2),
-                ReservationStatus.RESERVED
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1, seatTemplate2)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
         )).willReturn(List.of());
-        given(paymentService.requestPayment(any(PaymentCreateCommand.class)))
+        given(paymentService.startPayment(any(PaymentCreateCommand.class)))
                 .willReturn(new PaymentLog(PAYMENT_ID, "Movie reservation", 28_000L, "screeningId=1"));
         given(reservationRepository.save(any(Reservation.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        Reservation result = reservationService.createReservation(1L, 1L, List.of(1L, 2L), PAYMENT_ID);
+        Reservation result = reservationService.createReservation(1L, 1L, List.of(1L, 2L));
 
         assertThat(result).isNotNull();
         assertThat(result.getUser()).isEqualTo(user);
         assertThat(result.getScreening()).isEqualTo(screening);
-        assertThat(result.getPaymentId()).isEqualTo(PAYMENT_ID);
-        assertThat(result.getStatus()).isEqualTo(ReservationStatus.RESERVED);
+        assertThat(result.getPaymentId()).isNotBlank();
+        assertThat(result.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
+        assertThat(result.getExpiresAt()).isAfter(result.getReservedAt());
 
-        then(paymentService).should().requestPayment(any(PaymentCreateCommand.class));
+        then(paymentService).should().startPayment(any(PaymentCreateCommand.class));
         then(reservationRepository).should().save(any(Reservation.class));
         then(reservationSeatRepository).should().saveAllAndFlush(anyList());
     }
@@ -138,7 +148,7 @@ class ReservationServiceTest {
     @Test
     @DisplayName("create reservation fails when seats are empty")
     void createReservation_fail_emptySeats() {
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of()))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(paymentService);
     }
@@ -148,7 +158,7 @@ class ReservationServiceTest {
     void createReservation_fail_userNotFound() {
         given(userRepository.findById(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(NotFoundException.class);
         verifyNoInteractions(paymentService);
     }
@@ -159,7 +169,7 @@ class ReservationServiceTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(NotFoundException.class);
         verifyNoInteractions(paymentService);
     }
@@ -167,7 +177,7 @@ class ReservationServiceTest {
     @Test
     @DisplayName("create reservation fails when seat request is duplicated")
     void createReservation_fail_duplicateSeatRequest() {
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L, 1L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L, 1L)))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(paymentService);
     }
@@ -179,13 +189,15 @@ class ReservationServiceTest {
         given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L)))
                 .willReturn(List.of(seatTemplate1));
-        given(reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
-                screening,
-                List.of(seatTemplate1),
-                ReservationStatus.RESERVED
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
         )).willReturn(List.of(1L));
 
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(ConflictException.class);
         verifyNoInteractions(paymentService);
     }
@@ -203,36 +215,38 @@ class ReservationServiceTest {
         given(seatTemplateRepository.findAllById(List.of(3L)))
                 .willReturn(List.of(invalidSeat));
 
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(3L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(3L)))
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("create reservation fails when payment id is duplicated")
-    void createReservation_fail_duplicatePaymentId() {
+    @DisplayName("create reservation fails when payment hold creation fails")
+    void createReservation_fail_paymentStartConflict() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L)))
                 .willReturn(List.of(seatTemplate1));
-        given(reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
-                screening,
-                List.of(seatTemplate1),
-                ReservationStatus.RESERVED
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
         )).willReturn(List.of());
-        given(paymentService.requestPayment(any(PaymentCreateCommand.class)))
+        given(paymentService.startPayment(any(PaymentCreateCommand.class)))
                 .willThrow(new ConflictException(com.ceos23.spring_boot.cgv.global.exception.ErrorCode.DUPLICATE_PAYMENT_ID));
+        given(reservationRepository.save(any(Reservation.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
 
-        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L), PAYMENT_ID))
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(ConflictException.class);
-
-        then(reservationRepository).shouldHaveNoInteractions();
     }
 
     @Test
     @DisplayName("get reservations uses repository query by user id")
     void getReservations_success() {
-        Reservation reservation = new Reservation(user, screening, PAYMENT_ID);
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(reservationRepository.findAllByUserId(1L)).willReturn(List.of(reservation));
 
@@ -243,24 +257,56 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("cancel reservation success")
-    void cancelReservation_success() {
-        Reservation reservation = new Reservation(user, screening, PAYMENT_ID);
+    @DisplayName("confirm payment success")
+    void confirmPayment_success() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        PaymentLog paymentLog = new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1");
+        paymentLog.complete();
         given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
-        given(paymentService.cancelPayment(PAYMENT_ID))
-                .willReturn(new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1"));
+        given(paymentService.completePayment(PAYMENT_ID)).willReturn(paymentLog);
+
+        Reservation result = reservationService.confirmPayment(1L, 1L);
+
+        assertThat(result.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(result.getExpiresAt()).isNull();
+        then(paymentService).should().completePayment(PAYMENT_ID);
+    }
+
+    @Test
+    @DisplayName("confirm payment fails when payment window is expired")
+    void confirmPayment_fail_expired() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().minusMinutes(1));
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+
+        assertThatThrownBy(() -> reservationService.confirmPayment(1L, 1L))
+                .isInstanceOf(ConflictException.class);
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    @DisplayName("cancel reservation success releases seat hold")
+    void cancelReservation_success() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        reservation.confirmPayment(LocalDateTime.now());
+        PaymentLog paymentLog = new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1");
+        paymentLog.complete();
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+        given(paymentService.cancelPayment(PAYMENT_ID)).willReturn(paymentLog);
 
         reservationService.cancelReservation(1L, 1L);
 
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
         then(paymentService).should().cancelPayment(PAYMENT_ID);
+        then(reservationSeatRepository).should().deleteAllByReservation(reservation);
+        then(reservationSeatRepository).should().flush();
     }
 
     @Test
     @DisplayName("cancel reservation fails when already canceled")
     void cancelReservation_fail_alreadyCanceled() {
-        Reservation reservation = new Reservation(user, screening, PAYMENT_ID);
-        reservation.cancel();
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        reservation.cancel(LocalDateTime.now());
         given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
 
         assertThatThrownBy(() -> reservationService.cancelReservation(1L, 1L))

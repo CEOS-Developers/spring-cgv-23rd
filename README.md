@@ -99,32 +99,34 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 ### 참고한 포인트
 
 - 결제는 `paymentId`로 추적합니다.
-- 결제 상태는 `PAID`, `FAILED`, `CANCELLED` 같은 상태값으로 관리합니다.
+- 결제 상태는 `READY`, `PAID`, `FAILED`, `CANCELLED`, `EXPIRED` 같은 상태값으로 관리합니다.
 - 도메인 로직은 결제 내부 구현을 직접 알지 않고, 결제 서비스만 호출합니다.
-- 취소 시 결제 상태도 함께 취소되도록 묶습니다.
+- 취소와 만료 시 결제 상태도 함께 정리되도록 묶습니다.
 
 ### 어떤 케이스에 적용했는가
 
 현재 프로젝트에서는 `Reservation`이 가장 자연스럽게 결제와 연결됩니다.
 
-- 티켓 예매는 실제 결제가 먼저 성립되어야 완료되는 흐름입니다.
-- 이미 `cancelReservation()`이 존재해서 "예매 취소 -> 결제 취소" 흐름을 붙이기 좋았습니다.
+- 티켓 예매는 좌석을 고른 뒤 결제창에 진입하면서 임시 선점이 되고, 결제가 완료되면 최종 확정되는 흐름입니다.
+- 따라서 "좌석 홀드 -> 결제 완료 -> 예매 확정"과 "미결제 만료 -> 좌석 해제"를 함께 다루기 좋은 도메인이 `Reservation`이었습니다.
 - 반면 `StorePurchase`는 현재 취소 도메인이 아직 없어서, 먼저 예매 케이스를 완성도 있게 붙이는 쪽이 더 적절하다고 판단했습니다.
 
 ### 실제 적용한 방식
 
-- `ReservationCreateRequest`에 `paymentId`를 추가했습니다.
-- 예매 생성 시 `PaymentService.requestPayment()`를 먼저 호출해 결제 로그를 남기고, 성공하면 예매와 좌석을 저장합니다.
-- `Reservation`은 자신이 어떤 결제와 연결되었는지 알 수 있도록 `paymentId`를 저장합니다.
-- 예매 취소 시 `PaymentService.cancelPayment()`를 먼저 호출하고, 그 다음 예매 상태를 `CANCELED`로 변경합니다.
+- `POST /api/reservations`를 호출하면 `PENDING_PAYMENT` 상태의 예매를 생성하고, 좌석을 5분 동안 임시 선점합니다.
+- 이때 서버가 `paymentId`를 발급하고, 결제 로그는 `READY` 상태로 생성됩니다.
+- 사용자가 결제를 완료하면 `POST /api/reservations/{reservationId}/confirm-payment`을 호출해 예매를 `CONFIRMED`, 결제를 `PAID`로 바꿉니다.
+- 사용자가 취소하면 예매는 `CANCELED`, 결제는 `CANCELLED`로 바꾸고 좌석을 다시 풀어줍니다.
+- 5분 안에 결제를 완료하지 못하면 스케줄러와 만료 정리 로직이 예매를 `EXPIRED`, 결제를 `EXPIRED`로 바꾸고 좌석 점유를 해제합니다.
 - 결제 내역 확인용으로 `GET /api/payments/{paymentId}` API를 추가했습니다.
 
 ### 현재 결제 흐름
 
-1. 클라이언트가 `paymentId`를 포함해서 예매 요청을 보냅니다.
-2. 서버가 결제 로그를 `PAID` 상태로 생성합니다.
-3. 결제가 성공하면 예매와 좌석 정보를 저장합니다.
-4. 사용자가 예매를 취소하면 결제 로그도 `CANCELLED`로 변경합니다.
+1. 클라이언트가 좌석 선택 후 예매 요청을 보냅니다.
+2. 서버는 `PENDING_PAYMENT` 예약과 `READY` 결제 로그를 만들고, 좌석을 5분 동안 선점합니다.
+3. 사용자가 결제를 완료하면 예약은 `CONFIRMED`, 결제는 `PAID`로 확정됩니다.
+4. 사용자가 취소하면 좌석을 해제하고 예약은 `CANCELED`, 결제는 `CANCELLED`로 변경합니다.
+5. 5분 안에 결제가 완료되지 않으면 예약은 `EXPIRED`, 결제는 `EXPIRED`가 되며 좌석이 다시 예매 가능 상태로 돌아갑니다.
 
 ### Feign Client / HTTP Client 비교
 
@@ -143,19 +145,21 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 #### 3. 현재 프로젝트에서의 선택
 
 - 지금은 같은 애플리케이션 안에서 동작하는 과제용 결제 시스템이므로, 실제 HTTP 호출 대신 `PaymentService`를 직접 연동했습니다.
-- 이 방식은 테스트가 쉽고, 외부 서버 실행 없이 예매/취소/결제 흐름을 한 번에 검증할 수 있다는 장점이 있습니다.
+- 이 방식은 테스트가 쉽고, 외부 서버 실행 없이 `좌석 선점`, `결제 완료`, `미결제 만료`, `취소` 흐름을 한 번에 검증할 수 있다는 장점이 있습니다.
 - 이후 결제 서버를 별도 서비스로 분리한다면, 현재 스택에서는 `RestClient` 또는 Spring HTTP Interface 방식이 가장 자연스럽다고 판단했습니다.
 
 ### 한계와 다음 개선 방향
 
 - 현재 결제는 외부 PG를 실제 호출하는 구조가 아니라, 같은 DB 안에서 결제 로그를 관리하는 mock payment system입니다.
 - 외부 결제망과 연동하려면 timeout, retry, idempotency key, 보상 트랜잭션 같은 항목을 추가로 고려해야 합니다.
+- 만료 스케줄러는 1분 주기로 동작하므로, 실제 서비스처럼 정확한 타이머 이벤트를 쓰는 구조로 확장할 여지가 있습니다.
 - `StorePurchase`에도 취소 도메인이 생기면 같은 결제 모듈을 재사용해서 커머스 케이스로 확장할 수 있습니다.
 
 ### 검증
 
-- `ReservationPaymentFlowTest`에서 예매 생성 시 결제가 `PAID`로 저장되고, 예매 취소 시 결제 상태도 `CANCELLED`로 바뀌는 것을 확인했습니다.
-- `ReservationConcurrencyTest`에서도 같은 좌석 경쟁 상황에서 결제 로그가 한 건만 남는 것을 확인했습니다.
+- `ReservationPaymentFlowTest`에서 예매 생성 시 `PENDING_PAYMENT/READY`, 결제 완료 시 `CONFIRMED/PAID`, 만료 시 `EXPIRED/EXPIRED`, 취소 시 `CANCELED/CANCELLED`로 바뀌는 것을 확인했습니다.
+- `ReservationPaymentFlowTest`에서 만료된 좌석이 다시 예매 가능해지는 것도 검증했습니다.
+- `ReservationConcurrencyTest`에서도 같은 좌석 경쟁 상황에서 한 요청만 좌석 홀드에 성공하는 것을 확인했습니다.
 
 <details>
 <summary><h2>CGV 클론 코딩 : 찜, 구매</h2></summary>
