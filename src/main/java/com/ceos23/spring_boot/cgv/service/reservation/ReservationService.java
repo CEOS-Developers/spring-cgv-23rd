@@ -15,27 +15,38 @@ import com.ceos23.spring_boot.cgv.repository.movie.ScreeningRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationSeatRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentCreateCommand;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ReservationService {
 
+    private static final long STANDARD_TICKET_PRICE = 14_000L;
+
     private final UserRepository userRepository;
     private final ScreeningRepository screeningRepository;
     private final SeatTemplateRepository seatTemplateRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
+    private final PaymentService paymentService;
 
     @Transactional
-    public Reservation createReservation(Long userId, Long screeningId, List<Long> seatTemplateIds) {
+    public Reservation createReservation(
+            Long userId,
+            Long screeningId,
+            List<Long> seatTemplateIds,
+            String paymentId
+    ) {
         validateSeatRequest(seatTemplateIds);
 
         User user = findUserById(userId);
@@ -45,7 +56,9 @@ public class ReservationService {
         validateSeatBelongsToScreening(screening, seatTemplates);
         validateAlreadyReserved(screening, seatTemplates);
 
-        Reservation reservation = reservationRepository.save(new Reservation(user, screening));
+        paymentService.requestPayment(createPaymentCommand(paymentId, screening, seatTemplates));
+
+        Reservation reservation = reservationRepository.save(new Reservation(user, screening, paymentId));
         saveReservationSeats(reservation, screening, seatTemplates);
 
         return reservation;
@@ -63,7 +76,14 @@ public class ReservationService {
 
     @Transactional
     public void cancelReservation(Long reservationId) {
-        findReservationById(reservationId).cancel();
+        Reservation reservation = findReservationById(reservationId);
+
+        if (reservation.getStatus() == ReservationStatus.CANCELED) {
+            throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
+        paymentService.cancelPayment(reservation.getPaymentId());
+        reservation.cancel();
     }
 
     public List<ReservationSeat> getReservationSeats(Reservation reservation) {
@@ -119,6 +139,27 @@ public class ReservationService {
                 throw new BadRequestException(ErrorCode.INVALID_SEAT_FOR_SCREENING);
             }
         }
+    }
+
+    private PaymentCreateCommand createPaymentCommand(
+            String paymentId,
+            Screening screening,
+            List<SeatTemplate> seatTemplates
+    ) {
+        return new PaymentCreateCommand(
+                paymentId,
+                screening.getMovie().getTitle() + " reservation",
+                seatTemplates.size() * STANDARD_TICKET_PRICE,
+                createSeatDetail(screening, seatTemplates)
+        );
+    }
+
+    private String createSeatDetail(Screening screening, List<SeatTemplate> seatTemplates) {
+        String seatNumbers = seatTemplates.stream()
+                .map(seatTemplate -> seatTemplate.getRowName() + seatTemplate.getColNumber())
+                .collect(Collectors.joining(","));
+
+        return "screeningId=" + screening.getId() + ", seats=" + seatNumbers;
     }
 
     private List<ReservationSeat> createReservationSeats(

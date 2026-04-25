@@ -34,6 +34,9 @@ public class Reservation {
     @Column(nullable = false)
     private LocalDateTime reservedAt;
 
+    @Column(name = "payment_id", nullable = false, unique = true, updatable = false, length = 100)
+    private String paymentId;
+
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -42,9 +45,10 @@ public class Reservation {
     @JoinColumn(name = "screening_id", nullable = false)
     private Screening screening;
 
-    public Reservation(User user, Screening screening) {
+    public Reservation(User user, Screening screening, String paymentId) {
         this.user = user;
         this.screening = screening;
+        this.paymentId = paymentId;
         this.status = ReservationStatus.RESERVED;
         this.reservedAt = LocalDateTime.now();
     }

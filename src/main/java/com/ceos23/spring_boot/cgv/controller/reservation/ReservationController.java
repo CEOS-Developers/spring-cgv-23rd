@@ -23,7 +23,8 @@ public class ReservationController {
         Reservation reservation = reservationService.createReservation(
                 request.userId(),
                 request.screeningId(),
-                request.seatTemplateIds()
+                request.seatTemplateIds(),
+                request.paymentId()
         );
 
         return ReservationResponse.of(
