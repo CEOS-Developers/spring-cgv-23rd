@@ -14,6 +14,8 @@ import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
 import com.ceos23.spring_boot.cgv.domain.reservation.ReservationStatus;
 import com.ceos23.spring_boot.cgv.domain.user.User;
 import com.ceos23.spring_boot.cgv.domain.user.UserRole;
+import com.ceos23.spring_boot.cgv.global.exception.ConflictException;
+import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
 import com.ceos23.spring_boot.cgv.repository.cinema.CinemaRepository;
 import com.ceos23.spring_boot.cgv.repository.cinema.ScreenRepository;
 import com.ceos23.spring_boot.cgv.repository.cinema.SeatLayoutRepository;
@@ -24,6 +26,8 @@ import com.ceos23.spring_boot.cgv.repository.payment.PaymentLogRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationSeatRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentCreateCommand;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentService;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +41,9 @@ class ReservationPaymentFlowTest {
 
     @Autowired
     private ReservationService reservationService;
+
+    @Autowired
+    private PaymentService paymentService;
 
     @Autowired
     private UserRepository userRepository;
@@ -111,7 +118,10 @@ class ReservationPaymentFlowTest {
                 .extracting("status")
                 .isEqualTo(PaymentStatus.PAID);
 
-        reservationService.cancelReservation(reservation.getId());
+        assertThat(paymentService.getPayment("payment-flow-001", user.getId()).getStatus())
+                .isEqualTo(PaymentStatus.PAID);
+
+        reservationService.cancelReservation(reservation.getId(), user.getId());
 
         assertThat(paymentLogRepository.findByPaymentId("payment-flow-001"))
                 .get()
@@ -121,5 +131,57 @@ class ReservationPaymentFlowTest {
                 .get()
                 .extracting("status")
                 .isEqualTo(ReservationStatus.CANCELED);
+    }
+
+    @Test
+    @DisplayName("payment lookup fails when payment belongs to another user")
+    void getPayment_fail_whenUserDoesNotOwnPayment() {
+        User owner = userRepository.save(new User("owner", "owner@example.com", "password", UserRole.USER));
+        User otherUser = userRepository.save(new User("other", "other@example.com", "password", UserRole.USER));
+        Cinema cinema = cinemaRepository.save(new Cinema("CGV Gangnam", "Seoul"));
+        SeatLayout seatLayout = seatLayoutRepository.save(new SeatLayout("General", 3, 3));
+        Screen screen = screenRepository.save(new Screen("1", ScreenType.GENERAL, cinema, seatLayout));
+        Movie movie = movieRepository.save(new Movie("Movie", 120, "12", "Description"));
+        Screening screening = screeningRepository.save(new Screening(
+                LocalDateTime.of(2026, 4, 25, 19, 0),
+                LocalDateTime.of(2026, 4, 25, 21, 0),
+                movie,
+                screen
+        ));
+        SeatTemplate seatTemplate = seatTemplateRepository.save(new SeatTemplate("A", 1, seatLayout));
+
+        reservationService.createReservation(
+                owner.getId(),
+                screening.getId(),
+                List.of(seatTemplate.getId()),
+                "payment-owner-001"
+        );
+
+        assertThat(paymentService.getPayment("payment-owner-001", owner.getId()).getStatus())
+                .isEqualTo(PaymentStatus.PAID);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> paymentService.getPayment("payment-owner-001", otherUser.getId()))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    @DisplayName("duplicate payment id returns conflict")
+    void requestPayment_fail_duplicatePaymentId() {
+        paymentService.requestPayment(new PaymentCreateCommand(
+                "payment-dup-001",
+                "Movie reservation",
+                14_000L,
+                "screeningId=1, seats=A1"
+        ));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> paymentService.requestPayment(
+                        new PaymentCreateCommand(
+                                "payment-dup-001",
+                                "Movie reservation",
+                                14_000L,
+                                "screeningId=1, seats=A1"
+                        )))
+                .isInstanceOf(ConflictException.class);
     }
 }

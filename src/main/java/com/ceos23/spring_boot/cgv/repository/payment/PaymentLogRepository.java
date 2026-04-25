@@ -6,7 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PaymentLogRepository extends JpaRepository<PaymentLog, Long> {
 
-    boolean existsByPaymentId(String paymentId);
-
     Optional<PaymentLog> findByPaymentId(String paymentId);
 }

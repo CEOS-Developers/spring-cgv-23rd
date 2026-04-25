@@ -49,4 +49,8 @@ public class SeatTemplate {
     public boolean belongsTo(Long seatLayoutId) {
         return seatLayout.getId().equals(seatLayoutId);
     }
+
+    public String getSeatNumber() {
+        return rowName + colNumber;
+    }
 }

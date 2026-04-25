@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public record ReservationCreateRequest(
-        @NotNull Long userId,
         @NotNull Long screeningId,
         @NotEmpty List<Long> seatTemplateIds,
         @NotBlank String paymentId

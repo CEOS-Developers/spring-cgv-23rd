@@ -70,13 +70,12 @@ public class ReservationService {
     }
 
     public Reservation getReservation(Long reservationId, Long userId) {
-        return reservationRepository.findByIdAndUserId(reservationId, userId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.RESERVATION_NOT_FOUND));
+        return findReservationByIdAndUserId(reservationId, userId);
     }
 
     @Transactional
-    public void cancelReservation(Long reservationId) {
-        Reservation reservation = findReservationById(reservationId);
+    public void cancelReservation(Long reservationId, Long userId) {
+        Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
 
         if (reservation.getStatus() == ReservationStatus.CANCELED) {
             throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
@@ -116,8 +115,8 @@ public class ReservationService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.SCREENING_NOT_FOUND));
     }
 
-    private Reservation findReservationById(Long reservationId) {
-        return reservationRepository.findById(reservationId)
+    private Reservation findReservationByIdAndUserId(Long reservationId, Long userId) {
+        return reservationRepository.findByIdAndUserId(reservationId, userId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.RESERVATION_NOT_FOUND));
     }
 
@@ -156,7 +155,7 @@ public class ReservationService {
 
     private String createSeatDetail(Screening screening, List<SeatTemplate> seatTemplates) {
         String seatNumbers = seatTemplates.stream()
-                .map(seatTemplate -> seatTemplate.getRowName() + seatTemplate.getColNumber())
+                .map(SeatTemplate::getSeatNumber)
                 .collect(Collectors.joining(","));
 
         return "screeningId=" + screening.getId() + ", seats=" + seatNumbers;

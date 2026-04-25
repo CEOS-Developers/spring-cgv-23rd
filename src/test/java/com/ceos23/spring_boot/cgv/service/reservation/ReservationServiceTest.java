@@ -246,11 +246,11 @@ class ReservationServiceTest {
     @DisplayName("cancel reservation success")
     void cancelReservation_success() {
         Reservation reservation = new Reservation(user, screening, PAYMENT_ID);
-        given(reservationRepository.findById(1L)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
         given(paymentService.cancelPayment(PAYMENT_ID))
                 .willReturn(new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1"));
 
-        reservationService.cancelReservation(1L);
+        reservationService.cancelReservation(1L, 1L);
 
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
         then(paymentService).should().cancelPayment(PAYMENT_ID);
@@ -261,9 +261,9 @@ class ReservationServiceTest {
     void cancelReservation_fail_alreadyCanceled() {
         Reservation reservation = new Reservation(user, screening, PAYMENT_ID);
         reservation.cancel();
-        given(reservationRepository.findById(1L)).willReturn(Optional.of(reservation));
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
 
-        assertThatThrownBy(() -> reservationService.cancelReservation(1L))
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 1L))
                 .isInstanceOf(ConflictException.class);
 
         verifyNoInteractions(paymentService);
@@ -272,9 +272,20 @@ class ReservationServiceTest {
     @Test
     @DisplayName("cancel reservation fails when reservation is missing")
     void cancelReservation_fail_notFound() {
-        given(reservationRepository.findById(1L)).willReturn(Optional.empty());
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> reservationService.cancelReservation(1L))
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 1L))
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    @DisplayName("cancel reservation fails when reservation belongs to another user")
+    void cancelReservation_fail_forbiddenUser() {
+        given(reservationRepository.findByIdAndUserId(1L, 2L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 2L))
                 .isInstanceOf(NotFoundException.class);
 
         verifyNoInteractions(paymentService);
