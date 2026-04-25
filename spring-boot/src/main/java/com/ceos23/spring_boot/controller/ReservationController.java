@@ -2,10 +2,13 @@ package com.ceos23.spring_boot.controller;
 
 import com.ceos23.spring_boot.domain.Reservation;
 import com.ceos23.spring_boot.dto.ReservationRequest;
+import com.ceos23.spring_boot.dto.ReservationResponse;
+import com.ceos23.spring_boot.global.response.SuccessResponse;
 import com.ceos23.spring_boot.service.ReservationService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
@@ -21,24 +24,29 @@ public class ReservationController {
 
     // 🎟 예매
     @PostMapping
-    public Reservation reserve(
+    public ResponseEntity<SuccessResponse<ReservationResponse>> reserve(
             @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody ReservationRequest request
     ) {
         Long userId = Long.parseLong(userDetails.getUsername());
 
-        return reservationService.reserve(
+        Reservation reservation = reservationService.reserve(
                 userId,
                 request.screeningId(),
                 request.seatId()
         );
+
+        ReservationResponse response = ReservationResponse.from(reservation);
+
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));
     }
 
     // ❌ 취소
     @DeleteMapping("/{id}")
-    public void cancel(
+    public ResponseEntity<SuccessResponse<Void>> cancel(
             @PathVariable @Positive(message = "예매 ID는 양수여야 합니다.") Long id
     ) {
         reservationService.cancel(id);
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", null));
     }
 }

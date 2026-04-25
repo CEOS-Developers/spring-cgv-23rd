@@ -35,15 +35,19 @@ public class ItemOrder {
     @OneToMany(mappedBy = "itemOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetail> orderDetails = new ArrayList<>();
 
-    private ItemOrder(User user, Theater theater, Integer totalPrice, LocalDateTime orderedAt) {
+    private ItemOrder(User user, Theater theater, Integer totalPrice) {
         this.user = user;
         this.theater = theater;
         this.totalPrice = totalPrice;
-        this.orderedAt = orderedAt;
     }
 
-    public static ItemOrder of(User user, Theater theater, Integer totalPrice, LocalDateTime orderedAt) {
-        return new ItemOrder(user, theater, totalPrice, orderedAt);
+    public static ItemOrder of(User user, Theater theater, Integer totalPrice) {
+        return new ItemOrder(user, theater, totalPrice);
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.orderedAt = LocalDateTime.now();
     }
 
     public void addOrderDetail(OrderDetail orderDetail) {

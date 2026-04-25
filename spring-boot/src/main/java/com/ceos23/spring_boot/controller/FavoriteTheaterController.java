@@ -13,7 +13,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/favorite-theaters")
+@RequestMapping("/api/favorite-theaters")
 public class FavoriteTheaterController {
 
     private final FavoriteTheaterService favoriteTheaterService;

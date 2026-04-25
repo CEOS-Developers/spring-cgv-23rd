@@ -16,7 +16,7 @@ public class Screen {
     @Enumerated(EnumType.STRING)
     private ScreenType type;  // String → Enum으로 변경
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Theater theater;
 
     public Screen(ScreenType type, Theater theater) {

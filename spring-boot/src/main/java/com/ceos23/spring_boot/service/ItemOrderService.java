@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,7 +59,7 @@ public class ItemOrderService {
             totalPrice += item.getPrice() * orderItemRequest.getCount();
         }
 
-        ItemOrder itemOrder = ItemOrder.of(user, theater, totalPrice, LocalDateTime.now());
+        ItemOrder.of(user, theater, totalPrice)
         ItemOrder savedOrder = itemOrderRepository.save(itemOrder);
 
         for (int i = 0; i < request.getItems().size(); i++) {

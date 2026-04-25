@@ -29,8 +29,6 @@ public class AuthService {
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
-        validateSignUpRequest(request);
-
         User user = User.of(
                 request.getName(),
                 passwordEncoder.encode(request.getPassword())
@@ -42,13 +40,11 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        validateLoginRequest(request);
-
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 올바르지 않습니다.");
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -60,33 +56,5 @@ public class AuthService {
         String accessToken = tokenProvider.createAccessToken(user.getId(), authentication);
 
         return new LoginResponse(accessToken);
-    }
-
-    private void validateSignUpRequest(SignUpRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("회원가입 요청은 비어 있을 수 없습니다.");
-        }
-
-        if (request.getName() == null || request.getName().isBlank()) {
-            throw new IllegalArgumentException("이름은 필수입니다.");
-        }
-
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new IllegalArgumentException("비밀번호는 필수입니다.");
-        }
-    }
-
-    private void validateLoginRequest(LoginRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("로그인 요청은 비어 있을 수 없습니다.");
-        }
-
-        if (request.getUserId() == null || request.getUserId() <= 0) {
-            throw new IllegalArgumentException("userId는 1 이상이어야 합니다.");
-        }
-
-        if (request.getPassword() == null || request.getPassword().isBlank()) {
-            throw new IllegalArgumentException("비밀번호는 필수입니다.");
-        }
     }
 }
