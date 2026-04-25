@@ -11,6 +11,7 @@ import com.ceos23.spring_boot.repository.ScreeningRepository;
 import com.ceos23.spring_boot.repository.SeatRepository;
 import com.ceos23.spring_boot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,7 +33,12 @@ public class ReservationService {
         Seat seat = loadSeat(seatId);
 
         Reservation reservation = Reservation.create(user, screening, seat);
-        return reservationRepository.save(reservation);
+
+        try {
+            return reservationRepository.saveAndFlush(reservation);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
+        }
     }
 
     @Transactional

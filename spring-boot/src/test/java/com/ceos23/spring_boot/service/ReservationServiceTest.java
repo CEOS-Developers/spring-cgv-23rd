@@ -66,7 +66,7 @@ class ReservationServiceTest {
         given(seatRepository.findById(seatId))
                 .willReturn(Optional.of(seat));
 
-        given(reservationRepository.save(any(Reservation.class)))
+        given(reservationRepository.saveAndFlush(any(Reservation.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
         // when

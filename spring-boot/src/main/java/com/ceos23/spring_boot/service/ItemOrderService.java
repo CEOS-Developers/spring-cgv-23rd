@@ -125,7 +125,7 @@ public class ItemOrderService {
     }
 
     private TheaterItemStock loadStock(Long theaterId, Long itemId) {
-        return theaterItemStockRepository.findByTheaterIdAndItemId(theaterId, itemId)
+        return theaterItemStockRepository.findWithLockByTheaterIdAndItemId(theaterId, itemId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ITEM_STOCK_NOT_FOUND));
     }
 
