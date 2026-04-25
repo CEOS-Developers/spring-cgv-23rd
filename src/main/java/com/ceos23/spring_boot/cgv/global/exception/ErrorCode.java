@@ -15,12 +15,14 @@ public enum ErrorCode {
     SCREENING_NOT_FOUND(HttpStatus.NOT_FOUND, "SCREENING_404", "해당 상영 정보를 찾을 수 없습니다."),
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "RESERVATION_404", "해당 예매를 찾을 수 없습니다."),
     SEAT_TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "SEAT_TEMPLATE_404", "존재하지 않는 좌석이 포함되어 있습니다."),
+    STORE_MENU_STOCK_NOT_FOUND(HttpStatus.NOT_FOUND, "STORE_STOCK_404", "해당 영화관에 메뉴 재고 정보가 없습니다."),
 
     EMPTY_SEAT_REQUEST(HttpStatus.BAD_REQUEST, "RESERVATION_400", "예매할 좌석이 없습니다."),
     DUPLICATE_SEAT_REQUEST(HttpStatus.BAD_REQUEST, "RESERVATION_401", "중복된 좌석이 포함되어 있습니다."),
     INVALID_SEAT_FOR_SCREENING(HttpStatus.BAD_REQUEST, "RESERVATION_402", "해당 상영관에서 선택할 수 없는 좌석입니다."),
     ALREADY_RESERVED_SEAT(HttpStatus.CONFLICT, "RESERVATION_409", "이미 예매된 좌석입니다."),
-    ALREADY_CANCELED_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_410", "이미 취소된 예매입니다.");
+    ALREADY_CANCELED_RESERVATION(HttpStatus.CONFLICT, "RESERVATION_410", "이미 취소된 예매입니다."),
+    INSUFFICIENT_MENU_STOCK(HttpStatus.BAD_REQUEST, "STORE_STOCK_400", "구매 가능한 재고가 부족합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:cgv;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;NON_KEYWORDS=USER
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+jwt:
+  secret: Y2Vvcy1qd3Qtc2VjcmV0LWtleS1mb3Itc3ByaW5nLWNndi0yM3JkLWF1dGgtcHJvamVjdC0yMDI2LXNlY3VyZS1rZXktZm9yLWhzNTEy
+  access-token-validity-in-seconds: 3600
+  refresh-token-validity-in-seconds: 1209600

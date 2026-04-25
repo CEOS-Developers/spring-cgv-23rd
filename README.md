@@ -2,6 +2,28 @@
 
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+## 코드 리팩토링 정리
+
+이번 리팩토링에서는 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 코드를 정리했습니다.
+
+### 1. 예약 로직 책임 분리
+
+- `ReservationService`의 예매 생성 로직에서 조회, 검증, 좌석 생성 단계를 메서드로 분리했습니다.
+- 예매 목록 조회는 전체 조회 후 메모리에서 필터링하던 방식 대신 `findAllByUserId` repository query를 사용하도록 변경했습니다.
+- `Reservation.cancel()`이 이미 취소된 예매인지 직접 검사하도록 바꿔 상태 변경 책임을 엔티티에 더 가깝게 옮겼습니다.
+
+### 2. 매점 구매 로직 단순화
+
+- `StorePurchaseService`에서 중복되던 조회 로직을 전용 메서드로 분리해 구매 흐름이 한눈에 보이도록 정리했습니다.
+- `CinemaMenuStock.decreaseStock()`이 수량 검증과 재고 부족 검증을 함께 책임지도록 바꿔, 재고 관련 규칙이 한곳에 모이도록 개선했습니다.
+- 매점 구매 실패 상황을 더 잘 드러내기 위해 `STORE_MENU_STOCK_NOT_FOUND`, `INSUFFICIENT_MENU_STOCK` 에러 코드를 추가했습니다.
+
+### 3. 테스트 가능성 개선
+
+- 변경된 예매 로직에 맞춰 `ReservationServiceTest`를 정리했습니다.
+- `StorePurchaseServiceTest`를 추가해 재고 차감과 예외 흐름을 검증할 수 있게 했습니다.
+- 테스트 전용 H2 설정을 추가해 로컬 MySQL 환경 없이도 `./gradlew test`가 실행되도록 개선했습니다.
+
 <details>
 <summary><h2>CGV 클론 코딩 : 찜, 구매</h2></summary>
 

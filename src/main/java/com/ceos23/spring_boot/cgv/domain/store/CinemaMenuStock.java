@@ -1,6 +1,8 @@
 package com.ceos23.spring_boot.cgv.domain.store;
 
 import com.ceos23.spring_boot.cgv.domain.cinema.Cinema;
+import com.ceos23.spring_boot.cgv.global.exception.BadRequestException;
+import com.ceos23.spring_boot.cgv.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -49,6 +51,14 @@ public class CinemaMenuStock {
     }
 
     public void decreaseStock(Integer quantity) {
+        if (quantity == null || quantity < 1) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST);
+        }
+
+        if (stockQuantity < quantity) {
+            throw new BadRequestException(ErrorCode.INSUFFICIENT_MENU_STOCK);
+        }
+
         this.stockQuantity -= quantity;
     }
 }

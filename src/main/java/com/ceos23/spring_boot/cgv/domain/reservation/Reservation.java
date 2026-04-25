@@ -2,6 +2,8 @@ package com.ceos23.spring_boot.cgv.domain.reservation;
 
 import com.ceos23.spring_boot.cgv.domain.movie.Screening;
 import com.ceos23.spring_boot.cgv.domain.user.User;
+import com.ceos23.spring_boot.cgv.global.exception.ConflictException;
+import com.ceos23.spring_boot.cgv.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -48,6 +50,10 @@ public class Reservation {
     }
 
     public void cancel() {
+        if (status == ReservationStatus.CANCELED) {
+            throw new ConflictException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
         this.status = ReservationStatus.CANCELED;
     }
 }
