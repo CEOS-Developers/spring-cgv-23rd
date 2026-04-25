@@ -4,6 +4,8 @@ import cgv_23rd.ceos.entity.BaseEntity;
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
 import cgv_23rd.ceos.entity.theater.Theater;
 import cgv_23rd.ceos.entity.user.User;
+import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
+import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -52,14 +54,37 @@ public class FoodOrder extends BaseEntity {
     }
 
     public void confirm() {
+        if (this.status != FoodOrderStatus.대기) {
+            throw new GeneralException(
+                    GeneralErrorCode.PAYMENT_ALREADY_PROCESSED,
+                    "대기 상태의 주문만 완료할 수 있습니다."
+            );
+        }
         this.status = FoodOrderStatus.완료;
     }
 
     public void cancel() {
+        if (this.status == FoodOrderStatus.취소) {
+            throw new GeneralException(GeneralErrorCode.FOOD_ORDER_ALREADY_CANCELED);
+        }
+
+        if (this.status == FoodOrderStatus.완료) {
+            throw new GeneralException(
+                    GeneralErrorCode.FOOD_ORDER_CANNOT_CANCEL);
+        }
+
         this.status = FoodOrderStatus.취소;
     }
 
+    public boolean isOwnedBy(Long userId) {
+        return this.user.getId().equals(userId);
+    }
+
     public void addItem(Food food, int quantity) {
+        if (this.status != FoodOrderStatus.대기) {
+            throw new GeneralException(GeneralErrorCode.FOOD_ORDER_INVALID_STATE);
+        }
+
         int itemTotalPrice = food.getPrice() * quantity;
 
         FoodOrderItem orderItem = FoodOrderItem.builder()
@@ -71,9 +96,5 @@ public class FoodOrder extends BaseEntity {
 
         this.foodOrderItems.add(orderItem);
         this.totalPrice += itemTotalPrice;
-    }
-
-    public boolean isOwnedBy(Long userId) {
-        return this.user.getId().equals(userId);
     }
 }

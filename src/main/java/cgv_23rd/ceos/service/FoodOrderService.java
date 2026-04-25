@@ -40,11 +40,9 @@ public class FoodOrderService {
         for (FoodOrderItemRequestDto itemDto : requestDto.items()) {
             Food food = getFood(itemDto.foodId());
 
-            // 재고 엔티티를 락 걸고 조회하여 직접 차감
-            theaterFoodRepository.findByTheaterAndFoodWithLock(theater, food)
+            theaterFoodRepository.findByTheaterAndFood(theater, food)
                     .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_FOOD_NOT_FOUND));
 
-            // 주문에 항목 추가
             foodOrder.addItem(food, itemDto.quantity());
         }
 
@@ -74,6 +72,7 @@ public class FoodOrderService {
 
     @Transactional
     public void confirmOrderAndDeductStock(FoodOrder foodOrder) {
+
         for (FoodOrderItem item : foodOrder.getFoodOrderItems()) {
             // 비관적 락으로 재고 조회하여 동시성 제어
             TheaterFood theaterFood = theaterFoodRepository.findByTheaterAndFoodWithLock(foodOrder.getTheater(), item.getFood())

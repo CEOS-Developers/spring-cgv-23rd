@@ -61,6 +61,9 @@ public enum GeneralErrorCode implements BaseErrorCode {
     THEATER_FOOD_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_4042", "해당 극장에서 판매하지 않는 음식입니다."),
     OUT_OF_STOCK(HttpStatus.BAD_REQUEST, "FOOD_4001", "음식 재고가 부족합니다."),
     FOOD_ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "FOOD_ORDER_4041", "주문 내역을 찾을 수 없습니다."),
+    FOOD_ORDER_ALREADY_CANCELED(HttpStatus.BAD_REQUEST, "FOOD_ORDER_4001", "이미 취소된 주문입니다."),
+    FOOD_ORDER_CANNOT_CANCEL(HttpStatus.BAD_REQUEST, "FOOD_ORDER_4002", "완료된 주문은 취소할 수 없습니다."),
+    FOOD_ORDER_INVALID_STATE(HttpStatus.BAD_REQUEST, "FOOD_ORDER_4003", "주문 상태가 유효하지 않습니다."),
 
     // 결제 에러
     PAYMENT_FAILED(HttpStatus.BAD_REQUEST, "PAYMENT_4001", "결제에 실패했습니다."),

@@ -12,10 +12,11 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface TheaterFoodRepository extends JpaRepository<TheaterFood,Long> {
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
+
     Optional<TheaterFood> findByTheaterAndFood(Theater theater, Food food);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT tf FROM TheaterFood tf WHERE tf.theater = :theater AND tf.food = :food")
-    Optional<TheaterFood> findByTheaterAndFoodWithLock(@Param("theater") Theater theater, @Param("food") Food food);
+    Optional<TheaterFood> findByTheaterAndFoodWithLock(@Param("theater") Theater theater,
+                                                       @Param("food") Food food);
 }
