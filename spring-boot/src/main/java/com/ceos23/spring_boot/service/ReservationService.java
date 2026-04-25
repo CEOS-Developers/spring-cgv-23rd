@@ -6,6 +6,8 @@ import com.ceos23.spring_boot.domain.Seat;
 import com.ceos23.spring_boot.domain.User;
 import com.ceos23.spring_boot.exception.CustomException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
+import com.ceos23.spring_boot.infra.payment.PaymentGateway;
+import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
 import com.ceos23.spring_boot.repository.ReservationRepository;
 import com.ceos23.spring_boot.repository.ScreeningRepository;
 import com.ceos23.spring_boot.repository.SeatRepository;
@@ -15,14 +17,22 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Service
 @RequiredArgsConstructor
 public class ReservationService {
+
+    private static final int TICKET_PRICE = 15000;
+    private static final DateTimeFormatter PAYMENT_ID_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
     private final ScreeningRepository screeningRepository;
     private final SeatRepository seatRepository;
+    private final PaymentGateway paymentGateway;
 
     @Transactional
     public Reservation reserve(Long userId, Long screeningId, Long seatId) {
@@ -42,9 +52,46 @@ public class ReservationService {
     }
 
     @Transactional
+    public Reservation payReservation(Long reservationId) {
+        Reservation reservation = loadReservation(reservationId);
+
+        if (reservation.isExpired(LocalDateTime.now())) {
+            reservationRepository.delete(reservation);
+            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
+        }
+
+        if (reservation.isPaid()) {
+            return reservation;
+        }
+
+        String paymentId = createPaymentId(reservation.getId());
+
+        try {
+            PaymentData payment = paymentGateway.pay(
+                    paymentId,
+                    createOrderName(reservation),
+                    TICKET_PRICE,
+                    createCustomData(reservation)
+            );
+
+            reservation.markPaid(paymentId, resolvePaidAt(payment));
+            return reservation;
+
+        } catch (Exception e) {
+            reservationRepository.delete(reservation);
+            throw new CustomException(ErrorCode.BAD_REQUEST);
+        }
+    }
+
+    @Transactional
     public void cancel(Long reservationId) {
-        validateReservationExists(reservationId);
-        reservationRepository.deleteById(reservationId);
+        Reservation reservation = loadReservation(reservationId);
+
+        if (reservation.isPaid()) {
+            paymentGateway.cancel(reservation.getPaymentId());
+        }
+
+        reservationRepository.delete(reservation);
     }
 
     private void ensureSeatNotReserved(Long screeningId, Long seatId) {
@@ -53,6 +100,11 @@ public class ReservationService {
         if (exists) {
             throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
+    }
+
+    private Reservation loadReservation(Long reservationId) {
+        return reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
     }
 
     private User loadUser(Long userId) {
@@ -70,9 +122,23 @@ public class ReservationService {
                 .orElseThrow(() -> new CustomException(ErrorCode.SEAT_NOT_FOUND));
     }
 
-    private void validateReservationExists(Long reservationId) {
-        if (!reservationRepository.existsById(reservationId)) {
-            throw new CustomException(ErrorCode.RESERVATION_NOT_FOUND);
+    private String createPaymentId(Long reservationId) {
+        return "RSV_" + reservationId + "_" + LocalDateTime.now().format(PAYMENT_ID_FORMATTER);
+    }
+
+    private String createOrderName(Reservation reservation) {
+        return "CGV 좌석 예매 #" + reservation.getId();
+    }
+
+    private String createCustomData(Reservation reservation) {
+        return "RESERVATION:" + reservation.getId();
+    }
+
+    private LocalDateTime resolvePaidAt(PaymentData payment) {
+        if (payment.getPaidAt() != null) {
+            return payment.getPaidAt();
         }
+
+        return LocalDateTime.now();
     }
 }

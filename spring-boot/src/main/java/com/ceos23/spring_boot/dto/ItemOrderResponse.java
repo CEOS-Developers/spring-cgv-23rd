@@ -1,6 +1,7 @@
 package com.ceos23.spring_boot.dto;
 
 import com.ceos23.spring_boot.domain.ItemOrder;
+import com.ceos23.spring_boot.domain.OrderStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -17,6 +18,10 @@ public class ItemOrderResponse {
     private String theaterName;
     private Integer totalPrice;
     private LocalDateTime orderedAt;
+    private OrderStatus orderStatus;
+    private String paymentId;
+    private LocalDateTime paidAt;
+    private LocalDateTime cancelledAt;
     private List<OrderDetailResponse> orderDetails;
 
     public static ItemOrderResponse from(ItemOrder itemOrder) {
@@ -27,6 +32,10 @@ public class ItemOrderResponse {
                 .theaterName(itemOrder.getTheater().getName())
                 .totalPrice(itemOrder.getTotalPrice())
                 .orderedAt(itemOrder.getOrderedAt())
+                .orderStatus(itemOrder.getOrderStatus())
+                .paymentId(itemOrder.getPaymentId())
+                .paidAt(itemOrder.getPaidAt())
+                .cancelledAt(itemOrder.getCancelledAt())
                 .orderDetails(
                         itemOrder.getOrderDetails().stream()
                                 .map(OrderDetailResponse::from)

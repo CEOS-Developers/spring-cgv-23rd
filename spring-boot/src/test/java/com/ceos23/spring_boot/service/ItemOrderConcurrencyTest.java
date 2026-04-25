@@ -6,15 +6,20 @@ import com.ceos23.spring_boot.domain.TheaterItemStock;
 import com.ceos23.spring_boot.domain.User;
 import com.ceos23.spring_boot.dto.ItemOrderRequest;
 import com.ceos23.spring_boot.dto.OrderItemRequest;
+import com.ceos23.spring_boot.infra.payment.PaymentGateway;
+import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
 import com.ceos23.spring_boot.repository.ItemRepository;
 import com.ceos23.spring_boot.repository.TheaterItemStockRepository;
 import com.ceos23.spring_boot.repository.TheaterRepository;
 import com.ceos23.spring_boot.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.BDDMockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -22,6 +27,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @SpringBootTest
 class ItemOrderConcurrencyTest {
@@ -41,9 +50,18 @@ class ItemOrderConcurrencyTest {
     @Autowired
     private TheaterItemStockRepository theaterItemStockRepository;
 
+    @MockBean
+    private PaymentGateway paymentGateway;
+
     @Test
     @DisplayName("재고가 1개일 때 동시에 2번 주문하면 1번만 성공한다")
     void orderItemConcurrencyTest() throws InterruptedException {
+        PaymentData paymentData = mock(PaymentData.class);
+        when(paymentData.getPaidAt()).thenReturn(LocalDateTime.now());
+
+        BDDMockito.given(paymentGateway.pay(anyString(), anyString(), anyInt(), anyString()))
+                .willReturn(paymentData);
+
         User user1 = userRepository.save(User.of("user1", "1234"));
         User user2 = userRepository.save(User.of("user2", "1234"));
         Theater theater = theaterRepository.save(new Theater("강남 CGV", "서울"));

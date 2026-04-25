@@ -58,6 +58,11 @@ public class TheaterItemStock {
         this.stock -= quantity;
     }
 
+    public void increaseStock(Integer quantity) {
+        validateQuantity(quantity);
+        this.stock += quantity;
+    }
+
     private void validateQuantity(Integer quantity) {
         if (quantity == null || quantity <= 0) {
             throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");

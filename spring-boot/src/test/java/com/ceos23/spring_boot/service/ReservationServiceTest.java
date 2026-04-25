@@ -6,6 +6,7 @@ import com.ceos23.spring_boot.domain.Screening;
 import com.ceos23.spring_boot.domain.Seat;
 import com.ceos23.spring_boot.domain.User;
 import com.ceos23.spring_boot.exception.CustomException;
+import com.ceos23.spring_boot.infra.payment.PaymentGateway;
 import com.ceos23.spring_boot.repository.ReservationRepository;
 import com.ceos23.spring_boot.repository.ScreeningRepository;
 import com.ceos23.spring_boot.repository.SeatRepository;
@@ -41,6 +42,9 @@ class ReservationServiceTest {
 
     @Mock
     private SeatRepository seatRepository;
+
+    @Mock
+    private PaymentGateway paymentGateway;
 
     @Test
     void 예매_성공() {
