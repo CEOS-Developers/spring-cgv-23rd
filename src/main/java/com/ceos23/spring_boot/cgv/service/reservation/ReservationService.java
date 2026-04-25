@@ -21,6 +21,7 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 @RequiredArgsConstructor
@@ -38,14 +39,14 @@ public class ReservationService {
         validateSeatRequest(seatTemplateIds);
 
         User user = findUserById(userId);
-        Screening screening = findScreeningById(screeningId);
+        Screening screening = findScreeningByIdWithLock(screeningId);
         List<SeatTemplate> seatTemplates = findSeatTemplatesByIds(seatTemplateIds);
 
         validateSeatBelongsToScreening(screening, seatTemplates);
         validateAlreadyReserved(screening, seatTemplates);
 
         Reservation reservation = reservationRepository.save(new Reservation(user, screening));
-        reservationSeatRepository.saveAll(createReservationSeats(reservation, screening, seatTemplates));
+        saveReservationSeats(reservation, screening, seatTemplates);
 
         return reservation;
     }
@@ -90,8 +91,8 @@ public class ReservationService {
                 .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private Screening findScreeningById(Long screeningId) {
-        return screeningRepository.findById(screeningId)
+    private Screening findScreeningByIdWithLock(Long screeningId) {
+        return screeningRepository.findByIdWithPessimisticLock(screeningId)
                 .orElseThrow(() -> new NotFoundException(ErrorCode.SCREENING_NOT_FOUND));
     }
 
@@ -128,6 +129,20 @@ public class ReservationService {
         return seatTemplates.stream()
                 .map(seatTemplate -> new ReservationSeat(reservation, screening, seatTemplate))
                 .toList();
+    }
+
+    private void saveReservationSeats(
+            Reservation reservation,
+            Screening screening,
+            List<SeatTemplate> seatTemplates
+    ) {
+        try {
+            reservationSeatRepository.saveAllAndFlush(
+                    createReservationSeats(reservation, screening, seatTemplates)
+            );
+        } catch (DataIntegrityViolationException exception) {
+            throw new ConflictException(ErrorCode.ALREADY_RESERVED_SEAT);
+        }
     }
 
     private void validateAlreadyReserved(Screening screening, List<SeatTemplate> seatTemplates) {

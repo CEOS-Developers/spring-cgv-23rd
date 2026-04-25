@@ -66,19 +66,19 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = new User("지송", "jisong@example.com", "encoded-password", UserRole.USER);
+        user = new User("jisong", "jisong@example.com", "encoded-password", UserRole.USER);
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        Cinema cinema = new Cinema("CGV 강남", "서울시 강남구");
+        Cinema cinema = new Cinema("CGV Gangnam", "Seoul");
         ReflectionTestUtils.setField(cinema, "id", 1L);
 
-        SeatLayout seatLayout = new SeatLayout("일반관 기본 좌석", 3, 3);
+        SeatLayout seatLayout = new SeatLayout("General", 3, 3);
         ReflectionTestUtils.setField(seatLayout, "id", 1L);
 
-        Screen screen = new Screen("1관", ScreenType.GENERAL, cinema, seatLayout);
+        Screen screen = new Screen("1", ScreenType.GENERAL, cinema, seatLayout);
         ReflectionTestUtils.setField(screen, "id", 1L);
 
-        Movie movie = new Movie("괴물", 120, "12세 이상 관람가", "한국 영화");
+        Movie movie = new Movie("Movie", 120, "12", "Description");
         ReflectionTestUtils.setField(movie, "id", 1L);
 
         screening = new Screening(
@@ -97,10 +97,10 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 생성 성공")
+    @DisplayName("create reservation success")
     void createReservation_success() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L, 2L)))
                 .willReturn(List.of(seatTemplate1, seatTemplate2));
         given(reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
@@ -119,18 +119,18 @@ class ReservationServiceTest {
         assertThat(result.getStatus()).isEqualTo(ReservationStatus.RESERVED);
 
         then(reservationRepository).should().save(any(Reservation.class));
-        then(reservationSeatRepository).should().saveAll(anyList());
+        then(reservationSeatRepository).should().saveAllAndFlush(anyList());
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 좌석 요청이 비어 있음")
+    @DisplayName("create reservation fails when seats are empty")
     void createReservation_fail_emptySeats() {
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of()))
                 .isInstanceOf(BadRequestException.class);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 사용자 없음")
+    @DisplayName("create reservation fails when user is missing")
     void createReservation_fail_userNotFound() {
         given(userRepository.findById(1L)).willReturn(Optional.empty());
 
@@ -139,27 +139,27 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 상영 정보 없음")
+    @DisplayName("create reservation fails when screening is missing")
     void createReservation_fail_screeningNotFound() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.empty());
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 요청 좌석 중복")
+    @DisplayName("create reservation fails when seat request is duplicated")
     void createReservation_fail_duplicateSeatRequest() {
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L, 1L)))
                 .isInstanceOf(BadRequestException.class);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 이미 예매된 좌석")
+    @DisplayName("create reservation fails when seat is already reserved")
     void createReservation_fail_alreadyReservedSeat() {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L)))
                 .willReturn(List.of(seatTemplate1));
         given(reservationSeatRepository.findReservedSeatTemplateIdsByScreeningAndSeatTemplates(
@@ -173,15 +173,15 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 상영관에 없는 좌석")
+    @DisplayName("create reservation fails when seat does not belong to screening")
     void createReservation_fail_invalidSeatForScreening() {
-        SeatLayout otherSeatLayout = new SeatLayout("특별관 좌석", 2, 2);
+        SeatLayout otherSeatLayout = new SeatLayout("Special", 2, 2);
         ReflectionTestUtils.setField(otherSeatLayout, "id", 2L);
         SeatTemplate invalidSeat = new SeatTemplate("B", 1, otherSeatLayout);
         ReflectionTestUtils.setField(invalidSeat, "id", 3L);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(3L)))
                 .willReturn(List.of(invalidSeat));
 
@@ -190,7 +190,7 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 목록 조회는 사용자 기준 repository query를 사용한다")
+    @DisplayName("get reservations uses repository query by user id")
     void getReservations_success() {
         Reservation reservation = new Reservation(user, screening);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
@@ -203,7 +203,7 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 취소 성공")
+    @DisplayName("cancel reservation success")
     void cancelReservation_success() {
         Reservation reservation = new Reservation(user, screening);
         given(reservationRepository.findById(1L)).willReturn(Optional.of(reservation));
@@ -214,7 +214,7 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 취소 실패 - 이미 취소된 예매")
+    @DisplayName("cancel reservation fails when already canceled")
     void cancelReservation_fail_alreadyCanceled() {
         Reservation reservation = new Reservation(user, screening);
         reservation.cancel();
@@ -225,7 +225,7 @@ class ReservationServiceTest {
     }
 
     @Test
-    @DisplayName("예매 취소 실패 - 존재하지 않는 예매")
+    @DisplayName("cancel reservation fails when reservation is missing")
     void cancelReservation_fail_notFound() {
         given(reservationRepository.findById(1L)).willReturn(Optional.empty());
 
