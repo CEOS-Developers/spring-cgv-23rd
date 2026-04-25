@@ -1,11 +1,20 @@
 package com.ceos23.spring_cgv_23rd.User.Service;
 
+import com.ceos23.spring_cgv_23rd.Token.Domain.RefreshToken;
+import com.ceos23.spring_cgv_23rd.Token.Repository.TokenRepository;
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginRequestDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginResponseDTO;
+import com.ceos23.spring_cgv_23rd.User.DTO.UserWrapperDTO;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
-import com.ceos23.spring_cgv_23rd.global.TokenProvider;
+import com.ceos23.spring_cgv_23rd.Token.Service.TokenProvider;
+import com.ceos23.spring_cgv_23rd.global.CookieMaker;
+import com.ceos23.spring_cgv_23rd.global.DTO.TokenResultDTO;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import com.ceos23.spring_cgv_23rd.global.JWTType;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,33 +27,29 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@RequiredArgsConstructor
 public class LoginService {
     private final PasswordEncoder encoder;
     private final UserRepository userRepository;
     private final TokenProvider jwtProvider;
     private final UserDetailsService userDetailsService;
+    private final TokenRepository tokenRepository;
+    private final CookieMaker cookieMaker;
 
-    public LoginService(PasswordEncoder encoder,
-                        UserRepository userRepository,
-                        TokenProvider jwtProvider,
-                        UserDetailsService userDetailsService){
-        this.encoder = encoder;
-        this.userRepository = userRepository;
-        this.jwtProvider = jwtProvider;
-        this.userDetailsService = userDetailsService;
-    }
+    @Transactional
+    public UserWrapperDTO login(LoginRequestDTO req,
+                                HttpServletResponse res){
 
-    @Transactional(readOnly = true)
-    public LoginResponseDTO login(LoginRequestDTO req){
-
-        User user = userRepository.findByLoginId(req.loginId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "아이디가 올바르지 않습니다."));
+        User user = userRepository.findByLoginId(req.loginId()).orElseThrow(
+                () -> new CustomException(ErrorCode.ID_NOT_FOUND)
+        );
 
         if (!encoder.matches(req.password(), user.getPassword())){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "비밀번호가 올바르지 않습니다.");
+            throw new CustomException(ErrorCode.UNMATCHED_PASSWORD);
         }
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getLoginId());
+
         Authentication authentication = new UsernamePasswordAuthenticationToken(
                 userDetails,
                 null,
@@ -53,10 +58,13 @@ public class LoginService {
 
         String jwtAccessToken = jwtProvider.createToken(user.getLoginId(), authentication, JWTType.ACCESS);
         String jwtRefreshToken = jwtProvider.createToken(user.getLoginId(), authentication, JWTType.REFRESH);
+        TokenResultDTO resultDTO = TokenResultDTO.create(jwtAccessToken, jwtRefreshToken);
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        cookieMaker.setLoginCookie(res, resultDTO);
 
-        System.out.println("actkn >>> " + jwtAccessToken);
-        return LoginResponseDTO.create(jwtAccessToken, jwtRefreshToken);
+        RefreshToken refreshToken = RefreshToken.create(user, jwtRefreshToken);
+        tokenRepository.save(refreshToken);
+
+        return UserWrapperDTO.create(user);
     }
 }

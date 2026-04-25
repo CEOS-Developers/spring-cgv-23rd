@@ -4,6 +4,8 @@ import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationSeatInfo;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationSeat;
 import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationSeatRepository;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,11 +34,11 @@ public class SeatValidator {
 
         for (ReservationSeatInfo rsi : infos){
             if (!requestedSeatNames.add(rsi.seatName())){
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "좌석을 중복선택할 수 없습니다.");
+                throw new CustomException(ErrorCode.DIFFERENT_USER);
             }
 
             if (reservedSeatNames.contains(rsi.seatName())){
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 선택된 좌석입니다.");
+                throw new CustomException(ErrorCode.ALREADY_OCCUPIED);
             }
         }
     }

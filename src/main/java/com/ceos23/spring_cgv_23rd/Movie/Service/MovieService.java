@@ -14,6 +14,8 @@ import com.ceos23.spring_cgv_23rd.User.Domain.BookmarkedMovie;
 import com.ceos23.spring_cgv_23rd.User.Domain.BookmarkedTheater;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -36,30 +38,25 @@ public class MovieService {
     }
 
     @Transactional
-    public ResponseEntity<MovieSearchResponseDTO> theaterSearchService(String query){
+    public MovieSearchResponseDTO theaterSearchService(String query){
         List<Movie> searchedMovie = movieRepository.findByMovieNameContaining(query);
 
-        MovieSearchResponseDTO responseDTO = MovieSearchResponseDTO.builder()
+        return MovieSearchResponseDTO.builder()
                 .movie(MovieWrapperDTO.create(searchedMovie))
                 .build();
-
-        return ResponseEntity.ok(responseDTO);
     }
 
     @Transactional
-    public ResponseEntity<MovieSearchAllResponseDTO> theaterSearchService(){
+    public MovieSearchAllResponseDTO theaterSearchService(){
         List<Movie> searchedMovies = movieRepository.findAll();
 
-        MovieSearchAllResponseDTO responseDTO = MovieSearchAllResponseDTO.builder()
+        return MovieSearchAllResponseDTO.builder()
                 .searchedMovies(MovieWrapperDTO.create(searchedMovies))
                 .build();
-
-        return ResponseEntity.ok(responseDTO);
     }
 
     /**
      * 영화 좋아요
-     *
      * 이미 눌려져있는데 한 번 더 누르면 취소
      */
     public LikedMovieResponseDTO movieLikService(BookmarkMovieRequestDTO bmrDTO){
@@ -67,10 +64,12 @@ public class MovieService {
         long movieId = bmrDTO.movieId();
 
         Movie movie = movieRepository.findById(movieId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "영화가 존재하지 않습니다."));
+                () -> new CustomException(ErrorCode.NOT_FOUND_MOVIE)
+        );
 
         User user = userRepository.findById(userId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "사용자 정보가 존재하지 않습니다."));
+                () -> new CustomException(ErrorCode.NOT_FOUND_USER)
+        );
 
         Optional<BookmarkedMovie> movieOptional = bookmarkedMovieRepository.findByMovieAndUser(movie, user);
 
@@ -95,7 +94,8 @@ public class MovieService {
      */
     public CheckLikedMovieResponseDTO checkLikedMovieByUserId(String loginId) {
         User user = userRepository.findByLoginId(loginId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "사용자 정보가 존재하지 않습니다."));
+                () -> new CustomException(ErrorCode.NOT_FOUND_USER)
+        );
 
         List<BookmarkedMovie> bmm = bookmarkedMovieRepository.findByUser(user);
 

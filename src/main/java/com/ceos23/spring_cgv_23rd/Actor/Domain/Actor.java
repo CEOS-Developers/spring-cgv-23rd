@@ -2,18 +2,14 @@ package com.ceos23.spring_cgv_23rd.Actor.Domain;
 
 import com.ceos23.spring_cgv_23rd.Media.Domain.Media;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Getter
 public class Actor {
@@ -27,16 +23,13 @@ public class Actor {
 
     private String country;
 
-    @Builder.Default
     @OneToMany(mappedBy = "actor")
     private List<ActorInfo> actorInfos = new ArrayList<>();
 
-    @Builder.Default
     @OneToMany(mappedBy = "actor")
     private List<Prize> prizes = new ArrayList<>();
 
-    @OneToMany()
-    @Builder.Default
+    @OneToMany
     @JoinColumn(name = "actor_photos")
     private List<Media> photos = new ArrayList<>();
 

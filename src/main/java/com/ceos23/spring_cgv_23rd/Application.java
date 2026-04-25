@@ -13,10 +13,12 @@ import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 import java.time.LocalDateTime;
 
 @SpringBootApplication
+@EnableFeignClients
 public class Application {
 	public static void main(String[] args) {
 		SpringApplication.run(Application.class, args);

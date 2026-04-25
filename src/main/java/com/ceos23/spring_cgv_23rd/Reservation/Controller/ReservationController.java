@@ -20,12 +20,19 @@ public class ReservationController {
         this.reservationService = reservationService;
     }
 
-    @PostMapping
-    public ResponseEntity<ReservationResponseDTO> reserve(
+    @PostMapping("/seats")
+    public ResponseEntity<ReservationResponseDTO> selectSeats(
             @RequestBody ReservationRequestDTO requestDTO,
             @AuthenticationPrincipal User user
             ){
         return ResponseEntity.ok(reservationService.reserve(user.getUsername(), requestDTO));
+    }
+
+    @PostMapping(params = "reservationId")
+    public ResponseEntity<ReservationResponseDTO> reserve(
+            @RequestParam long reservationId
+    ){
+        return ResponseEntity.ok(reservationService.reserve(reservationId));
     }
 
     /**

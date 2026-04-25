@@ -1,9 +1,13 @@
 package com.ceos23.spring_cgv_23rd.global.DTO;
 
-import lombok.Builder;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 
-@Builder
 public record ErrDTO(
-        int errCode, String errMessage
+        String errCode, String errMessage
 ){
+    public static ErrDTO create(ErrorCode e){
+        return new ErrDTO(
+                e.getErrorCode(), e.getErrorMessage()
+        );
+    }
 }

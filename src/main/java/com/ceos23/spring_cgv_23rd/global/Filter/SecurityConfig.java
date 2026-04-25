@@ -1,4 +1,4 @@
-package com.ceos23.spring_cgv_23rd.global;
+package com.ceos23.spring_cgv_23rd.global.Filter;
 
 import com.ceos23.spring_cgv_23rd.Token.Service.TokenProvider;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
@@ -25,22 +25,15 @@ public class SecurityConfig {
     }
 
     @Bean
-    public TokenProvider tokenProvider(UserDetailsService userDetailsService) {
-        return new TokenProvider(userDetailsService);
-    }
-
-    @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository){
-        return new CustomUserDetailsService(userRepository);
-    }
-
-    @Bean
     public JWTAuthenticationFilter jwtAuthenticationFilter(TokenProvider tokenProvider) {
         return new JWTAuthenticationFilter(tokenProvider);
     }
 
     @Bean
-    public SecurityFilterChain filterChain (HttpSecurity http, JWTAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+    public SecurityFilterChain filterChain (HttpSecurity http,
+                                            JWTAuthenticationFilter jwtAuthenticationFilter,
+                                            CustomLogoutHandler customLogoutHandler,
+                                            CustomLogoutSuccessHandler successHandler) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/login", "/api/login/**", "/api/signup").permitAll()
@@ -71,7 +64,9 @@ public class SecurityConfig {
                 )
 
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/")
+                        .logoutUrl("/logout")
+                        .addLogoutHandler(customLogoutHandler)
+                        .logoutSuccessHandler(successHandler)
                 );
 
         return http.build();

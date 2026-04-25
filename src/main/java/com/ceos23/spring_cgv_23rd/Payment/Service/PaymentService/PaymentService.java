@@ -7,16 +7,14 @@ import com.ceos23.spring_cgv_23rd.Payment.Service.ConcurrencyClient;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import feign.FeignException;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class MoviePaymentService {
+public class PaymentService {
 
     private final ConcurrencyClient concurrencyClient;
 
-    public MoviePaymentService(ConcurrencyClient concurrencyClient) {
+    public PaymentService(ConcurrencyClient concurrencyClient) {
         this.concurrencyClient = concurrencyClient;
     }
 

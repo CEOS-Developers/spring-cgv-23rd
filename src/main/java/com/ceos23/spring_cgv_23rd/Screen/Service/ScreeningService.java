@@ -2,6 +2,7 @@ package com.ceos23.spring_cgv_23rd.Screen.Service;
 
 import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import com.ceos23.spring_cgv_23rd.Movie.Repository.MovieRepository;
+import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.ReservationResponseDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationRepository;
 import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreenWrapperDTO;
 import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreeningSearchResponseDTO;
@@ -13,7 +14,10 @@ import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreenRepository;
 import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreeningRepository;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 import com.ceos23.spring_cgv_23rd.Theater.Repository.TheaterRepository;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -27,33 +31,22 @@ import java.util.stream.Collectors;
 
 
 @Service
+@RequiredArgsConstructor
 public class ScreeningService {
     TheaterRepository theaterRepository;
-    ScreenRepository screenRepository;
     ScreeningRepository screeningRepository;
     ReservationRepository reservationRepository;
     MovieRepository movieRepository;
-
-    public ScreeningService(TheaterRepository theaterRepository,
-                            ScreenRepository screenRepository,
-                            ScreeningRepository screeningRepository,
-                            ReservationRepository reservationRepository,
-                            MovieRepository movieRepository){
-        this.theaterRepository = theaterRepository;
-        this.screenRepository = screenRepository;
-        this.screeningRepository = screeningRepository;
-        this.reservationRepository = reservationRepository;
-        this.movieRepository = movieRepository;
-    }
 
     /**
      * 사용자가 영화관 id와 관림일자를 건네주면 영화관별로 이용가능한 시간 및 상영관에 대한 정보를 제공합니다.
      * TODO: 관람일자 설정하기: 완료
      */
-    public ResponseEntity<List<ScreeningSearchResponseDTO>> searchMovieWithTheaterId(long theaterId,
+    public List<ScreeningSearchResponseDTO> searchMovieWithTheaterId(long theaterId,
                                                                                      LocalDate date){
-        Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화관이 존재하지 않습니다."));
+        Theater theater = theaterRepository.findById(theaterId).orElseThrow(
+                () -> new CustomException(ErrorCode.NOT_FOUND_THEATER)
+        );
 
         List<Screening> screenings = screeningRepository.findByScreen_Theater(theater).stream()
                 .filter(s -> s.getStartTime().isAfter(LocalDateTime.now()))
@@ -94,20 +87,20 @@ public class ScreeningService {
             res.add(ScreeningSearchResponseDTO.create(movie, screenWrapperDTOS));
         }
 
-        return ResponseEntity.ok(res);
+        return res;
     }
 
     /**
      * 사용자가 영화관 id와 관림일자, 영화id를 건네주면 영화관별로 이용가능한 시간 및 상영관에 대한 정보를 제공합니다.
      */
-    public ResponseEntity<List<ScreeningSearchResponseDTO>> searchMovieWithTheaterId(long theaterId,
+    public List<ScreeningSearchResponseDTO> searchMovieWithTheaterId(long theaterId,
                                                                                      long movieId,
                                                                                      LocalDate date){
         Theater theater = theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화관이 존재하지 않습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_THEATER));
 
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 영화가 존재하지 않습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_MOVIE));
 
         List<Screening> screenings = screeningRepository.findByScreen_TheaterAndMovie(theater, movie).stream()
                 .filter(s -> s.getStartTime().isAfter(LocalDateTime.now()))
@@ -142,6 +135,25 @@ public class ScreeningService {
         }
 
         res.add(ScreeningSearchResponseDTO.create(movie, wrd));
-        return ResponseEntity.ok(res);
+        return res;
     }
+
+    /*
+    public ReservationResponseDTO reserve(String loginId, ReservationRequestDTO req){
+        User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new EntityNotFoundException("유저 정보가 없습니다."));
+        Screening screening = screeningRepository.findById(req.screeningId()).orElseThrow(() -> new EntityNotFoundException("상영 정보가 없습니다."));
+
+        seatValidator.checkValidity(screening, req.seatInfos());
+
+        Reservation reservation = Reservation.create(
+                user,
+                screening,
+                req.toReservingSeats(),
+                discountPolicyFactory.create(screening, req.toSeatInfos())
+        );
+
+        reservationRepository.save(reservation);
+        return ReservationResponseDTO.createForReserve(user, reservation);
+    }
+     */
 }

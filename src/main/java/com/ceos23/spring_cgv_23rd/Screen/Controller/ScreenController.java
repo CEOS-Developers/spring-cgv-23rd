@@ -32,7 +32,7 @@ public class ScreenController {
             @RequestParam long theaterId,
             @RequestParam LocalDate date
             ){
-        return screeningService.searchMovieWithTheaterId(theaterId, date);
+        return ResponseEntity.ok(screeningService.searchMovieWithTheaterId(theaterId, date));
     }
 
     /**
@@ -44,6 +44,6 @@ public class ScreenController {
             @RequestParam long movieId,
             @RequestParam LocalDate date
     ){
-        return screeningService.searchMovieWithTheaterId(theaterId, movieId, date);
+        return ResponseEntity.ok(screeningService.searchMovieWithTheaterId(theaterId, movieId, date));
     }
 }

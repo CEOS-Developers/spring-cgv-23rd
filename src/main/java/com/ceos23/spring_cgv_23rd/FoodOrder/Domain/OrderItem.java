@@ -11,7 +11,11 @@ import lombok.Setter;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItem {
-    private OrderItem(TheaterMenu menu, int quantity){
+    protected OrderItem(CartItem ci){
+        this(ci.getMenu(), ci.getQuantity());
+    }
+
+    protected OrderItem(TheaterMenu menu, int quantity){
         this.menu = menu;
         this.quantity = quantity;
     }
@@ -31,23 +35,7 @@ public class OrderItem {
 
     private int quantity;
 
-    public long getPrice(){
-        return (long) menu.getPrice() * quantity;
-    }
-
-    public void addOrder(Order or){
-        this.order = or;
-        or.getOrderItems().add(this);
-    }
-
-    public static OrderItem create(Order order, TheaterMenu menu, int quantity){
-        OrderItem oi = new OrderItem(
-                menu, quantity
-        );
-
-        oi.addOrder(order);
-        order.addPrice(oi.getPrice());
-
-        return oi;
+    public int getPrice(){
+        return menu.getPrice() * quantity;
     }
 }

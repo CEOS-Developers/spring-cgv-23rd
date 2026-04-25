@@ -26,12 +26,12 @@ public class MovieController {
     public ResponseEntity<MovieSearchResponseDTO> searchWithName(
             @RequestParam String searchQuery
     ) {
-        return movieService.theaterSearchService(searchQuery);
+        return ResponseEntity.ok(movieService.theaterSearchService(searchQuery));
     }
 
     @GetMapping
     public ResponseEntity<MovieSearchAllResponseDTO> searchAll() {
-        return movieService.theaterSearchService();
+        return ResponseEntity.ok(movieService.theaterSearchService());
     }
 
     /**
@@ -41,10 +41,10 @@ public class MovieController {
      * 이미 눌려져있는데 한 번 더 누르면 취소
      */
     @PostMapping("/likes")
-    public ResponseEntity<LikedMovieResponseDTO> bookmarkMovie(
+    public LikedMovieResponseDTO bookmarkMovie(
             @RequestBody BookmarkMovieRequestDTO bmrDTO
             ) {
-        return ResponseEntity.ok(movieService.movieLikService(bmrDTO));
+        return movieService.movieLikService(bmrDTO);
     }
 
     /**

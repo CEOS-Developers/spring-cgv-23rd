@@ -2,6 +2,7 @@ package com.ceos23.spring_cgv_23rd.User.Controller;
 
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginRequestDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginResponseDTO;
+import com.ceos23.spring_cgv_23rd.User.DTO.UserWrapperDTO;
 import com.ceos23.spring_cgv_23rd.User.Service.LoginService;
 import com.ceos23.spring_cgv_23rd.global.JWTType;
 import jakarta.servlet.http.Cookie;
@@ -22,35 +23,11 @@ public class LoginController {
     }
 
     @PostMapping
-    public ResponseEntity<LoginResponseDTO> login(
+    public ResponseEntity<UserWrapperDTO> login(
             @RequestBody LoginRequestDTO req,
             HttpServletResponse res
     ){
-
-        LoginResponseDTO loginRes = loginService.login(req);
-
-        String at = loginRes.accessToken();
-        String rt = loginRes.refreshToken();
-
-        Cookie cookie = new Cookie("accessToken", at);
-        cookie.setMaxAge(JWTType.ACCESS.getValidTime());
-        cookie.setPath("/");
-        cookie.setHttpOnly(true);
-        cookie.setAttribute("SameSite", "Strict");
-        //cookie.setSecure(true); TODO: localhost 환경을 벗어나면 주석제거
-
-        Cookie cookie2 = new Cookie("refreshToken", rt);
-        cookie2.setMaxAge(JWTType.REFRESH.getValidTime());
-        cookie2.setPath("/");
-        cookie2.setHttpOnly(true);
-        cookie2.setAttribute("SameSite", "Strict");
-        //cookie2.setSecure(true); TODO: localhost 환경을 벗어나면 주석제거
-
-        res.addCookie(cookie);
-        res.addCookie(cookie2);
-
-        System.out.println("actkn >>> " + at);
-        return ResponseEntity.ok(loginRes);
+        return ResponseEntity.ok(loginService.login(req, res));
 
     }
 

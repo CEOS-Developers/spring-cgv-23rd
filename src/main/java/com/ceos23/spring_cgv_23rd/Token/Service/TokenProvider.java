@@ -1,21 +1,19 @@
-package com.ceos23.spring_cgv_23rd.global;
+package com.ceos23.spring_cgv_23rd.Token.Service;
 
+import com.ceos23.spring_cgv_23rd.global.JWTType;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.io.Encoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
@@ -25,7 +23,9 @@ import java.util.stream.Collectors;
 @Component
 public class TokenProvider implements InitializingBean {
     private Key key;
+
     private final UserDetailsService userDetailsService;
+
     @Value("${jwt.secret-key}")
     private String jwtSecretKey;
 
@@ -40,14 +40,8 @@ public class TokenProvider implements InitializingBean {
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public boolean validateToken(String token){
-        try {
-            getTokenLoginId(token);
-            return true;
-        } catch (IllegalArgumentException | MalformedJwtException | ExpiredJwtException e){
-            e.printStackTrace();
-            return false;
-        }
+    public void validateToken(String token){
+        getTokenLoginId(token);
     }
 
     public String getAccessToken(HttpServletRequest req) {
@@ -57,6 +51,22 @@ public class TokenProvider implements InitializingBean {
 
         for (Cookie c : cookies) {
             if ("accessToken".equals(c.getName())) {
+                return c.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    public String getRefreshToken(HttpServletRequest req) {
+        Cookie[] cookies = req.getCookies();
+
+        if (cookies == null){
+            return null;
+        }
+
+        for (Cookie c : cookies) {
+            if ("refreshToken".equals(c.getName())) {
                 return c.getValue();
             }
         }

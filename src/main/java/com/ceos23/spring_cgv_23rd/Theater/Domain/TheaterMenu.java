@@ -2,6 +2,8 @@ package com.ceos23.spring_cgv_23rd.Theater.Domain;
 
 import com.ceos23.spring_cgv_23rd.Food.Domain.Food;
 import com.ceos23.spring_cgv_23rd.Food.Domain.MenuType;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.http.HttpStatus;
@@ -53,7 +55,7 @@ public class TheaterMenu {
 
     public void buy(int amount){
         if (soldOut || sold < amount){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "재고가 없습니다.");
+            throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
         }
         this.sold -= amount;
         if (sold == 0){
@@ -68,7 +70,7 @@ public class TheaterMenu {
 
             return tm;
         } else if (amount < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 인수입니다.");
+            throw new CustomException(ErrorCode.INVALID_QUANTITY);
         } else {
             TheaterMenu tm = new TheaterMenu(food, theater, false, amount);
             tm.addTheaterInEntity(theater);

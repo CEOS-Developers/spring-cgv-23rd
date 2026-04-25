@@ -6,46 +6,42 @@ import com.ceos23.spring_cgv_23rd.Food.Domain.MenuType;
 import com.ceos23.spring_cgv_23rd.Food.Repository.FoodRepository;
 import com.ceos23.spring_cgv_23rd.FoodOrder.DTO.FoodMenuAndQuantityDTO;
 import com.ceos23.spring_cgv_23rd.FoodOrder.DTO.FoodOrderRequestDTO;
-import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.MovieSearchAllResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.Domain.AccessibleAge;
 import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import com.ceos23.spring_cgv_23rd.Movie.Domain.MovieType;
 import com.ceos23.spring_cgv_23rd.Movie.Repository.MovieRepository;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationRequestDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationSeatInfo;
-import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.ReservationResponseDTO;
-import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationSeat;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.SeatInfo;
-import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreeningSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.CinemaType;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screen;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
-import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreenRepository;
 import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreeningRepository;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.TheaterMenu;
 import com.ceos23.spring_cgv_23rd.Theater.Repository.TheaterMenuRepository;
 import com.ceos23.spring_cgv_23rd.Theater.Repository.TheaterRepository;
+import com.ceos23.spring_cgv_23rd.User.Controller.LoginController;
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginRequestDTO;
-import com.ceos23.spring_cgv_23rd.User.DTO.LoginResponseDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.SignupRequestDTO;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
+import com.ceos23.spring_cgv_23rd.User.Service.LoginService;
 import jakarta.servlet.http.Cookie;
 import org.apache.coyote.BadRequestException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,7 +50,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -84,13 +79,20 @@ class ApplicationTests {
 	TheaterRepository theaterRepository;
 
 	@Autowired
-	private MockMvc mockMvc;
-    @Autowired
-    private ScreenRepository screenRepository;
-    @Autowired
     private FoodRepository foodRepository;
+
     @Autowired
     private TheaterMenuRepository theaterMenuRepository;
+
+	@Autowired
+	ApplicationContext context;
+
+	@Test
+	void check() {
+		System.out.println("CONTEXT >>> " + context.getBean(LoginController.class));
+		System.out.println(context.getBean(LoginService.class));
+	}
+
 
 	@Test
 	void contextLoads() {
@@ -212,7 +214,7 @@ class ApplicationTests {
 		for (Screen sc : scs){
 			for (Movie mv : movies){
 				scc.add(Screening.create(
-					sc, mv, LocalDateTime.of(2026,3,28,8,0)
+					sc, mv, LocalDateTime.of(2026,5,28,8,0)
 				));
 
 				scc.add(Screening.create(
@@ -221,7 +223,7 @@ class ApplicationTests {
 
 
 				scc.add(Screening.create(
-					sc, mv, LocalDateTime.of(2026,3,28,13,0)
+					sc, mv, LocalDateTime.of(2026,5,28,13,0)
 				));
 
 				scc.add(Screening.create(
@@ -230,7 +232,7 @@ class ApplicationTests {
 
 
 				scc.add(Screening.create(
-					sc, mv, LocalDateTime.of(2026,3,28,20,0)
+					sc, mv, LocalDateTime.of(2026,5,28,20,0)
 				));
 
 				scc.add(Screening.create(
@@ -261,11 +263,66 @@ class ApplicationTests {
 		return sss;
 	}
 
+    void signup() throws Exception {
+		if (userRepository.existsByLoginId("ceos1234")){
+			return;
+		}
 
-	void normalSetting() throws BadRequestException {
+        SignupRequestDTO srd1 = new SignupRequestDTO(
+                "세오스", "ceos1234", "ceos1234**", true, 21
+        );
+
+        SignupRequestDTO srd2 = new SignupRequestDTO(
+                "홍익대", "hongik1234", "hongik1234**", true, 29
+        );
+
+        SignupRequestDTO srd3 = new SignupRequestDTO(
+                "김자바", "hongk1234", "java1234**", false, 25
+        );
+
+        mockmvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(srd1)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        mockmvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(srd2)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        mockmvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(srd3)))
+                .andExpect(status().isOk())
+                .andReturn();
+    }
+
+	void normalSetting() throws Exception {
 		setMovie();
-		setScreening(setScreen(setTheater()));
+		List<Theater> theaters = setTheater();
+		setTheaterToTheaterMenu(theaters);
+		setScreening(setScreen(theaters));
+		signup();
 	}
+
+    void signup(SignupRequestDTO req) throws Exception{
+        mockmvc.perform(post("/api/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andReturn();
+    }
+
+    String login(LoginRequestDTO req) throws Exception {
+        return mockmvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andReturn()
+				.getResponse().getCookie("accessToken").getValue();
+    }
 
 	@Test
 	@DisplayName("영화관 전체조회")
@@ -277,45 +334,6 @@ class ApplicationTests {
 				.andReturn();
 
 		System.out.println(res);
-	}
-
-	//String username,
-	//        String loginId,
-	//        String password,
-	//        boolean men,
-	//        int age
-	@Test
-	@DisplayName("회원가입 및 아이디 중복테스트")
-	void signup() throws Exception {
-		SignupRequestDTO srd1 = new SignupRequestDTO(
-				"세오스", "ceos1234", "ceos1234**", true, 21
-		);
-
-		SignupRequestDTO srd2 = new SignupRequestDTO(
-				"홍익대", "hongik1234", "hongik1234**", true, 29
-		);
-
-		SignupRequestDTO srd3 = new SignupRequestDTO(
-				"세오스", "hongk1234", "java1234**", false, 25
-		);
-
-		mockmvc.perform(post("/api/signup")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(srd1)))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		mockmvc.perform(post("/api/signup")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(srd2)))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		mockmvc.perform(post("/api/signup")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(srd3)))
-				.andExpect(jsonPath("$.message").value("중복된 아이디입니다."));
-
 	}
 
 	@Test
@@ -350,7 +368,7 @@ class ApplicationTests {
 
 		for (Theater theater : theaters) {
 			MvcResult res = mockmvc.perform(get("/api/screen?theaterId=" + theater.getId()
-							+ "&date=" + LocalDate.of(2026,3,28)))
+							+ "&date=" + LocalDate.of(2026,4,28)))
 					.andExpect(status().isOk())
 					.andReturn();
 
@@ -369,7 +387,7 @@ class ApplicationTests {
 
 		MvcResult res = mockmvc.perform(get("/api/screen?theaterId=" + theaters.get(0).getId()
 				+ "&movieId=" + movies.get(1).getId()
-				+ "&date=" + LocalDate.of(2026, 3, 28)))
+				+ "&date=" + LocalDate.of(2026, 4, 28)))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -382,27 +400,8 @@ class ApplicationTests {
 	void reserve() throws Exception {
 		normalSetting();
 		List<Screening> screenings = screeningRepository.findAll();
+        String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
 
-		SignupRequestDTO srd1 = new SignupRequestDTO(
-				"세오스", "ceos1234", "ceos1234**", true, 21
-		);
-
-		System.out.println(mockmvc.perform(post("/api/signup")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(srd1)))
-				.andExpect(status().isOk())
-				.andReturn().getResponse().getContentAsString());
-
-			MvcResult res = mockmvc.perform(post("/api/login")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(new LoginRequestDTO("ceos1234", "ceos1234**"))))
-					.andDo(r -> System.out.println(r.getRequest().getRequestURI()))
-					.andExpect(status().isOk())
-					.andReturn();
-
-			System.out.println(res.getResolvedException());
-
-		String at = res.getResponse().getCookie("accessToken").getValue();
 		System.out.println("at >>> " + at);
 		Cookie authCookie = new Cookie("accessToken", at);
 		authCookie.setPath("/");
@@ -413,7 +412,7 @@ class ApplicationTests {
 						ReservationSeatInfo.create("C17", SeatInfo.CHILD))
 		);
 
-		MvcResult res333 = mockmvc.perform(post("/api/reservation")
+		MvcResult reservationResult = mockmvc.perform(post("/api/reservation")
 						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(r))
@@ -421,7 +420,7 @@ class ApplicationTests {
 				.andExpect(status().isOk())
 				.andReturn();
 
-		System.out.println(res333.getResponse().getContentAsString());
+		System.out.println(reservationResult.getResponse().getContentAsString());
 	}
 
 	@Test
@@ -429,7 +428,11 @@ class ApplicationTests {
 	void reserveWithOccupied() throws Exception {
 		normalSetting();
 		List<Screening> screenings = screeningRepository.findAll();
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
+
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
 
 
 		ReservationRequestDTO r = ReservationRequestDTO.create(
@@ -452,8 +455,11 @@ class ApplicationTests {
 	void reserveAlreadyOccupied() throws Exception {
 		normalSetting();
 		List<Screening> screenings = screeningRepository.findAll();
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
 
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
 
 		ReservationRequestDTO r = ReservationRequestDTO.create(
 				screenings.get(3).getId(),
@@ -485,14 +491,23 @@ class ApplicationTests {
 	void canceling() throws Exception {
 		normalSetting();
 		List<Screening> screenings = screeningRepository.findAll();
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
 
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
 
 		ReservationRequestDTO r = ReservationRequestDTO.create(
-				screenings.get(0).getId(),
+				screenings.get(3).getId(),
 				Arrays.asList(ReservationSeatInfo.create("C16", SeatInfo.ADULT),
 						ReservationSeatInfo.create("C17", SeatInfo.CHILD))
 		);
+
+		mockmvc.perform(post("/api/reservation")
+						.cookie(authCookie)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(r)))
+				.andExpect(status().isOk());
 
 		ReservationRequestDTO r2 = ReservationRequestDTO.create(
 				screenings.get(0).getId(),
@@ -508,16 +523,13 @@ class ApplicationTests {
 		);
 
 		mockmvc.perform(post("/api/reservation")
-						.contentType(MediaType.APPLICATION_JSON)
-						.content(objectMapper.writeValueAsString(r)))
-				.andExpect(status().isOk());
-
-		mockmvc.perform(post("/api/reservation")
+						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(r2)))
 				.andExpect(status().isOk());
 
 		mockmvc.perform(post("/api/reservation")
+						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(r3)))
 				.andExpect(status().isOk());
@@ -531,19 +543,23 @@ class ApplicationTests {
 
 		System.out.println(res.getResponse().getContentAsString());
 		System.out.println("finish!");
-
 	}
 
 	@Test
 	@DisplayName("영화관 찜")
 	void bookmarkTheater() throws Exception {
 		normalSetting();
-		User user = userRepository.findAll().get(0);
 		Theater theater = theaterRepository.findAll().get(0);
-		System.out.println("ID >>> " + theater.getId());
 
-		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
-						+ "&theaterId=" + theater.getId()))
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
+
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
+
+		MvcResult res = mockmvc.perform(get("/api/theater/likes"
+						+ "?theaterId=" + theater.getId())
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -554,18 +570,25 @@ class ApplicationTests {
 	@DisplayName("영화관 찜 & 취소")
 	void bookmarkAndCancelTheater() throws Exception {
 		normalSetting();
-		User user = userRepository.findAll().get(0);
 		Theater theater = theaterRepository.findAll().get(0);
 
-		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
-						+ "&theaterId=" + theater.getId()))
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
+
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
+
+		MvcResult res = mockmvc.perform(get("/api/theater/likes"
+						+ "?theaterId=" + theater.getId())
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		System.out.println(res.getResponse().getContentAsString());
 
-		MvcResult res2 = mockmvc.perform(get("/api/theater?userId=" + user.getId()
-						+ "&theaterId=" + theater.getId()))
+		MvcResult res2 = mockmvc.perform(get("/api/theater/likes"
+						+ "?theaterId=" + theater.getId())
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
@@ -576,96 +599,40 @@ class ApplicationTests {
 	@DisplayName("영화관 찜 & 취소 & 조회")
 	void bookmarkAndCancelTheaterAndCheck() throws Exception {
 		normalSetting();
-		User user = userRepository.findAll().get(0);
 		Theater theater = theaterRepository.findAll().get(0);
 
-		MvcResult res = mockmvc.perform(get("/api/theater?userId=" + user.getId()
-						+ "&theaterId=" + theater.getId()))
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
+
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
+
+		MvcResult res = mockmvc.perform(get("/api/theater/likes"
+						+ "?theaterId=" + theater.getId())
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		System.out.println(res.getResponse().getContentAsString());
 
-		System.out.println(mockmvc.perform(get("/api/theater?userId=" + user.getId()))
+		System.out.println(mockmvc.perform(get("/api/theater/likes")
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn()
 				.getResponse().getContentAsString());
 
-		MvcResult res2 = mockmvc.perform(get("/api/theater?userId=" + user.getId()
-						+ "&theaterId=" + theater.getId()))
+		MvcResult res2 = mockmvc.perform(get("/api/theater/likes"
+						+ "?theaterId=" + theater.getId())
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
-		MvcResult res3 = mockmvc.perform(get("/api/theater?userId=" + user.getId()))
+		MvcResult res3 = mockmvc.perform(get("/api/theater/likes")
+						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn();
 
 		System.out.println(res3.getResponse().getContentAsString());
-	}
-
-	@Test
-	@DisplayName("영화 찜")
-	void bookmarkMovie() throws Exception {
-		normalSetting();
-		User user = userRepository.findAll().get(0);
-		Movie movie = movieRepository.findAll().get(0);
-
-		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
-						+ "&movieId=" + movie.getId()))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		System.out.println(res.getResponse().getContentAsString());
-	}
-
-	@Test
-	@DisplayName("영화 찜 + 취소")
-	void bookmarkMovieAndCancel() throws Exception {
-		normalSetting();
-		User user = userRepository.findAll().get(0);
-		Movie movie = movieRepository.findAll().get(0);
-
-		mockmvc.perform(get("/api/movie?userId=" + user.getId()
-						+ "&movieId=" + movie.getId()))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
-						+ "&movieId=" + movie.getId()))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		System.out.println(res.getResponse().getContentAsString());
-	}
-
-	@Test
-	@DisplayName("영화 찜 + 취소 + 조회")
-	void bookmarkMovieAndCancelAndCheck() throws Exception {
-		normalSetting();
-		User user = userRepository.findAll().get(0);
-		Movie movie = movieRepository.findAll().get(0);
-
-		mockmvc.perform(get("/api/movie?userId=" + user.getId()
-						+ "&movieId=" + movie.getId()))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		System.out.println(
-				mockmvc.perform(get("/api/movie?userId=" + user.getId()))
-						.andReturn().getResponse().getContentAsString()
-		);
-
-		MvcResult res = mockmvc.perform(get("/api/movie?userId=" + user.getId()
-						+ "&movieId=" + movie.getId()))
-				.andExpect(status().isOk())
-				.andReturn();
-
-		System.out.println(res.getResponse().getContentAsString());
-
-		System.out.println(
-				mockmvc.perform(get("/api/movie?userId=" + user.getId()))
-						.andReturn().getResponse().getContentAsString()
-		);
 	}
 
 	@Test
@@ -691,64 +658,77 @@ class ApplicationTests {
 	}
 
 	@Test
-	@DisplayName("음식 구매하기")
+	@DisplayName("음식 예약하기")
 	void foodOrder() throws Exception {
 		normalSetting();
-		List<Theater> theaters = theaterRepository.findAll();
-		setTheaterToTheaterMenu(theaters);
+		Theater theater = theaterRepository.findAll().get(0);
 
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
 
-		System.out.println(
-				mockmvc.perform(get("/api/menus?theaterId=" + theaters.get(0).getId()
-								+ "&menuType=" + MenuType.COMBO))
-						.andExpect(status().isOk())
-						.andReturn().getResponse().getContentAsString()
-		);
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
 
-		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theaters.get(0));
+		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theater);
 		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 2);
 		FoodMenuAndQuantityDTO rrd2 = new FoodMenuAndQuantityDTO(theaterMenus.get(1).getId(), 1);
 
-		System.out.println(
-				mockmvc.perform(post("/api/orders?userId=" + user.getId())
-								.contentType(MediaType.APPLICATION_JSON)
-								.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(Arrays.asList(rrd, rrd2)))))
+
+		mockmvc.perform(post("/api/foods/items")
+							.contentType(MediaType.APPLICATION_JSON)
+							.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(theater.getId(), Arrays.asList(rrd, rrd2))))
+							.cookie(authCookie))
+				.andExpect(status().isOk());
+
+		System.out.println(mockmvc.perform(get("/api/foods")
+						    .cookie(authCookie))
 						.andExpect(status().isOk())
 						.andReturn().getResponse().getContentAsString()
 		);
 	}
 
+	/**
+	 * 장바구니에만 추가한 경우에는 재고수량이 줄지 않았다.
+	 * 결제까지 진행한 경우에 재고수량이 줄어들었다.
+	 *
+	 * @throws Exception
+	 */
 	@Test
 	@DisplayName("음식 구매 후 수량 변화 조사")
 	void foodOrderAndCheck() throws Exception {
 		normalSetting();
-		List<Theater> theaters = theaterRepository.findAll();
-		setTheaterToTheaterMenu(theaters);
+		Theater theater = theaterRepository.findAll().get(0);
 
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
+
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
+
+		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theater);
+		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 3);
+		FoodMenuAndQuantityDTO rrd2 = new FoodMenuAndQuantityDTO(theaterMenus.get(1).getId(), 1);
 
 		System.out.println(
-				mockmvc.perform(get("/api/menus?theaterId=" + theaters.get(0).getId()
+				mockmvc.perform(get("/api/menus?theaterId=" + theater.getId()
 								+ "&menuType=" + MenuType.COMBO))
 						.andExpect(status().isOk())
 						.andReturn().getResponse().getContentAsString()
 		);
 
-		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theaters.get(0));
-		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 3);
-		FoodMenuAndQuantityDTO rrd2 = new FoodMenuAndQuantityDTO(theaterMenus.get(1).getId(), 1);
+		mockmvc.perform(post("/api/foods/items")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(theater.getId(), Arrays.asList(rrd, rrd2))))
+						.cookie(authCookie))
+				.andExpect(status().isOk());
+
+		mockmvc.perform(post("/api/foods/pay")
+					.contentType(MediaType.APPLICATION_JSON)
+					.cookie(authCookie))
+				.andExpect(status().isOk());
 
 		System.out.println(
-				mockmvc.perform(post("/api/orders?userId=" + user.getId())
-								.contentType(MediaType.APPLICATION_JSON)
-								.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(Arrays.asList(rrd, rrd2)))))
-						.andExpect(status().isOk())
-						.andReturn().getResponse().getContentAsString()
-		);
-
-		System.out.println(
-				mockmvc.perform(get("/api/menus?theaterId=" + theaters.get(0).getId()
+				mockmvc.perform(get("/api/menus?theaterId=" + theater.getId()
 								+ "&menuType=" + MenuType.COMBO))
 						.andExpect(status().isOk())
 						.andReturn().getResponse().getContentAsString()
@@ -759,66 +739,28 @@ class ApplicationTests {
 	@DisplayName("음식 매진 테스트")
 	void foodSoldOut() throws Exception {
 		normalSetting();
-		List<Theater> theaters = theaterRepository.findAll();
-		setTheaterToTheaterMenu(theaters);
+		Theater theater = theaterRepository.findAll().get(0);
 
-		User user = userRepository.findAll().get(0);
+		String at = login(new LoginRequestDTO("ceos1234", "ceos1234**"));
 
-		System.out.println(
-				mockmvc.perform(get("/api/menus?theaterId=" + theaters.get(0).getId()
-								+ "&menuType=" + MenuType.COMBO))
-						.andExpect(status().isOk())
-						.andReturn().getResponse().getContentAsString()
-		);
+		System.out.println("at >>> " + at);
+		Cookie authCookie = new Cookie("accessToken", at);
+		authCookie.setPath("/");
 
-		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theaters.get(0));
-		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 4);
+		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theater);
+		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 2);
 		FoodMenuAndQuantityDTO rrd2 = new FoodMenuAndQuantityDTO(theaterMenus.get(1).getId(), 1);
 
-		System.out.println(
-				mockmvc.perform(post("/api/orders?userId=" + user.getId())
-								.contentType(MediaType.APPLICATION_JSON)
-								.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(Arrays.asList(rrd, rrd2)))))
-						.andExpect(status().isBadRequest())
-						.andReturn().getResponse().getContentAsString()
-		);
-	}
+		mockmvc.perform(post("/api/foods/items")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(theater.getId(), Arrays.asList(rrd, rrd2))))
+						.cookie(authCookie))
+				.andExpect(status().isOk());
 
-	@Test
-	@DisplayName("음식 매진 테스트2")
-	void foodSoldOut2() throws Exception {
-		normalSetting();
-		List<Theater> theaters = theaterRepository.findAll();
-		setTheaterToTheaterMenu(theaters);
-
-		User user = userRepository.findAll().get(0);
-
-		System.out.println(
-				mockmvc.perform(get("/api/menus?theaterId=" + theaters.get(0).getId()
-								+ "&menuType=" + MenuType.COMBO))
-						.andExpect(status().isOk())
-						.andReturn().getResponse().getContentAsString()
-		);
-
-		List<TheaterMenu> theaterMenus = theaterMenuRepository.findByTheater(theaters.get(0));
-		FoodMenuAndQuantityDTO rrd = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 3);
-		FoodMenuAndQuantityDTO rrd2 = new FoodMenuAndQuantityDTO(theaterMenus.get(1).getId(), 1);
-
-		System.out.println(
-				mockmvc.perform(post("/api/orders?userId=" + user.getId())
-								.contentType(MediaType.APPLICATION_JSON)
-								.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(Arrays.asList(rrd, rrd2)))))
-						.andExpect(status().isOk())
-						.andReturn().getResponse().getContentAsString()
-		);
-
-		FoodMenuAndQuantityDTO rrd3 = new FoodMenuAndQuantityDTO(theaterMenus.get(0).getId(), 2);
-		System.out.println(
-				mockmvc.perform(post("/api/orders?userId=" + user.getId())
-								.contentType(MediaType.APPLICATION_JSON)
-								.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(List.of(rrd3)))))
-						.andExpect(status().isBadRequest())
-						.andReturn().getResponse().getContentAsString()
-		);
+		System.out.println(mockmvc.perform(post("/api/foods/pay")
+						.cookie(authCookie)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(objectMapper.writeValueAsString(new FoodOrderRequestDTO(theater.getId(), Arrays.asList(rrd, rrd2)))))
+				.andExpect(status().isBadRequest()).andReturn().getResponse().getContentAsString());
 	}
 }

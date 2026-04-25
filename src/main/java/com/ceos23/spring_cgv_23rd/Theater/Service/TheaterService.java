@@ -8,6 +8,9 @@ import com.ceos23.spring_cgv_23rd.Theater.Repository.TheaterRepository;
 import com.ceos23.spring_cgv_23rd.User.Domain.BookmarkedTheater;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,17 +21,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class TheaterService {
     TheaterRepository theaterRepository;
     BookmarkedTheaterRepository bookmarkedTheaterRepository;
     UserRepository userRepository;
-
-    public TheaterService(TheaterRepository theaterRepository,
-                   BookmarkedTheaterRepository bookmarkedTheaterRepository, UserRepository userRepository){
-        this.theaterRepository = theaterRepository;
-        this.bookmarkedTheaterRepository = bookmarkedTheaterRepository;
-        this.userRepository = userRepository;
-    }
 
     /**
      * 검색어로 극장 조회
@@ -37,14 +34,14 @@ public class TheaterService {
      * @return 검색결과. 극장의 id값과 이름값
      */
     @Transactional
-    public ResponseEntity<TheaterSearchResponseDTO> theaterSearchService(String query){
+    public TheaterSearchResponseDTO theaterSearchService(String query){
         List<Theater> searchedTheater = theaterRepository.findByNameContaining(query);
 
         TheaterSearchResponseDTO responseDTO = TheaterSearchResponseDTO.builder()
                 .theater(TheaterWrapperDTO.create(searchedTheater))
                 .build();
 
-        return ResponseEntity.ok(responseDTO);
+        return responseDTO;
     }
 
     /**
@@ -53,14 +50,12 @@ public class TheaterService {
      * @return 전체 극장의 id값과 이름값
      */
     @Transactional(readOnly = true)
-    public ResponseEntity<TheaterSearchResponseDTO> theaterSearchService(){
+    public TheaterSearchResponseDTO theaterSearchService(){
         List<Theater> searchedTheaters = theaterRepository.findAll();
 
-        TheaterSearchResponseDTO responseDTO = TheaterSearchResponseDTO.builder()
+        return TheaterSearchResponseDTO.builder()
                 .theater(TheaterWrapperDTO.create(searchedTheaters))
                 .build();
-
-        return ResponseEntity.ok(responseDTO);
     }
 
     /**
@@ -72,14 +67,12 @@ public class TheaterService {
      * @return 영화관 검색결과. id값과 이름 필드
      */
     @Transactional(readOnly = true)
-    public ResponseEntity<TheaterSearchResponseDTO> theaterSearchService(Region reg){
+    public TheaterSearchResponseDTO theaterSearchService(Region reg){
         List<Theater> searchedTheaters = theaterRepository.findByRegion(reg);
 
-        TheaterSearchResponseDTO responseDTO = TheaterSearchResponseDTO.builder()
+        return TheaterSearchResponseDTO.builder()
                 .theater(TheaterWrapperDTO.create(searchedTheaters))
                 .build();
-
-        return ResponseEntity.ok(responseDTO);
     }
 
     /**
@@ -87,17 +80,16 @@ public class TheaterService {
      * 이미 찜된 경우 취소
      *
      * @param theaterId 영화관 ID
-     * @param userId 사용자 ID
      * @return 영화관 검색결과. id값과 이름 필드
      */
     @Transactional()
     public LikedTheaterResponseDTO theaterBookMarkService(String loginId, long theaterId){
         Theater theater = theaterRepository.findById(theaterId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "해당 ID의 영화관이 없습니다.")
+                () -> new CustomException(ErrorCode.NOT_FOUND_THEATER)
         );
 
         User user = userRepository.findByLoginId(loginId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "해당 ID의 사용자가 없습니다.")
+                () -> new CustomException(ErrorCode.NOT_FOUND_USER)
         );
 
         Optional<BookmarkedTheater> theaterOptional = bookmarkedTheaterRepository.findByTheaterAndUser(theater, user);
@@ -127,7 +119,7 @@ public class TheaterService {
     @Transactional(readOnly = true)
     public CheckLikedTheaterResponseDTO checkTheaterBookMark(String loginId){
         User user = userRepository.findByLoginId(loginId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "해당 ID의 사용자가 없습니다.")
+                () -> new CustomException(ErrorCode.NOT_FOUND_USER)
         );
 
         List<BookmarkedTheater> bookmarkedTheaters = bookmarkedTheaterRepository.findByUser(user);

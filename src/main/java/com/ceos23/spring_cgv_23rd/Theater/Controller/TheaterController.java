@@ -30,7 +30,7 @@ public class TheaterController {
     public ResponseEntity<TheaterSearchResponseDTO> searchWithName(
             @RequestParam String query
     ) {
-        return theaterService.theaterSearchService(query);
+        return ResponseEntity.ok(theaterService.theaterSearchService(query));
     }
 
     /**
@@ -43,7 +43,7 @@ public class TheaterController {
     public ResponseEntity<TheaterSearchResponseDTO> searchWithRegion(
             @RequestParam Region region
     ) {
-        return theaterService.theaterSearchService(region);
+        return ResponseEntity.ok(theaterService.theaterSearchService(region));
     }
 
     /**
@@ -53,7 +53,7 @@ public class TheaterController {
      */
     @GetMapping
     public ResponseEntity<TheaterSearchResponseDTO> searchAll() {
-        return theaterService.theaterSearchService();
+        return ResponseEntity.ok(theaterService.theaterSearchService());
     }
 
     /**

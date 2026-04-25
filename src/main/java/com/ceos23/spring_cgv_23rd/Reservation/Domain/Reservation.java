@@ -19,6 +19,8 @@ public class Reservation {
         this.user = user;
         this.screening = sc;
         this.reservationDate = date;
+        this.status = ReservationStatus.RESERVED;
+        this.expiredAt = LocalDateTime.now().plusMinutes(5);
     }
 
     @Id
@@ -33,12 +35,32 @@ public class Reservation {
     @JoinColumn(name = "screening_id")
     private Screening screening;
 
-    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
 
     private LocalDateTime reservationDate;
 
     private int totalPrice;
+
+    private LocalDateTime expiredAt;
+
+    private boolean expired;
+
+    @Enumerated(value = EnumType.STRING)
+    private ReservationStatus status;
+
+    public boolean canPay(){
+        return status.equals(ReservationStatus.RESERVED);
+    }
+
+    public void expired(){
+        this.expired = true;
+        this.status = ReservationStatus.EXPIRED;
+
+        for (ReservationSeat rs : reservationSeats){
+            rs.cancel();
+        }
+    }
 
     public void addReservationSeat(ReservationSeat rs){
         reservationSeats.add(rs);
@@ -52,6 +74,14 @@ public class Reservation {
         }
 
         this.totalPrice = totalSum;
+    }
+
+    public void cancel(){
+        this.status = ReservationStatus.CANCELED;
+
+        for (ReservationSeat seat : reservationSeats){
+            seat.cancel();
+        }
     }
 
     public static Reservation create(User user,
@@ -75,5 +105,9 @@ public class Reservation {
         res.computeTotalPrice();
 
         return res;
+    }
+
+    public void buyReservation(){
+        this.status = ReservationStatus.PAID;
     }
 }

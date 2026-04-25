@@ -1,5 +1,5 @@
-package com.ceos23.spring_cgv_23rd.Payment.Service.PaymentService;
+package com.ceos23.spring_cgv_23rd.Payment.Service.PaymentFacadeService;
 
-public interface CancelablePaymentService extends PaymentService{
+public interface CancelablePaymentFacadeService extends PaymentFacadeService {
     void cancel(long targetId);
 }
