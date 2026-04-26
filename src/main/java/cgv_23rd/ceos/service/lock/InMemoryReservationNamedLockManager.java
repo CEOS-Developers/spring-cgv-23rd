@@ -60,9 +60,7 @@ public class InMemoryReservationNamedLockManager implements ReservationNamedLock
 
             if (!acquired) {
                 throw new GeneralException(
-                        GeneralErrorCode.SERVICE_UNAVAILABLE,
-                        "다른 사용자가 동일 좌석 예매를 처리 중입니다. 잠시 후 다시 시도해주세요."
-                );
+                        GeneralErrorCode.RESERVATION_ALREADY_LOCKED);
             }
 
             holder.lockKeys.add(lockKey);

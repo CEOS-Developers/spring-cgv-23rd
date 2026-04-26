@@ -65,7 +65,7 @@ public class MySqlReservationNamedLockManager implements ReservationNamedLockMan
             });
             return newHolder;
         } catch (SQLException e) {
-            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "예매 락 연결을 생성하지 못했습니다.");
+            throw new GeneralException(GeneralErrorCode.LOCK_ACQUISITION_FAILED);
         }
     }
 
@@ -77,13 +77,12 @@ public class MySqlReservationNamedLockManager implements ReservationNamedLockMan
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (!resultSet.next() || resultSet.getInt(1) != 1) {
                     throw new GeneralException(
-                            GeneralErrorCode.SERVICE_UNAVAILABLE,
-                            "다른 사용자가 동일 좌석 예매를 처리 중입니다. 잠시 후 다시 시도해주세요."
+                            GeneralErrorCode.RESERVATION_ALREADY_LOCKED
                     );
                 }
             }
         } catch (SQLException e) {
-            throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "예매 락 획득 중 오류가 발생했습니다.");
+            throw new GeneralException(GeneralErrorCode.LOCK_ACQUISITION_ERROR);
         }
     }
 

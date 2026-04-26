@@ -70,7 +70,13 @@ public enum GeneralErrorCode implements BaseErrorCode {
     PAYMENT_NOT_READY(HttpStatus.BAD_REQUEST, "PAYMENT_4002", "결제를 진행할 수 없는 상태입니다."),
     PAYMENT_ALREADY_PROCESSED(HttpStatus.CONFLICT, "PAYMENT_4091", "이미 결제 처리된 예매입니다."),
     PAYMENT_NOT_CANCELLABLE(HttpStatus.CONFLICT, "PAYMENT_4092", "취소할 수 없는 결제 상태입니다."),
-    PAYMENT_SERVER_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_5001", "결제 처리 중 서버 오류가 발생했습니다.")
+    PAYMENT_SERVER_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "PAYMENT_5001", "결제 처리 중 서버 오류가 발생했습니다."),
+
+    //락 에러
+    RESERVATION_ALREADY_LOCKED(HttpStatus.BAD_REQUEST,"RESERVATION_4004","이미 다른 사용자가 예매를 진행 중인 좌석입니다."),
+    LOCK_ACQUISITION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "LOCK_5001", "락 획득에 실패했습니다."),
+    LOCK_ACQUISITION_ERROR(HttpStatus.INTERNAL_SERVER_ERROR,"LOCK_5002","락 획득 중 오류가 발생했습니다."),
+
 
     ;
 
