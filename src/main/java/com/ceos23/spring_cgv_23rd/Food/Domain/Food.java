@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Food {
@@ -21,15 +20,19 @@ public class Food {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Getter
     private MenuType menuType;
 
     private String description;
 
+    @Getter
     private String foodName;
 
+    @Getter
     private int price;
 
     @OneToMany

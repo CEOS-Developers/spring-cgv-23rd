@@ -1,8 +1,6 @@
 package com.ceos23.spring_cgv_23rd.Reservation.Service;
 
-import com.ceos23.spring_cgv_23rd.DiscountPolicy.*;
 import com.ceos23.spring_cgv_23rd.Payment.DTO.PaymentRequestDTO;
-import com.ceos23.spring_cgv_23rd.Payment.Domain.Payment;
 import com.ceos23.spring_cgv_23rd.Payment.Service.PaymentFacadeService.CancelablePaymentFacadeService;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationRequestDTO;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.RemainingSeatsDTO;
@@ -17,6 +15,8 @@ import com.ceos23.spring_cgv_23rd.Screen.Repository.ScreeningRepository;
 import com.ceos23.spring_cgv_23rd.Screen.Service.SeatValidator;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
+import com.ceos23.spring_cgv_23rd.global.DiscountPolicy.DiscountPolicy;
+import com.ceos23.spring_cgv_23rd.global.DiscountPolicy.DiscountPolicyFactory;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
@@ -65,12 +66,16 @@ public class ReservationService {
      * @param req 요청사항
      * @return 완료된 예매정보
      */
+    @Transactional
     public ReservationResponseDTO reserve(String loginId, ReservationRequestDTO req){
         User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new EntityNotFoundException("유저 정보가 없습니다."));
         Screening screening = screeningRepository.findById(req.screeningId()).orElseThrow(() -> new EntityNotFoundException("상영 정보가 없습니다."));
+        DiscountPolicy discountPolicy = discountPolicyFactory.create(screening, req.toSeatInfos());
+
+        seatValidator.checkValidity(screening, req.seatInfos());
 
         Reservation reservation = screening.reserve(
-                user, req, seatValidator, discountPolicyFactory
+                user, req, discountPolicy
         );
 
         try{
@@ -79,7 +84,7 @@ public class ReservationService {
             return ReservationResponseDTO.createForReserve(user, reservation);
         } catch (DataIntegrityViolationException de){
             //잘못된 요청 이외의 동시성 처리
-            //UK를 통해서 도잇에 같은 좌석 예매요청에 대해서 처리한다.
+            //UK를 통해서 동시에 같은 좌석 예매요청에 대해서 처리한다.
             de.printStackTrace();
             reservation.cancel();
             throw new CustomException(ErrorCode.ALREADY_OCCUPIED);

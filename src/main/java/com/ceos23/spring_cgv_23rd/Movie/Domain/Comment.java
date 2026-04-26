@@ -7,7 +7,6 @@ import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 public class Comment {
@@ -18,6 +17,7 @@ public class Comment {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
@@ -30,8 +30,10 @@ public class Comment {
     @JoinColumn(name = "movie_id")
     private Movie movie;
 
+    @Getter
     private LocalDateTime createdAt;
 
+    @Getter
     private String content;
 
     public void addMovie(Movie movie){

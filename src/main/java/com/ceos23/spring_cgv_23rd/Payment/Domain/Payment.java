@@ -13,7 +13,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment {
     private Payment(String paymentId, LocalDateTime time, String storeId, String orderName, int totalPayAmount, Currency currency, PayType payType, long targetId){
@@ -30,9 +29,11 @@ public class Payment {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Getter
     private String paymentId;
 
     private PaymentStatus paymentStatus;
@@ -42,6 +43,7 @@ public class Payment {
     @Enumerated(value = EnumType.STRING)
     private PayType payType;
 
+    @Getter
     private long targetId;
 
     private String storeId;

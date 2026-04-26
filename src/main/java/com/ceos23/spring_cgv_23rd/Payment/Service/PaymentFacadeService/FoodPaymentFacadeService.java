@@ -82,62 +82,6 @@ public class FoodPaymentFacadeService implements PaymentFacadeService {
         throw new CustomException(ErrorCode.PAYMENT_FAILED_BY_SERVER);
     }
 
-                /*
-                concurrencyClient.pay(paymentId, req);
-                payment.paymentSuccess();
-                order = cart.buyCart();
-                foodOrderRepository.save(order);
-
-                cart.endPaying();
-                return payment;
-
-            } catch (FeignException fe) {
-                if (handleFeignException(fe)) {
-                    if (fe.status() == 409) {
-                        payment.updatePaymentId(paymentIdHandler.getPaymentId());
-                        paymentId = payment.getId();
-                        continue;
-                    } else if (fe.status() == 500) {
-                        try {
-                            PaymentResponseDTO paymentDTO = concurrencyClient.checkPayment(paymentId);
-
-                            if (paymentDTO.findStatus("PAID")) {
-                                //결제에 성공했으나 응답반환에 실패
-                                if (order == null){
-                                    order = cart.buyCart();
-                                    foodOrderRepository.save(order);
-                                }
-
-                                cart.endPaying();
-                                payment.paymentSuccess();
-                                return payment;
-                            } else {
-                                continue;
-                            }
-                        } catch (FeignException e) {
-                            // 결제에 성공하지도 못 함. 외부 연동 서버 에러
-                            // 다시 결제 시도를 보내야함
-                            continue;
-                        }
-                    }
-                    throw fe;
-                }
-            } catch (Exception e) {
-                //외부연동이 아니라 내부 서버에러
-                e.printStackTrace();
-                cart.fail();
-                payment.paymentFail();
-                throw e;
-            }
-        }
-
-        payment.paymentFail();
-        cart.fail();
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "결제에 실패했습니다.");
-    }
-}
-                 */
-
     private boolean checkPaymentStatusPaid(String paymentId){
         try {
             PaymentResponseDTO paymentDTO = concurrencyClient.checkPayment(paymentId);

@@ -24,8 +24,8 @@ public class Screen {
     private long id;
 
     private String screenName;
-
     private CinemaType cinemaType;
+
 
     private int seatAmount;
 
@@ -36,6 +36,5 @@ public class Screen {
     public static Screen create(Theater theater, String scName, CinemaType cType, int seatAmount){
         return new Screen(scName, cType, theater, seatAmount);
     }
-
 
 }

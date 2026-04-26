@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CartItem {
     protected CartItem(TheaterMenu menu, int quantity){
@@ -17,6 +16,7 @@ public class CartItem {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
@@ -25,10 +25,12 @@ public class CartItem {
     @JoinColumn(name = "cart_id")
     private Cart cart;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "menu_id")
     private TheaterMenu menu;
 
+    @Getter
     private int quantity;
 
     public int getPrice(){

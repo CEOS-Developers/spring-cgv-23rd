@@ -9,7 +9,6 @@ import lombok.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-@Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TheaterMenu {
@@ -21,15 +20,20 @@ public class TheaterMenu {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Getter
     private int sold;
 
+    @Getter
     private boolean soldOut;
 
+    @Getter
     private boolean ablePickUpLater;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "food")
     private Food food;

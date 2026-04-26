@@ -11,7 +11,6 @@ import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Getter
 public class Actor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,9 +22,11 @@ public class Actor {
 
     private String country;
 
+    @Getter
     @OneToMany(mappedBy = "actor")
     private List<ActorInfo> actorInfos = new ArrayList<>();
 
+    @Getter
     @OneToMany(mappedBy = "actor")
     private List<Prize> prizes = new ArrayList<>();
 

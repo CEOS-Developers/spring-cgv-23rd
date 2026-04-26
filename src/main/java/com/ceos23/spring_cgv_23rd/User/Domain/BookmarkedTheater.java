@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 import java.awt.print.Book;
 
 @Entity
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BookmarkedTheater {
     private BookmarkedTheater(Theater theater, User user){
@@ -18,9 +17,11 @@ public class BookmarkedTheater {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "theater_id")
     private Theater theater;

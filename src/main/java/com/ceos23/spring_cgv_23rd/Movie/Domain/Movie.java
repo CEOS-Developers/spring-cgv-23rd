@@ -10,11 +10,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Movie {
-    private Movie(String name, LocalDate openDate, String prolog, AccessibleAge aca, MovieType movieType, int price, long runningTime){
+    private Movie(String name, LocalDate openDate, String prolog, AccessibleAge aca, MovieType movieType, int price, int runningTime){
         this.movieName = name;
         this.openDate = openDate;
         this.prolog = prolog;
@@ -25,6 +24,7 @@ public class Movie {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
@@ -32,6 +32,7 @@ public class Movie {
     @OneToOne(mappedBy = "movie")
     private AudienceData audienceData;
 
+    @Getter
     @OneToMany(mappedBy = "movie")
     private List<Comment> comments = new ArrayList<>();
 
@@ -43,9 +44,11 @@ public class Movie {
     @JoinColumn(name = "video_photos")
     private List<Media> video = new ArrayList<>();
 
+    @Getter
     @OneToMany(mappedBy = "movie")
     private List<ActorInfo> actors = new ArrayList<>();
 
+    @Getter
     private String movieName;
 
     private LocalDate openDate;
@@ -54,16 +57,20 @@ public class Movie {
 
     private double eggRate;
 
+    @Getter
     private String prolog;
 
+    @Getter
     @Enumerated(EnumType.STRING)
     private AccessibleAge accessibleAge;
 
     private MovieType movieType;
 
+    @Getter
     private int price;
 
-    private long runningTime;
+    @Getter
+    private int runningTime;
 
     public void addAudienceDataInMovie(AudienceData aud){
         this.audienceData = aud;
@@ -81,7 +88,7 @@ public class Movie {
     }
 
     public static Movie create(String name, LocalDate date, String prolog, AccessibleAge aca, MovieType type,
-                               int price, long runningTime) {
+                               int price, int runningTime) {
         return new Movie(name, date, prolog, aca, type, price, runningTime);
     }
 }

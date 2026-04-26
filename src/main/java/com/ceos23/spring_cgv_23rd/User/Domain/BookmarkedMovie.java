@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BookmarkedMovie {
     private BookmarkedMovie(User user, Movie movie){
@@ -16,6 +15,7 @@ public class BookmarkedMovie {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
@@ -23,6 +23,7 @@ public class BookmarkedMovie {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "movie_id")
     private Movie movie;

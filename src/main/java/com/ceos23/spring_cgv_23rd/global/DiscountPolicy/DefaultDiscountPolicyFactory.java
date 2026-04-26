@@ -1,9 +1,7 @@
-package com.ceos23.spring_cgv_23rd.DiscountPolicy;
+package com.ceos23.spring_cgv_23rd.global.DiscountPolicy;
 
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.SeatInfo;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -24,5 +22,9 @@ public class DefaultDiscountPolicyFactory implements DiscountPolicyFactory {
                         .filter(p -> p.supports(screening, seatInfos))
                         .toList()
         );
+    }
+
+    public DiscountPolicy createAllPolicy(Screening s, List<SeatInfo> seatInfos){
+        return create(s, seatInfos);
     }
 }

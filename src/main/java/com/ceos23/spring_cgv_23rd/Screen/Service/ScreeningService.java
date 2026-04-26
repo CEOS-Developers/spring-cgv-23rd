@@ -2,11 +2,16 @@ package com.ceos23.spring_cgv_23rd.Screen.Service;
 
 import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import com.ceos23.spring_cgv_23rd.Movie.Repository.MovieRepository;
+import com.ceos23.spring_cgv_23rd.Reservation.DTO.Request.ReservationType;
 import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.ReservationResponseDTO;
+import com.ceos23.spring_cgv_23rd.Reservation.DTO.Response.ReservedSeatQuantityResponseDTO;
+import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationStatus;
 import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationRepository;
+import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationSeatRepository;
 import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreenWrapperDTO;
 import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreeningSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreeningWrapperDTO;
+import com.ceos23.spring_cgv_23rd.Screen.DTO.ScreeningSearchQueryResultDTO;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.CinemaType;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screen;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
@@ -33,67 +38,80 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ScreeningService {
+    private final ReservationSeatRepository reservationSeatRepository;
     TheaterRepository theaterRepository;
     ScreeningRepository screeningRepository;
-    ReservationRepository reservationRepository;
     MovieRepository movieRepository;
 
     /**
      * 사용자가 영화관 id와 관림일자를 건네주면 영화관별로 이용가능한 시간 및 상영관에 대한 정보를 제공합니다.
-     * TODO: 관람일자 설정하기: 완료
      */
-    public List<ScreeningSearchResponseDTO> searchMovieWithTheaterId(long theaterId,
-                                                                                     LocalDate date){
-        Theater theater = theaterRepository.findById(theaterId).orElseThrow(
-                () -> new CustomException(ErrorCode.NOT_FOUND_THEATER)
-        );
+    public List<ScreeningSearchResponseDTO> searchMovieWithTheaterId(long theaterId, LocalDate date) {
 
-        List<Screening> screenings = screeningRepository.findByScreen_Theater(theater).stream()
-                .filter(s -> s.getStartTime().isAfter(LocalDateTime.now()))
-                .filter(s -> s.getStartTime().toLocalDate().isEqual(date))
-                .toList();
+        Theater theater = theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_THEATER));
 
-        Map<Movie, Map<CinemaType, List<Screening>>> gr =
+        List<Screening> screenings = screeningRepository.findByTheater(theater, date);
+
+        Map<Movie, Map<CinemaType, List<Screening>>> grouped =
                 screenings.stream()
                         .collect(Collectors.groupingBy(
                                 Screening::getMovie,
                                 Collectors.groupingBy(s -> s.getScreen().getCinemaType())
                         ));
 
-        List<ScreeningSearchResponseDTO> res = new ArrayList<>();
+        List<Long> screeningIds = screenings.stream()
+                .map(Screening::getId)
+                .toList();
 
-        for (Movie movie : gr.keySet()){
+        List<ReservedSeatQuantityResponseDTO> quantityInfos =
+                reservationSeatRepository.getQuantityOfReservedSeatByScreening(
+                        screeningIds,
+                        ReservationStatus.RESERVED
+                );
+
+        Map<Long, Long> quantityMap = quantityInfos.stream()
+                .collect(Collectors.toMap(
+                        ReservedSeatQuantityResponseDTO::screeningId,
+                        ReservedSeatQuantityResponseDTO::quantity
+                ));
+
+        List<ScreeningSearchResponseDTO> result = new ArrayList<>();
+
+        for (Movie movie : grouped.keySet()) {
+            Map<CinemaType, List<Screening>> byCinema = grouped.get(movie);
             List<ScreenWrapperDTO> screenWrapperDTOS = new ArrayList<>();
-            Map<CinemaType, List<Screening>> screeningWithCinemaType = gr.get(movie);
 
-            for (CinemaType type : screeningWithCinemaType.keySet()){
+            for (CinemaType type : CinemaType.values()) {
+                List<Screening> list =
+                        byCinema.getOrDefault(type, List.of());
 
-                List<ScreeningWrapperDTO> screeningWrapperDTOs =
-                        screeningWithCinemaType.get(type).stream()
-                                .map(s -> ScreeningWrapperDTO.create(
-                                        s.getScreen(),
-                                        s,
-                                        movie,
-                                        s.getScreen().getSeatAmount() -
-                                                reservationRepository.findByScreening(s).stream()
-                                                                .mapToInt(r -> r.getReservationSeats().size())
-                                                                .sum(),
-                                        s.getScreen().getSeatAmount()
-                                ))
+                List<ScreeningWrapperDTO> screeningWrapperDTOS =
+                        list.stream()
+                                .map(s -> {
+                                    long reserved = quantityMap.getOrDefault(s.getId(), 0L);
+
+                                    return ScreeningWrapperDTO.create(
+                                            s.getScreen(),
+                                            s,
+                                            movie,
+                                            (int) (s.getScreen().getSeatAmount() - reserved),
+                                            s.getScreen().getSeatAmount()
+                                    );
+                                })
                                 .toList();
 
-                 screenWrapperDTOS.add(ScreenWrapperDTO.create(type, screeningWrapperDTOs));
+                screenWrapperDTOS.add(ScreenWrapperDTO.create(type, screeningWrapperDTOS));
             }
-            res.add(ScreeningSearchResponseDTO.create(movie, screenWrapperDTOS));
+            result.add(ScreeningSearchResponseDTO.create(movie, screenWrapperDTOS));
         }
-
-        return res;
+        return result;
     }
 
     /**
      * 사용자가 영화관 id와 관림일자, 영화id를 건네주면 영화관별로 이용가능한 시간 및 상영관에 대한 정보를 제공합니다.
      */
-    public List<ScreeningSearchResponseDTO> searchMovieWithTheaterId(long theaterId,
+    public ScreeningSearchResponseDTO searchMovieWithTheaterId(long theaterId,
                                                                                      long movieId,
                                                                                      LocalDate date){
         Theater theater = theaterRepository.findById(theaterId)
@@ -102,58 +120,46 @@ public class ScreeningService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOT_FOUND_MOVIE));
 
-        List<Screening> screenings = screeningRepository.findByScreen_TheaterAndMovie(theater, movie).stream()
-                .filter(s -> s.getStartTime().isAfter(LocalDateTime.now()))
-                .filter(s -> s.getStartTime().toLocalDate().isEqual(date))
-                .toList();
-
-        Map<CinemaType, List<Screening>> gr =
-                screenings.stream()
-                        .collect(Collectors.groupingBy(
-                                s -> s.getScreen().getCinemaType()
+        Map<CinemaType, List<ScreeningSearchQueryResultDTO>> screeningSearchResult = screeningRepository.findByTheaterAndMovie(theater, movie, LocalDateTime.now())
+                .stream().collect(
+                        Collectors.groupingBy(
+                                ScreeningSearchQueryResultDTO::type
                         ));
 
+        List<Long> screeningIds = screeningSearchResult.values().stream()
+                .flatMap(List::stream)
+                .map(ScreeningSearchQueryResultDTO::screeningId)
+                .toList();
 
-        List<ScreeningSearchResponseDTO> res = new ArrayList<>();
-        List<ScreenWrapperDTO> wrd = new ArrayList<>();
-
-        for (CinemaType type : gr.keySet()){
-            List<ScreeningWrapperDTO> screeningWrapperDTOs =
-                    gr.get(type).stream()
-                            .map(s -> ScreeningWrapperDTO.create(
-                                    s.getScreen(),
-                                    s,
-                                    movie,
-                                    s.getScreen().getSeatAmount() -
-                                            reservationRepository.findByScreening(s).stream()
-                                                    .mapToInt(r -> r.getReservationSeats().size())
-                                                    .sum(),
-                                    s.getScreen().getSeatAmount()
-                            ))
-                            .toList();
-            wrd.add(ScreenWrapperDTO.create(type, screeningWrapperDTOs));
-        }
-
-        res.add(ScreeningSearchResponseDTO.create(movie, wrd));
-        return res;
-    }
-
-    /*
-    public ReservationResponseDTO reserve(String loginId, ReservationRequestDTO req){
-        User user = userRepository.findByLoginId(loginId).orElseThrow(() -> new EntityNotFoundException("유저 정보가 없습니다."));
-        Screening screening = screeningRepository.findById(req.screeningId()).orElseThrow(() -> new EntityNotFoundException("상영 정보가 없습니다."));
-
-        seatValidator.checkValidity(screening, req.seatInfos());
-
-        Reservation reservation = Reservation.create(
-                user,
-                screening,
-                req.toReservingSeats(),
-                discountPolicyFactory.create(screening, req.toSeatInfos())
+        List<ReservedSeatQuantityResponseDTO> quantityInfos = reservationSeatRepository.getQuantityOfReservedSeatByScreening(
+                screeningIds, ReservationStatus.RESERVED
         );
 
-        reservationRepository.save(reservation);
-        return ReservationResponseDTO.createForReserve(user, reservation);
+        Map<Long, Long> quantityMap = quantityInfos.stream()
+                .collect(Collectors.toMap(
+                        ReservedSeatQuantityResponseDTO::screeningId,
+                        ReservedSeatQuantityResponseDTO::quantity
+                ));
+
+        List<ScreenWrapperDTO> screenWrapperDTOs = new ArrayList<>();
+
+        for (CinemaType type : CinemaType.values()) {
+
+            List<ScreeningSearchQueryResultDTO> dtos =
+                    screeningSearchResult.getOrDefault(type, List.of());
+
+            List<ScreeningWrapperDTO> wrappers = dtos.stream()
+                    .map(dto -> {
+                        long reserved = quantityMap.getOrDefault(dto.screeningId(), 0L);
+                        return ScreeningWrapperDTO.create(dto, (int) reserved);
+                    })
+                    .toList();
+
+            screenWrapperDTOs.add(
+                    ScreenWrapperDTO.create(type, wrappers)
+            );
+        }
+
+        return ScreeningSearchResponseDTO.create(movie, screenWrapperDTOs);
     }
-     */
 }

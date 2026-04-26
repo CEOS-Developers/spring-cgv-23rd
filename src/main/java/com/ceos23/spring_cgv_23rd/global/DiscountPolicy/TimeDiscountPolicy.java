@@ -1,4 +1,4 @@
-package com.ceos23.spring_cgv_23rd.DiscountPolicy;
+package com.ceos23.spring_cgv_23rd.global.DiscountPolicy;
 
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.SeatInfo;
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
@@ -12,7 +12,7 @@ public class TimeDiscountPolicy implements DiscountPolicy{
     }
 
     @Override
-    public int calculateDiscount(Screening screening, SeatInfo seatInfo){
+    public int calculateFee(Screening screening, SeatInfo seatInfo){
         int price = screening.getMoviePrice();
 
         if(screening.isMorning()){ //조조할인
@@ -21,7 +21,7 @@ public class TimeDiscountPolicy implements DiscountPolicy{
             return (int) Math.round(price * 0.1);
         }
 
-        return 0;
+        return price;
     }
 
 }

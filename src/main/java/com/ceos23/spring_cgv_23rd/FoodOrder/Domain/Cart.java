@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Getter
 @Table(name = "cart",
         uniqueConstraints = {
                 @UniqueConstraint(
@@ -35,24 +34,30 @@ public class Cart {
     }
 
     @Id
+    @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Getter
     private ReservationStatus status;
 
     private String activeKey;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Getter
     @ManyToOne
     @JoinColumn(name = "theater_id")
     private Theater theater;
 
+    @Getter
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL)
     private List<CartItem> cartItems = new ArrayList<>();
 
+    @Getter
     private int price = 0;
 
     public void addItem(TheaterMenu menu, int quantity){

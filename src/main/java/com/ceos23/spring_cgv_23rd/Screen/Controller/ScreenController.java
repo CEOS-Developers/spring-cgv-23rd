@@ -39,7 +39,7 @@ public class ScreenController {
      * 사용자가 영화관 id와 관림일자, 영화id를 건네주면 영화관별로 이용가능한 시간 및 상영관에 대한 정보를 제공합니다.
      */
     @GetMapping(params = {"theaterId", "movieId", "date"})
-    public ResponseEntity<List<ScreeningSearchResponseDTO>> screenSearching(
+    public ResponseEntity<ScreeningSearchResponseDTO> screenSearching(
             @RequestParam long theaterId,
             @RequestParam long movieId,
             @RequestParam LocalDate date

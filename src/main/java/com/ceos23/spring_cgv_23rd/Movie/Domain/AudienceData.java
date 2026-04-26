@@ -1,19 +1,16 @@
 package com.ceos23.spring_cgv_23rd.Movie.Domain;
 
-import com.ceos23.spring_cgv_23rd.Actor.Domain.ActorInfo;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Data
 @Entity
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AudienceData {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
+    @Setter
     @OneToOne
     @JoinColumn(name = "movie_id")
     private Movie movie;

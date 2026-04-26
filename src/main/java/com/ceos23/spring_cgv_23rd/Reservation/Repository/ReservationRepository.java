@@ -18,12 +18,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     """)
     List<Reservation> findByScreening(Screening screening);
 
+
+
     @Query("""
         select r from Reservation r
         where r.id = :targetId
         and r.status = 'RESERVED'
     """)
-    Optional<Reservation> findActivatedReservationById(@Param("targetId") long id);
+    Optional<Reservation> findActivatedReservationById(@Param("targetId")  long id);
 
     @Query("""
         select r from Reservation r
