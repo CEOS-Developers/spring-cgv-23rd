@@ -1138,13 +1138,20 @@ public void confirm() {
 - 같은 극장의 같은 음식 재고
 - 같은 상영관의 시간표 등록
 
-이 자원들은 모두 **이미 DB에 존재하는 행(row) 기반 자원**이고, 충돌 시 데이터 정합성이 가장 중요하다.
+이 자원들은 모두 정합성이 매우 중요하지만, 자원의 성격은 서로 다르다.
 
-따라서 현재 단계에서는 **Pessimistic Lock + 유니크 제약 + 도메인 검증** 조합이 가장 적합하다고 판단했다.
+- **예매 좌석**: 실제로 보호해야 하는 대상은 `Seat` 행 자체가 아니라 `movieScreenId + seatId` 조합이다.
+- **음식 재고 / 상영관 시간표**: 이미 존재하는 재고 row, 상영관 row를 기준으로 보호하면 된다.
+
+따라서 현재 프로젝트에서는 자원 특성에 따라 락 전략을 구분했다.
+
+- **예매 좌석**: `Named Lock + 유니크 제약 + 도메인 검증`
+- **매점 재고 / 상영 시간표**: `Pessimistic Lock + 도메인 검증`
 
 이 방식을 선택한 이유는 다음과 같다.
 
-- 좌석/재고는 충돌 빈도가 높을 수 있음
+- 좌석 예매는 `같은 회차의 같은 좌석`만 정확히 직렬화하면 됨
+- 재고 차감과 시간표 등록은 이미 존재하는 부모 row를 잠그는 방식이 단순하고 명확함
 - 중복 예매나 음수 재고는 절대 허용되면 안 됨
 - 단순 조회보다 정합성이 더 중요함
 - Redis 분산 락을 붙이기 전에도 DB 수준에서 확실한 보호 장치가 필요함
@@ -1193,9 +1200,32 @@ A :
 
 #### 예매 좌석
 
-- `Seat` 조회 시 비관적 락을 사용
+- `movieScreenId + seatId` 조합을 문자열 키로 만들어 `Named Lock`을 획득
 - `ReservationSeat` 에 `UNIQUE (movie_screen_id, seat_id)` 제약을 둠
 - `ReservationStatus.대기`, `완료` 상태를 모두 점유 상태로 간주하여 중복 선택을 막음
+
+예매 좌석은 물리 좌석(`Seat`) 자체를 잠그는 것이 아니라, **특정 상영 회차에서의 특정 좌석**을 잠그는 것이 핵심이다.
+
+만약 `Seat` row 자체에 비관적 락을 걸면, 같은 물리 좌석이라도 서로 다른 `movieScreenId` 예매까지 함께 대기하게 된다.  
+예를 들어 `A1` 좌석이 10시 회차와 14시 회차에 모두 존재할 때, 우리가 막아야 하는 충돌은 `10시 A1 vs 10시 A1`이지 `10시 A1 vs 14시 A1`이 아니다.
+
+그래서 예매에서는 다음과 같이 `reservation:{movieScreenId}:{seatId}` 형식의 키로 네임드 락을 사용한다.
+
+```java
+List<String> lockKeys = seatIds.stream()
+        .sorted()
+        .map(seatId -> "reservation:" + movieScreenId + ":" + seatId)
+        .toList();
+
+reservationNamedLockManager.acquireLocks(lockKeys);
+```
+
+이 방식을 선택한 이유는 다음과 같다.
+
+- 예매 충돌의 기준이 `seat_id` 단독이 아니라 `movieScreenId + seatId` 조합이기 때문
+- 아직 `ReservationSeat` row가 생성되기 전에도 문자열 키만으로 선점 제어가 가능하기 때문
+- 서로 다른 회차의 같은 물리 좌석은 동시에 처리할 수 있어 락 범위를 더 정확히 줄일 수 있기 때문
+- `ReservationSeat`의 유니크 제약이 마지막 안전망 역할을 계속 수행하기 때문
 
 ```java
 boolean isAlreadyReserved = reservationSeatRepository

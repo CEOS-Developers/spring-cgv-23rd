@@ -14,6 +14,7 @@ import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
 import cgv_23rd.ceos.repository.reservation.SeatRepository;
+import cgv_23rd.ceos.service.lock.ReservationNamedLockManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -33,16 +34,19 @@ public class ReservationService {
     private final ReservationSeatRepository reservationSeatRepository;
     private final MovieScreenRepository movieScreenRepository;
     private final SeatRepository seatRepository;
+    private final ReservationNamedLockManager reservationNamedLockManager;
 
     // 1. 영화 예매
     public Long createReservation(Long userId, ReservationRequestDto requestDto) {
         validateSeatRequest(requestDto);
         User user = getUser(userId);
-
         MovieScreen movieScreen = getMovieScreen(requestDto.movieScreenId());
+        List<Long> sortedSeatIds = requestDto.seatIds().stream().sorted().toList();
+
+        reservationNamedLockManager.acquireLocks(buildSeatLockKeys(movieScreen.getId(), sortedSeatIds));
 
         Reservation reservation = Reservation.create(user, movieScreen, LocalDateTime.now());
-        processSeatReservations(reservation, movieScreen.getId(), requestDto.seatIds());
+        processSeatReservations(reservation, movieScreen.getId(), sortedSeatIds);
 
         try {
             reservationRepository.save(reservation);
@@ -130,10 +134,8 @@ public class ReservationService {
     }
 
     private void processSeatReservations(Reservation reservation, Long movieScreenId, List<Long> seatIds) {
-        List<Long> sortedSeatIds = seatIds.stream().sorted().toList();
-
-        for (Long seatId : sortedSeatIds) {
-            Seat seat = seatRepository.findByIdWithLock(seatId)
+        for (Long seatId : seatIds) {
+            Seat seat = seatRepository.findById(seatId)
                     .orElseThrow(() -> new GeneralException(GeneralErrorCode.SEAT_NOT_FOUND));
 
             boolean isAlreadyReserved = reservationSeatRepository
@@ -147,6 +149,12 @@ public class ReservationService {
 
             reservation.addSeat(seat);
         }
+    }
+
+    private List<String> buildSeatLockKeys(Long movieScreenId, List<Long> seatIds) {
+        return seatIds.stream()
+                .map(seatId -> "reservation:" + movieScreenId + ":" + seatId)
+                .toList();
     }
 
     private void validateUserExists(Long userId) {

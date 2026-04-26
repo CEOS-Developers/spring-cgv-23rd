@@ -15,6 +15,7 @@ import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
 import cgv_23rd.ceos.repository.reservation.SeatRepository;
+import cgv_23rd.ceos.service.lock.ReservationNamedLockManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,7 @@ class ReservationServiceTest {
     @Mock private ReservationSeatRepository reservationSeatRepository;
     @Mock private MovieScreenRepository movieScreenRepository;
     @Mock private SeatRepository seatRepository;
+    @Mock private ReservationNamedLockManager reservationNamedLockManager;
 
     @Test
     @DisplayName("영화 예매 성공 테스트")
@@ -68,8 +70,8 @@ class ReservationServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(movieScreenRepository.findById(movieScreenId)).willReturn(Optional.of(movieScreen));
-        given(seatRepository.findByIdWithLock(1L)).willReturn(Optional.of(seat1));
-        given(seatRepository.findByIdWithLock(2L)).willReturn(Optional.of(seat2));
+        given(seatRepository.findById(1L)).willReturn(Optional.of(seat1));
+        given(seatRepository.findById(2L)).willReturn(Optional.of(seat2));
         given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))
                 .willReturn(false);
 
@@ -101,7 +103,7 @@ class ReservationServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(movieScreenRepository.findById(1L)).willReturn(Optional.of(movieScreen));
-        given(seatRepository.findByIdWithLock(1L)).willReturn(Optional.of(seat));
+        given(seatRepository.findById(1L)).willReturn(Optional.of(seat));
 
         // 이미 좌석이 예약된 상황으로 가정
         given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))

@@ -73,6 +73,7 @@ class ReservationConcurrencyTest {
     private ScreenTypeRepository screenTypeRepository;
 
     private Long movieScreenId;
+    private Long anotherMovieScreenId;
     private Long seatA1Id;
     private Long seatA2Id;
     private Long user1Id;
@@ -130,6 +131,14 @@ class ReservationConcurrencyTest {
                 LocalDateTime.now().plusHours(4)
         ));
 
+        MovieScreen anotherMovieScreen = movieScreenRepository.saveAndFlush(MovieScreen.create(
+                screen,
+                movie,
+                2,
+                LocalDateTime.now().plusHours(5),
+                LocalDateTime.now().plusHours(7)
+        ));
+
         User user1 = userRepository.saveAndFlush(User.signup(
                 "user1",
                 "01011111111",
@@ -147,6 +156,7 @@ class ReservationConcurrencyTest {
         ));
 
         movieScreenId = movieScreen.getId();
+        anotherMovieScreenId = anotherMovieScreen.getId();
         seatA1Id = seatA1.getId();
         seatA2Id = seatA2.getId();
         user1Id = user1.getId();
@@ -191,9 +201,36 @@ class ReservationConcurrencyTest {
         assertEquals(2L, reservationSeatRepository.count());
     }
 
+    @Test
+    @DisplayName("같은 물리 좌석이어도 상영 회차가 다르면 동시에 예매할 수 있다")
+    void createReservation_sameSeatDifferentMovieScreens_bothSucceed() throws Exception {
+        AtomicInteger successCount = new AtomicInteger();
+        Queue<Throwable> failures = new ConcurrentLinkedQueue<>();
+
+        runConcurrently(
+                () -> reserve(user1Id, movieScreenId, List.of(seatA1Id), successCount, failures),
+                () -> reserve(user2Id, anotherMovieScreenId, List.of(seatA1Id), successCount, failures)
+        );
+
+        assertEquals(2, successCount.get());
+        assertTrue(failures.isEmpty());
+        assertEquals(2L, reservationRepository.count());
+        assertEquals(2L, reservationSeatRepository.count());
+    }
+
     private void reserve(Long userId, List<Long> seatIds, AtomicInteger successCount, Queue<Throwable> failures) {
+        reserve(userId, movieScreenId, seatIds, successCount, failures);
+    }
+
+    private void reserve(
+            Long userId,
+            Long targetMovieScreenId,
+            List<Long> seatIds,
+            AtomicInteger successCount,
+            Queue<Throwable> failures
+    ) {
         try {
-            reservationService.createReservation(userId, new ReservationRequestDto(movieScreenId, seatIds));
+            reservationService.createReservation(userId, new ReservationRequestDto(targetMovieScreenId, seatIds));
             successCount.incrementAndGet();
         } catch (Throwable throwable) {
             failures.add(throwable);
