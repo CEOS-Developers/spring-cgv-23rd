@@ -6,9 +6,11 @@ import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.global.config.PaymentProperties;
 import feign.FeignException;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
@@ -27,10 +29,21 @@ public class PaymentService {
 
         try {
             // Feign 인터페이스 호출
-            return paymentFeignClient.requestInstantPayment(paymentId, request);
+            PaymentResponse response = paymentFeignClient.requestInstantPayment(paymentId, request);
+            if (response == null || response.data() == null) {
+                log.warn("Payment instant request returned empty success body. paymentId={}", paymentId);
+                return getPayment(paymentId);
+            }
+            return response;
         } catch (FeignException e) {
+            log.warn("Payment instant request failed. status={}, body={}", e.status(), safeBody(e));
+            if (isEmptySuccessResponse(e)) {
+                return getPayment(paymentId);
+            }
             throw translateInstantPaymentException(e);
         } catch (Exception e) { // ResourceAccessException 대신 일반 Exception 처리
+            log.warn("Payment instant request unexpected error. type={}, message={}",
+                    e.getClass().getName(), e.getMessage());
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }
@@ -39,8 +52,11 @@ public class PaymentService {
         try {
             return paymentFeignClient.cancelPayment(paymentId);
         } catch (FeignException e) {
+            log.warn("Payment cancel request failed. status={}, body={}", e.status(), safeBody(e));
             throw translateCancelPaymentException(e);
         } catch (Exception e) {
+            log.warn("Payment cancel request unexpected error. type={}, message={}",
+                    e.getClass().getName(), e.getMessage());
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }
@@ -49,10 +65,26 @@ public class PaymentService {
         try {
             return paymentFeignClient.getPayment(paymentId);
         } catch (FeignException e) {
+            log.warn("Payment get request failed. status={}, body={}", e.status(), safeBody(e));
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 내역 조회에 실패했습니다. status=" + e.status());
         } catch (Exception e) {
+            log.warn("Payment get request unexpected error. type={}, message={}",
+                    e.getClass().getName(), e.getMessage());
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
+    }
+
+    private String safeBody(FeignException e) {
+        try {
+            String body = e.contentUTF8();
+            return (body == null || body.isBlank()) ? "<empty>" : body;
+        } catch (Exception ignored) {
+            return "<unavailable>";
+        }
+    }
+
+    private boolean isEmptySuccessResponse(FeignException e) {
+        return e.status() == 200 && "<empty>".equals(safeBody(e));
     }
 
     private GeneralException translateInstantPaymentException(FeignException e) {

@@ -22,6 +22,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(
@@ -75,9 +77,9 @@ class PaymentFeignIntegrationTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody("""
                         {
-                          "code": 200,
+                          "status": 201,
                           "message": "ok",
-                          "data": {
+                          "payload": {
                             "paymentId": "RES_1_12345678",
                             "paymentStatus": "PAID",
                             "orderName": "인셉션 예매",
@@ -110,7 +112,50 @@ class PaymentFeignIntegrationTest {
                 .contains("\"customData\":\"{\\\"reservationId\\\":1}\"");
 
         assertThat(response).isNotNull();
-        assertThat(response.code()).isEqualTo(200);
+        assertThat(response.code()).isEqualTo(201);
+        assertThat(response.data().paymentStatus()).isEqualTo("PAID");
+    }
+
+    @Test
+    @DisplayName("즉시 결제 응답 본문이 비어 있으면 결제 내역 조회로 상태를 보완한다")
+    void requestInstantPayment_emptyBody_fallsBackToGetPayment() throws Exception {
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200));
+        mockWebServer.enqueue(new MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("""
+                        {
+                          "status": 200,
+                          "message": "결제 내역 조회",
+                          "payload": {
+                            "paymentId": "RES_1_12345678",
+                            "paymentStatus": "PAID",
+                            "orderName": "인셉션 예매",
+                            "pgProvider": "mock-pg",
+                            "currency": "KRW",
+                            "customData": "{\\"reservationId\\":1}",
+                            "paidAt": "2026-04-25T14:30:00"
+                          }
+                        }
+                        """));
+
+        var response = paymentService.requestInstantPayment(
+                "RES_1_12345678",
+                "인셉션 예매",
+                15000,
+                "{\"reservationId\":1}"
+        );
+
+        RecordedRequest instantRequest = mockWebServer.takeRequest(3, TimeUnit.SECONDS);
+        RecordedRequest getRequest = mockWebServer.takeRequest(3, TimeUnit.SECONDS);
+
+        assertThat(instantRequest).isNotNull();
+        assertThat(getRequest).isNotNull();
+        assertThat(instantRequest.getMethod()).isEqualTo("POST");
+        assertThat(instantRequest.getPath()).isEqualTo("/payments/RES_1_12345678/instant");
+        assertThat(getRequest.getMethod()).isEqualTo("GET");
+        assertThat(getRequest.getPath()).isEqualTo("/payments/RES_1_12345678");
+        assertThat(response).isNotNull();
         assertThat(response.data().paymentStatus()).isEqualTo("PAID");
     }
 
@@ -121,9 +166,9 @@ class PaymentFeignIntegrationTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody("""
                         {
-                          "code": 200,
+                          "status": 200,
                           "message": "ok",
-                          "data": {
+                          "payload": {
                             "paymentId": "RES_1_12345678",
                             "paymentStatus": "CANCELLED",
                             "orderName": "인셉션 예매",

@@ -60,7 +60,7 @@ public class FoodOrderService {
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public FoodOrder getOwnedFoodOrderWithLock(Long userId, Long orderId) {
         FoodOrder order = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -74,7 +74,7 @@ public class FoodOrderService {
         return order;
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public void confirmOrderAndDeductStock(FoodOrder foodOrder) {
 
         for (FoodOrderItem item : foodOrder.getFoodOrderItems()) {
@@ -88,7 +88,7 @@ public class FoodOrderService {
     }
 
     // 주문 취소 처리
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public void cancelOrder(FoodOrder foodOrder) {
         foodOrder.cancel();
     }

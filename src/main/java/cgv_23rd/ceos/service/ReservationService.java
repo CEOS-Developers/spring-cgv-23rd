@@ -58,29 +58,29 @@ public class ReservationService {
         return reservation.getId();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public void confirmReservation(Reservation reservation) {
         reservation.confirm();
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public void assignPaymentId(Reservation reservation, String paymentId) {
         reservation.assignPaymentId(paymentId);
     }
 
     // 결제 실패 시 예약 취소 (보상 트랜잭션)
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public void rollbackReservation(Reservation reservation) {
         reservation.cancel(LocalDateTime.now());
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public Reservation getReservationWithLock(Long reservationId) {
         return reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public Reservation getOwnedReservationWithLock(Long userId, Long reservationId) {
         Reservation reservation = getReservationWithLock(reservationId);
         validateOwner(userId, reservation);

@@ -19,9 +19,8 @@ public class ReservationPaymentFacade {
 
     private final ReservationService reservationService;
     private final PaymentService paymentService;
-    private final PaymentCompensationService paymentCompensationService;
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public PaymentResultDto processPayment(Long userId, Long reservationId) {
         Reservation reservation = reservationService.getOwnedReservationWithLock(userId, reservationId);
 
@@ -49,14 +48,13 @@ public class ReservationPaymentFacade {
                 return new PaymentResultDto(true, "결제가 완료되었습니다.");
             } catch (RuntimeException e) {
                 paymentService.cancelPayment(paymentId);
-                paymentCompensationService.cancelReservation(reservation.getId());
                 throw e;
             }
         } catch (GeneralException e) {
-            paymentCompensationService.cancelReservation(reservation.getId());
+            rollbackReservationIfPending(reservation);
             throw e;
         } catch (Exception e) {
-            paymentCompensationService.cancelReservation(reservation.getId());
+            rollbackReservationIfPending(reservation);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 처리 중 알 수 없는 오류가 발생했습니다.");
         }
     }
@@ -83,6 +81,12 @@ public class ReservationPaymentFacade {
     private void validatePaymentSuccess(PaymentResponse response) {
         if (response == null || response.data() == null || !"PAID".equals(response.data().paymentStatus())) {
             throw new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED);
+        }
+    }
+
+    private void rollbackReservationIfPending(Reservation reservation) {
+        if (reservation.getStatus() == ReservationStatus.대기) {
+            reservationService.rollbackReservation(reservation);
         }
     }
 }

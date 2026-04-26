@@ -2,6 +2,7 @@ package cgv_23rd.ceos.service.pay;
 
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
+import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
@@ -18,9 +19,8 @@ public class FoodPaymentFacade {
 
     private final FoodOrderService foodOrderService;
     private final PaymentService paymentService;
-    private final PaymentCompensationService paymentCompensationService;
 
-    @Transactional
+    @Transactional(noRollbackFor = GeneralException.class)
     public PaymentResultDto processPayment(Long userId ,Long orderId) {
         FoodOrder order = foodOrderService.getOwnedFoodOrderWithLock(userId, orderId);
 
@@ -53,11 +53,17 @@ public class FoodPaymentFacade {
             }
 
         } catch (GeneralException e) {
-            paymentCompensationService.cancelFoodOrder(order.getId());
+            rollbackFoodOrderIfPending(order);
             throw e;
         } catch (Exception e) {
-            paymentCompensationService.cancelFoodOrder(order.getId());
+            rollbackFoodOrderIfPending(order);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED);
+        }
+    }
+
+    private void rollbackFoodOrderIfPending(FoodOrder order) {
+        if (order.getStatus() == FoodOrderStatus.대기) {
+            foodOrderService.cancelOrder(order);
         }
     }
 }
