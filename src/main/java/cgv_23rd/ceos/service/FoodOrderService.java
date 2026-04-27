@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -75,7 +76,7 @@ public class FoodOrderService {
     }
 
     @Transactional(noRollbackFor = GeneralException.class)
-    public void assignPaymentId(Long userId, Long orderId, String paymentId) {
+    public void preparePayment(Long userId, Long orderId, String paymentId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
 
@@ -103,7 +104,11 @@ public class FoodOrderService {
             throw new GeneralException(GeneralErrorCode.PAYMENT_ALREADY_PROCESSED);
         }
 
-        for (FoodOrderItem item : foodOrder.getFoodOrderItems()) {
+        List<FoodOrderItem> sortedItems = foodOrder.getFoodOrderItems().stream()
+                .sorted(Comparator.comparing(item -> item.getFood().getId()))
+                .toList();
+
+        for (FoodOrderItem item : sortedItems) {
             // 비관적 락으로 재고 조회하여 동시성 제어
             TheaterFood theaterFood = theaterFoodRepository.findByTheaterAndFoodWithLock(foodOrder.getTheater(), item.getFood())
                     .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_FOOD_NOT_FOUND));

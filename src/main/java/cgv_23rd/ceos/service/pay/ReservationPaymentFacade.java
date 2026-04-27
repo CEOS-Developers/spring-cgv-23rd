@@ -18,6 +18,7 @@ public class ReservationPaymentFacade {
 
     private final ReservationService reservationService;
     private final PaymentService paymentService;
+    private final PaymentCompensationService paymentCompensationService;
 
     public PaymentResultDto processPayment(Long userId, Long reservationId) {
         Reservation reservation = reservationService.getOwnedReservation(userId, reservationId);
@@ -29,7 +30,7 @@ public class ReservationPaymentFacade {
         String paymentId = "RES_" + reservationId + "_" + UUID.randomUUID().toString().substring(0, 8);
         String orderName = reservation.getMovieTitle() + " 예매";
         String customData = "{\"reservationId\":" + reservation.getId() + "}";
-        reservationService.assignPaymentId(userId, reservationId, paymentId);
+        reservationService.preparePayment(userId, reservationId, paymentId);
 
         try {
             PaymentResponse response = paymentService.requestInstantPayment(
@@ -45,9 +46,7 @@ public class ReservationPaymentFacade {
                 reservationService.confirmReservation(userId, reservationId);
                 return new PaymentResultDto(true, "결제가 완료되었습니다.");
             } catch (RuntimeException e) {
-                paymentService.cancelPayment(paymentId);
-                reservationService.markPaymentCancelled(userId, reservationId);
-                reservationService.cancelReservation(userId, reservationId);
+                compensateFailedReservation(userId, reservationId, paymentId);
                 throw e;
             }
         } catch (GeneralException e) {
@@ -68,11 +67,7 @@ public class ReservationPaymentFacade {
                 throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "결제 식별자가 없는 완료 예매입니다.");
             }
 
-            PaymentResponse response = paymentService.cancelPayment(reservation.getPaymentId());
-            if (response == null || response.data() == null || !"CANCELLED".equals(response.data().paymentStatus())) {
-                throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
-            }
-            reservationService.markPaymentCancelled(userId, reservationId);
+            cancelCompletedReservationPayment(userId, reservationId, reservation.getPaymentId());
         }
 
         reservationService.cancelReservation(userId, reservationId);
@@ -93,6 +88,37 @@ public class ReservationPaymentFacade {
         if (e.getCode() == GeneralErrorCode.PAYMENT_SERVER_FAILED
                 || e.getCode() == GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT) {
             reservationService.markPaymentUnknown(userId, reservationId);
+        }
+    }
+
+    private void compensateFailedReservation(Long userId, Long reservationId, String paymentId) {
+        try {
+            paymentService.cancelPayment(paymentId);
+        } catch (GeneralException e) {
+            reservationService.markPaymentUnknown(userId, reservationId);
+            throw e;
+        }
+
+        try {
+            paymentCompensationService.cancelReservation(reservationId);
+        } catch (GeneralException e) {
+            reservationService.markPaymentUnknown(userId, reservationId);
+            throw e;
+        }
+    }
+
+    private void cancelCompletedReservationPayment(Long userId, Long reservationId, String paymentId) {
+        PaymentResponse response;
+        try {
+            response = paymentService.cancelPayment(paymentId);
+        } catch (GeneralException e) {
+            reservationService.markPaymentUnknown(userId, reservationId);
+            throw e;
+        }
+
+        if (response == null || response.data() == null || !"CANCELLED".equals(response.data().paymentStatus())) {
+            reservationService.markPaymentUnknown(userId, reservationId);
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
         }
     }
 }

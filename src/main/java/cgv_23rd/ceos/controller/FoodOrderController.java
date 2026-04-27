@@ -9,6 +9,7 @@ import cgv_23rd.ceos.service.FoodOrderService;
 import cgv_23rd.ceos.service.pay.FoodPaymentFacade;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +29,7 @@ public class FoodOrderController {
     @Operation(summary = "매점 음식 주문 API", description = "특정 극장의 매점 음식을 주문")
     public ApiResponse<Long> createFoodOrder(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
-            @RequestBody FoodOrderRequestDto requestDto) {
+            @Valid @RequestBody FoodOrderRequestDto requestDto) {
 
         Long orderId = foodOrderService.createFoodOrder(userDetails.getUser().getId(), requestDto);
         return ApiResponse.onSuccess("음식 주문 요청 성공",orderId);

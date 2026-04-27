@@ -68,7 +68,7 @@ public class ReservationService {
     }
 
     @Transactional(noRollbackFor = GeneralException.class)
-    public void assignPaymentId(Long userId, Long reservationId, String paymentId) {
+    public void preparePayment(Long userId, Long reservationId, String paymentId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
         validateOwner(userId, reservation);

@@ -13,6 +13,7 @@ import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.entity.user.UserRole;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
+import cgv_23rd.ceos.service.pay.PaymentCompensationService;
 import cgv_23rd.ceos.service.pay.PaymentService;
 import cgv_23rd.ceos.service.pay.ReservationPaymentFacade;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,9 @@ class ReservationPaymentFacadeTest {
 
     @Mock
     private PaymentService paymentService;
+
+    @Mock
+    private PaymentCompensationService paymentCompensationService;
     @Test
     @DisplayName("결제 성공 시 예매를 완료 상태로 확정한다")
     void processPayment_success() {
@@ -55,7 +59,7 @@ class ReservationPaymentFacadeTest {
         PaymentResultDto result = reservationPaymentFacade.processPayment(1L, 1L);
 
         assertEquals(true, result.success());
-        verify(reservationService).assignPaymentId(eq(1L), eq(1L), anyString());
+        verify(reservationService).preparePayment(eq(1L), eq(1L), anyString());
         verify(reservationService).confirmReservation(1L, 1L);
     }
 
@@ -83,8 +87,21 @@ class ReservationPaymentFacadeTest {
         reservationPaymentFacade.cancelReservation(1L, 1L);
 
         verify(paymentService).cancelPayment("RES_1_12345678");
-        verify(reservationService).markPaymentCancelled(1L, 1L);
         verify(reservationService).cancelReservation(1L, 1L);
+    }
+
+    @Test
+    @DisplayName("외부 결제 취소가 실패하면 예매는 결제 미확정 상태로 남긴다")
+    void cancelReservation_cancelPaymentFails_marksPaymentUnknown() {
+        Reservation reservation = createCompletedReservation(1L, 1L, "RES_1_12345678");
+        given(reservationService.getOwnedReservation(1L, 1L)).willReturn(reservation);
+        given(paymentService.cancelPayment("RES_1_12345678"))
+                .willThrow(new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED));
+
+        assertThrows(GeneralException.class, () -> reservationPaymentFacade.cancelReservation(1L, 1L));
+
+        verify(reservationService).markPaymentUnknown(1L, 1L);
+        verify(reservationService, never()).cancelReservation(1L, 1L);
     }
 
     private Reservation createPendingReservation(Long reservationId, Long userId) {

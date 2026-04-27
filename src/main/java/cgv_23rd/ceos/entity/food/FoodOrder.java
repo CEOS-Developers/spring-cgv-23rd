@@ -67,6 +67,12 @@ public class FoodOrder extends BaseEntity {
         if (this.status != FoodOrderStatus.대기) {
             throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY);
         }
+        if (this.paymentStatus == PaymentStatus.PROCESSING || this.paymentStatus == PaymentStatus.PAID) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_ALREADY_PROCESSED, "이미 결제가 진행 중이거나 완료된 주문입니다.");
+        }
+        if (this.paymentId != null && !this.paymentId.isBlank()) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "이미 결제 식별자가 할당된 주문입니다.");
+        }
         this.paymentId = paymentId;
         this.paymentStatus = PaymentStatus.PROCESSING;
     }

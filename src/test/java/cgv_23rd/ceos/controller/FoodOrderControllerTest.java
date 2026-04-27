@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -32,12 +33,12 @@ class FoodOrderControllerTest extends ControllerTestSupport {
                 List.of(new FoodOrderItemRequestDto(10L, 2))
         );
 
-        mockMvc.perform(post("/api/foods/orders/")
-                        .with(authenticatedUser())
-                        .contentType(APPLICATION_JSON)
-                        .content(toJson(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("음식 주문 성공"));
+                mockMvc.perform(post("/api/foods/orders/")
+                                .with(authenticatedUser())
+                                .contentType(APPLICATION_JSON)
+                                .content(toJson(request)))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.message").value("음식 주문 요청 성공"));
 
         verify(foodOrderService).createFoodOrder(any(Long.class), any(FoodOrderRequestDto.class));
     }
@@ -55,6 +56,23 @@ class FoodOrderControllerTest extends ControllerTestSupport {
                         .content(toJson(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_4011"));
+    }
+
+    @Test
+    @DisplayName("매점 음식 주문 요청의 수량이 0 이하이면 검증에 실패한다")
+    void createFoodOrderValidationFail_whenQuantityIsZero() throws Exception {
+        FoodOrderRequestDto request = new FoodOrderRequestDto(
+                1L,
+                List.of(new FoodOrderItemRequestDto(10L, 0))
+        );
+
+        mockMvc.perform(post("/api/foods/orders/")
+                        .with(authenticatedUser())
+                        .contentType(APPLICATION_JSON)
+                        .content(toJson(request)))
+                .andExpect(status().isBadRequest());
+
+        verify(foodOrderService, never()).createFoodOrder(any(Long.class), any(FoodOrderRequestDto.class));
     }
 
     @Test
