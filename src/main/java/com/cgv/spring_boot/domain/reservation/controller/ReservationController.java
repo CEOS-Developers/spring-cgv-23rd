@@ -1,5 +1,6 @@
 package com.cgv.spring_boot.domain.reservation.controller;
 
+import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
 import com.cgv.spring_boot.domain.reservation.service.ReservationService;
 import com.cgv.spring_boot.global.common.code.SuccessCode;
@@ -7,6 +8,7 @@ import com.cgv.spring_boot.global.common.response.ApiResponse;
 import com.cgv.spring_boot.global.security.AuthenticatedUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,14 +22,24 @@ public class ReservationController {
 
     private final ReservationService reservationService;
 
-    @Operation(summary = "영화 예매", description = "스케줄과 좌석 정보를 통해 영화를 예매합니다.")
+    @Operation(summary = "영화 좌석 선점", description = "스케줄과 좌석 정보를 통해 좌석 선점을 진행합니다.")
     @PostMapping
     public ResponseEntity<ApiResponse<Long>> reserve(
             @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
-            @RequestBody ReservationRequest request
+            @Valid @RequestBody ReservationRequest request
     ) {
         Long reservationId = reservationService.reserve(authenticatedUser.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.success(reservationId));
+    }
+
+    @Operation(summary = "영화 예매 결제", description = "선점한 좌석에 대해 결제를 진행하고 예매를 확정합니다.")
+    @PostMapping("/{id}/pay")
+    public ResponseEntity<ApiResponse<PaymentResponse>> pay(
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @PathVariable("id") Long id
+    ) {
+        PaymentResponse response = reservationService.pay(authenticatedUser.getUserId(), id);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Operation(summary = "영화 예매 취소", description = "영화 예매를 취소합니다.")

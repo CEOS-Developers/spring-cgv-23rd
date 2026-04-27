@@ -17,3 +17,7 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
+
+payment:
+  base-url: ${PAYMENT_BASE_URL:https://ceos.diggindie.com}
+  store-id: ${PAYMENT_STORE_ID}

@@ -42,4 +42,13 @@ public class ReservedSeat extends BaseEntity {
         this.schedule = schedule;
         this.reservation = reservation;
     }
+
+    public static ReservedSeat create(Reservation reservation, Schedule schedule, SeatPosition seatPosition) {
+        return ReservedSeat.builder()
+                .seatRow(seatPosition.seatRow())
+                .seatCol(seatPosition.seatCol())
+                .schedule(schedule)
+                .reservation(reservation)
+                .build();
+    }
 }

@@ -1,5 +1,6 @@
 package com.cgv.spring_boot.domain.reservation.entity;
 
+import com.cgv.spring_boot.domain.payment.entity.Payment;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.user.entity.User;
 import com.cgv.spring_boot.global.common.entity.BaseEntity;
@@ -9,6 +10,8 @@ import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -24,6 +27,9 @@ public class Reservation extends BaseEntity {
     @Column(nullable = false)
     private ReservationStatus status; // BOOKED, CANCELED
 
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -32,20 +38,50 @@ public class Reservation extends BaseEntity {
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
 
+    @OneToOne(mappedBy = "reservation", fetch = FetchType.LAZY)
+    private Payment payment;
+
     @Builder
-    public Reservation(ReservationStatus status, User user, Schedule schedule) {
+    public Reservation(ReservationStatus status, User user, Schedule schedule, LocalDateTime expiresAt) {
         this.status = status;
         this.user = user;
         this.schedule = schedule;
+        this.expiresAt = expiresAt;
+    }
+
+    public static Reservation createPending(User user, Schedule schedule, LocalDateTime expiresAt) {
+        return Reservation.builder()
+                .status(ReservationStatus.PENDING_PAYMENT)
+                .user(user)
+                .schedule(schedule)
+                .expiresAt(expiresAt)
+                .build();
     }
 
     /**
-     * 예약 상태 변경 (RESERVED -> CANCELLED)
+     * 예약 상태 변경 관련 메서드
      */
-    public void cancelStatus() {
+    public void cancel() {
         if (this.status == ReservationStatus.CANCELLED) {
-            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELED);
+            throw new BusinessException(ReservationErrorCode.ALREADY_CANCELLED);
+        }
+        if (this.status == ReservationStatus.EXPIRED) {
+            throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
         }
         this.status = ReservationStatus.CANCELLED;
+    }
+
+    public void confirm() {
+        if (this.status != ReservationStatus.PENDING_PAYMENT) {
+            throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+        }
+        this.status = ReservationStatus.RESERVED;
+    }
+
+    public void expire() {
+        if (this.status != ReservationStatus.PENDING_PAYMENT) {
+            throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
+        }
+        this.status = ReservationStatus.EXPIRED;
     }
 }
