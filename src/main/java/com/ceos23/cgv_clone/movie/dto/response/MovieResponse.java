@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.movie.dto.response;
 
-import com.ceos23.cgv_clone.movie.domain.Movie;
+import com.ceos23.cgv_clone.movie.entity.Movie;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

@@ -1,6 +1,6 @@
 package com.ceos23.cgv_clone.user.repository;
 
-import com.ceos23.cgv_clone.user.domain.User;
+import com.ceos23.cgv_clone.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

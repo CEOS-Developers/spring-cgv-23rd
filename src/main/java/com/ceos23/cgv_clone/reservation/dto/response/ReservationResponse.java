@@ -1,7 +1,7 @@
 package com.ceos23.cgv_clone.reservation.dto.response;
 
-import com.ceos23.cgv_clone.reservation.domain.Reservation;
-import com.ceos23.cgv_clone.reservation.domain.ReservationStatus;
+import com.ceos23.cgv_clone.reservation.entity.Reservation;
+import com.ceos23.cgv_clone.reservation.entity.ReservationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

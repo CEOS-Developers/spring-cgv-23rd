@@ -3,7 +3,7 @@ package com.ceos23.cgv_clone.user.controller;
 import com.ceos23.cgv_clone.global.jwt.CustomUserDetails;
 import com.ceos23.cgv_clone.global.response.ApiResponse;
 import com.ceos23.cgv_clone.global.response.SuccessCode;
-import com.ceos23.cgv_clone.user.dto.reponse.LoginResponse;
+import com.ceos23.cgv_clone.user.dto.response.LoginResponse;
 import com.ceos23.cgv_clone.user.dto.request.LoginRequest;
 import com.ceos23.cgv_clone.user.dto.request.ReissueRequest;
 import com.ceos23.cgv_clone.user.dto.request.SignUpRequest;

@@ -5,8 +5,9 @@ import com.ceos23.cgv_clone.global.jwt.TokenProvider;
 import com.ceos23.cgv_clone.global.jwt.domain.RefreshToken;
 import com.ceos23.cgv_clone.global.jwt.repository.RefreshTokenRepository;
 import com.ceos23.cgv_clone.global.response.ErrorCode;
-import com.ceos23.cgv_clone.user.domain.User;
-import com.ceos23.cgv_clone.user.dto.reponse.LoginResponse;
+import com.ceos23.cgv_clone.user.entity.Role;
+import com.ceos23.cgv_clone.user.entity.User;
+import com.ceos23.cgv_clone.user.dto.response.LoginResponse;
 import com.ceos23.cgv_clone.user.dto.request.LoginRequest;
 import com.ceos23.cgv_clone.user.dto.request.ReissueRequest;
 import com.ceos23.cgv_clone.user.dto.request.SignUpRequest;
@@ -38,25 +39,11 @@ public class UserService {
         }
 
         // accessToken 발급
-        String token = tokenProvider.createAccessToken(user.getId());
+        String accessToken = tokenProvider.createAccessToken(user.getId(), user.getRole());
         // refreshToken 발급
-        String refreshToken = tokenProvider.createRefreshToken(user.getId());
+        String refreshToken = issueAndSaveRefreshToken(user.getId());
 
-        // 기존 토큰 있으면 rotate, 없으면 새로 저장
-        refreshTokenRepository.findByUserId(user.getId())
-                .ifPresentOrElse(
-                        rt -> rt.rotate(refreshToken, tokenProvider.getRefreshTokenExpiresAt()),
-                        () -> refreshTokenRepository.save(RefreshToken.builder()
-                                .userId(user.getId())
-                                .token(refreshToken)
-                                .expiresAt(tokenProvider.getRefreshTokenExpiresAt())
-                                .build())
-                );
-
-        return LoginResponse.builder()
-                .accessToken(token)
-                .refreshToken(refreshToken)
-                .build();
+        return LoginResponse.of(accessToken, refreshToken);
     }
 
     @Transactional
@@ -69,23 +56,16 @@ public class UserService {
                 .email(request.getEmail())
                 .nickname(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.ROLE_USER)
                 .build();
 
         userRepository.save(user);
 
-        String token = tokenProvider.createAccessToken(user.getId());
-        String refreshToken = tokenProvider.createRefreshToken(user.getId());
+        String accessToken = tokenProvider.createAccessToken(user.getId(), user.getRole());
+        String refreshToken = issueAndSaveRefreshToken(user.getId());
 
-        refreshTokenRepository.save(RefreshToken.builder()
-                .userId(user.getId())
-                .token(refreshToken)
-                .expiresAt(tokenProvider.getRefreshTokenExpiresAt())
-                .build());
+        return LoginResponse.of(accessToken, refreshToken);
 
-        return LoginResponse.builder()
-                .accessToken(token)
-                .refreshToken(refreshToken)
-                .build();
     }
 
     @Transactional
@@ -97,19 +77,34 @@ public class UserService {
             throw new CustomException(ErrorCode.EXPIRED_REFRESH_TOKEN);
         }
 
-        String newAccessToken = tokenProvider.createAccessToken(refreshToken.getUserId());
-        String newRefreshToken = tokenProvider.createRefreshToken(refreshToken.getUserId());
+        User user = userRepository.findById(refreshToken.getUserId())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        refreshToken.rotate(newRefreshToken, tokenProvider.getRefreshTokenExpiresAt());
+        String newAccessToken = tokenProvider.createAccessToken(user.getId(), user.getRole());
+        String newRefreshToken = issueAndSaveRefreshToken(refreshToken.getUserId());
 
-        return LoginResponse.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .build();
+        return LoginResponse.of(newAccessToken, newRefreshToken);
+
     }
 
     @Transactional
     public void logout(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    private String issueAndSaveRefreshToken(Long userId) {
+        String refreshToken = tokenProvider.createRefreshToken(userId);
+
+        refreshTokenRepository.findByUserId(userId)
+                .ifPresentOrElse(
+                        rt -> rt.rotate(refreshToken, tokenProvider.getRefreshTokenExpiresAt()),
+                        () -> refreshTokenRepository.save(RefreshToken.builder()
+                                .userId(userId)
+                                .token(refreshToken)
+                                .expiresAt(tokenProvider.getRefreshTokenExpiresAt())
+                                .build())
+                );
+
+        return refreshToken;
     }
 }

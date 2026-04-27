@@ -46,9 +46,11 @@ public enum ErrorCode {
     // 만료된 리프레쉬 토큰
     EXPIRED_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "G010", "만료된 리프레쉬 토큰입니다."),
 
+    // 동시 수정 문제
+    CONCURRENT_UPDATE_FAILED(HttpStatus.CONFLICT, "G011" , "동시 수정으로 요청이 실패했습니다."),
+
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G999", "Internal Server Error Exception"),
-
 
     /**
      * ******************************* Custom Error CodeList ****************************************
@@ -87,6 +89,12 @@ public enum ErrorCode {
     // 이미 취소된 예약
     ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "RES004", "해당 예매는 이미 취소되었습니다."),
 
+    // 예약 대기 상태가 아닐 경우에 취소
+    INVALID_RESERVATION_STATUS(HttpStatus.BAD_REQUEST, "RES005" , "해당 좌석은 대기상태가 아닙니다."),
+
+    // 예약 대기 시간 만료
+    RESERVATION_EXPIRED(HttpStatus.BAD_REQUEST, "RES006" , "예약 대기시간이 만료되었습니다." ),
+
     // 상점 미존재
     STORE_NOT_FOUND(HttpStatus.NOT_FOUND, "STO001", "해당 매점을 찾을 수 없습니다."),
 
@@ -95,6 +103,15 @@ public enum ErrorCode {
 
     // 상품 미존재
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "ITE001", "해당 물품이 존재하지 않습니다."),
+
+    // 주문 미존재
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "ORD001", "해당 주문을 찾을 수 없습니다."),
+
+    // 이미 취소된 주문
+    ALREADY_CANCELED_ORDER(HttpStatus.BAD_REQUEST, "ORD002", "해당 주문은 이미 취소되었습니다."),
+
+    // 취소 권한 없음 (타 유저 주문)
+    INVALID_ORDER_OWNER(HttpStatus.FORBIDDEN, "ORD003", "해당 주문을 취소할 권한이 없습니다."),
 
     // 요청 매점 불일치
     INVALID_INVENTORY(HttpStatus.BAD_REQUEST, "INV001", "잘못된 매점 요청입니다."),
@@ -107,6 +124,15 @@ public enum ErrorCode {
 
     // 비밀번호 불일치
     INVALID_PASSWORD(HttpStatus.BAD_REQUEST, "SIGN002", "비밀번호가 다릅니다"),
+
+    // 결제 실패
+    PAYMENT_FAILED(HttpStatus.BAD_GATEWAY, "PAY001" , "결제에 실패했습니다." ),
+
+    // 결제 취소 실패
+    PAYMENT_CANCELLED_FAILED(HttpStatus.BAD_REQUEST, "PAY002" , "결제 취소에 실패했습니다." ),
+
+    // 결제 서버 오류
+    PAYMENT_SERVER_ERROR(HttpStatus.BAD_REQUEST, "PAY003", "결제 서버 통신 오류"),
 
     ;
     /**
