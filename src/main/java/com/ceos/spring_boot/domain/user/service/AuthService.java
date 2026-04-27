@@ -8,6 +8,7 @@ import com.ceos.spring_boot.domain.user.entity.UserRole;
 import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.domain.user.repository.UserRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import com.ceos.spring_boot.global.security.TokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,16 +37,16 @@ public class AuthService {
         }
 
         // 비밀번호 암호화 및 유저 생성
-        User user = User.builder()
-                .name(request.name())
-                .nickname(request.nickname())
-                .email(request.email())
-                .password(passwordEncoder.encode(request.password())) // 암호화
-                .phone(request.phoneNumber())
-                .role(UserRole.ROLE_USER)
-                .build();
+        String encodedPassword = passwordEncoder.encode(request.password());
+        User user = User.create(
+                request.name(),
+                request.nickname(),
+                request.email(),
+                encodedPassword,
+                request.phoneNumber()
+        );
 
-        User savedUser = userRepository.save(user);
+        userRepository.save(user);
         return SignupResponse.of(
                 user.getId(),
                 user.getName(),
@@ -60,16 +61,17 @@ public class AuthService {
 
         // 이메일로 유저 조회
         User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.USER_NOT_FOUND_ERROR.getMessage()));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND_ERROR));
+
 
         // 비밀번호 일치 확인
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException(ErrorCode.INVALID_LOGIN_ERROR.getMessage());
+            throw new BusinessException(ErrorCode.INVALID_LOGIN_ERROR);
         }
 
         // 인증 객체 생성 및 토큰 발급 (Spring Security의 인증 과정을 거쳐 권한 정보를 토큰에 담기)
         UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(user.getId(), request.password());
+                new UsernamePasswordAuthenticationToken(request.email(), request.password());
 
         // 실제 검증
         Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);

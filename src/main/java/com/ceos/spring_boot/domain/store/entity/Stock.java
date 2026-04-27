@@ -3,6 +3,7 @@ package com.ceos.spring_boot.domain.store.entity;
 import com.ceos.spring_boot.domain.cinema.entity.Cinema;
 import com.ceos.spring_boot.global.codes.ErrorCode;
 import com.ceos.spring_boot.global.entity.BaseEntity;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,6 +28,13 @@ public class Stock extends BaseEntity {
 
     @Column(nullable = false)
     private Integer quantity; // 현재 재고 수량
+
+    public void increaseQuantity(Integer amount) {
+        if (amount <= 0) {
+            throw new BusinessException(ErrorCode.INVALID_PARAMETER_ERROR);
+        }
+        this.quantity += amount;
+    }
 
     public void decreaseQuantity(Integer amount) {
         int restStock = this.quantity - amount;

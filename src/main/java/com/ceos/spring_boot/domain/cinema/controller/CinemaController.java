@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Cinema 관련 API", description = "영화관 조회 및 관리를 위한 API입니다.")
@@ -24,6 +25,7 @@ public class CinemaController {
 
     // 영화관 생성
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     @Operation(summary = "영화관 생성", description = "영화관을 생성합니다.")
     public ResponseEntity<ApiResponse<CinemaResponse>> createCinema(@RequestBody @Valid CinemaCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.of(cinemaService.createCinema(request), SuccessCode.INSERT_SUCCESS));
@@ -49,6 +51,7 @@ public class CinemaController {
 
     // 영화관 삭제
     @DeleteMapping("/{cinemaId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @Operation(summary = "영화관 삭제", description = "영화관 id를 이용해 영화관을 삭제합니다.")
     public ResponseEntity<ApiResponse<Void>> deleteCinema(@PathVariable Long cinemaId) {
         cinemaService.deleteCinema(cinemaId);

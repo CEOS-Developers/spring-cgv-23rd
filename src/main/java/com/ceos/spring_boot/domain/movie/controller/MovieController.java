@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Movie 관련 API", description = "영화 조회 및 관리를 위한 API입니다.")
@@ -26,6 +27,7 @@ public class MovieController {
 
     // 영화 생성
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     @Operation(summary = "영화 생성", description = "영화를 생성합니다.")
     public ResponseEntity<ApiResponse<MovieResponse>> createMovie(@RequestBody @Valid MovieCreateRequest request) {
         return ResponseEntity.ok(ApiResponse.of(movieService.createMovie(request), SuccessCode.INSERT_SUCCESS));
@@ -50,6 +52,7 @@ public class MovieController {
     }
 
     @DeleteMapping("/{movieId}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     @Operation(summary = "영화 삭제", description = "영화 ID를 이용해 영화를 삭제합니다.")
     public ResponseEntity<ApiResponse<Void>> deleteMovie(@PathVariable Long movieId) {
         movieService.deleteMovie(movieId);

@@ -38,4 +38,15 @@ public class ReservationSeat extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seat_id", nullable = false)
     private Seat seat; // 예매한 좌석
+
+    public static ReservationSeat create(Reservation reservation, Seat seat, Schedule schedule) {
+        ReservationSeat rs = ReservationSeat.builder()
+                .reservation(reservation)
+                .seat(seat)
+                .schedule(schedule)
+                .build();
+
+        reservation.addReservationSeat(rs);
+        return rs;
+    }
 }

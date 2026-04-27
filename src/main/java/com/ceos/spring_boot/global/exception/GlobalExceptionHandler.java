@@ -1,4 +1,4 @@
-package com.ceos.spring_boot.global.config;
+package com.ceos.spring_boot.global.exception;
 
 import com.ceos.spring_boot.global.codes.ErrorCode;
 import com.ceos.spring_boot.global.response.ErrorResponse;
@@ -99,5 +99,20 @@ public class GlobalExceptionHandler {
         // 예상치 못한 서버 에러의 원인 메시지를 전달
         final ErrorResponse response = ErrorResponse.of(ErrorCode.INTERNAL_SERVER_ERROR, e.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * [Custom] 비즈니스 로직 실행 중 발생하는 예외 처리
+     * ErrorCode에 정의된 상태 코드와 메시지를 그대로 사용합니다.
+     */
+    @ExceptionHandler(BusinessException.class)
+    protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
+        log.error("handleBusinessException", e);
+        ErrorCode errorCode = e.getErrorCode();
+
+        return new ResponseEntity<>(
+                ErrorResponse.of(errorCode, e.getMessage()),
+                HttpStatus.valueOf(errorCode.getStatusCode())
+        );
     }
 }

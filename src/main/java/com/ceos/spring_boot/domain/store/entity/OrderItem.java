@@ -1,8 +1,12 @@
 package com.ceos.spring_boot.domain.store.entity;
 
+import com.ceos.spring_boot.domain.cinema.entity.Cinema;
+import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.util.ArrayList;
 
 @Entity
 @Getter
@@ -26,6 +30,18 @@ public class OrderItem extends BaseEntity {
     private Product product;
 
     private Integer count; // 구매 수량
+
+    public static OrderItem create(Order order, Product product, Integer count) {
+        OrderItem orderItem = OrderItem.builder()
+                .order(order)
+                .product(product)
+                .count(count)
+                .build();
+
+        order.addOrderItem(orderItem);
+
+        return orderItem;
+    }
 
     public void setOrder(Order order) {
         this.order = order;

@@ -15,19 +15,22 @@ import com.ceos.spring_boot.domain.schedule.repository.ScheduleRepository;
 import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.domain.user.repository.UserRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
-import jakarta.persistence.EntityNotFoundException;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class ReservationService {
 
     private final ReservationRepository reservationRepository;
@@ -35,87 +38,90 @@ public class ReservationService {
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
     private final SeatRepository seatRepository;
+    private final RedissonClient redissonClient;
+    private final TransactionTemplate transactionTemplate;
 
-    // 예매
-    @Transactional
     public ReservationResponse createReservation(Long userId, ReservationRequest request) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.USER_NOT_FOUND_ERROR.getMessage()));
-
-        Schedule schedule = scheduleRepository.findById(request.scheduleId())
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.SCHEDULE_NOT_FOUND_ERROR.getMessage()));
-
-        ScreenType currentType = schedule.getScreen().getScreenType();
-
-        // 좌표로 좌석 엔티티 조회
-        List<Seat> seats = request.seats().stream()
-                .map(seatReq -> {
-                    // 사용자가 소문자 'a'를 입력해도 'A'로 처리되도록 대문자 변환
-                    String rowUpper = seatReq.row().toUpperCase();
-
-                    // 타입 + 행 + 열로 좌석 조회
-                    return seatRepository.findByScreenTypeAndSeatRowAndSeatCol(currentType, rowUpper, seatReq.column())
-                            .orElseThrow(() -> new IllegalArgumentException(ErrorCode.SEAT_NOT_FOUND_ERROR.getMessage()));
-                })
+        // 락 키 생성 및 정렬 (데드락 방지)
+        List<String> lockKeys = request.seats().stream()
+                .map(s -> "lock:" + request.scheduleId() + ":" + s.row().toUpperCase() + "-" + s.column())
+                .sorted()
                 .toList();
 
-        // 좌석 중복 검증 (찾아온 seats 리스트를 활용)
-        for (Seat seat : seats) {
-            if (reservationSeatRepository.existsByScheduleIdAndSeatId(schedule.getId(), seat.getId())) {
-                throw new IllegalStateException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR.getMessage());
-            }
-        }
-
+        RLock multiLock = redissonClient.getMultiLock(
+                lockKeys.stream().map(redissonClient::getLock).toArray(RLock[]::new)
+        );
 
         try {
-            // 예매 생성 및 저장
-            Reservation reservation = Reservation.builder()
-                    .user(user)
-                    .schedule(schedule)
-                    .status(ReservationStatus.CONFIRMED)
-                    .build();
-            reservationRepository.save(reservation);
+            // 분산 락 획득 시도
+            boolean isLocked = multiLock.tryLock(5, 2, TimeUnit.SECONDS);
+            if (!isLocked) {
+                throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
+            }
 
-            // 예매-좌석 연결 저장
-            List<ReservationSeat> reservationSeats = seats.stream()
-                    .map(seat -> {
-                        ReservationSeat rs = ReservationSeat.builder()
-                                .reservation(reservation)
-                                .seat(seat)
-                                .schedule(schedule) // 반드시 포함
-                                .build();
-                        reservation.addReservationSeat(rs);
-                        return rs;
-                    })
-                    .toList();
+            // 트랜잭션 내 비즈니스 로직 수행
+            return transactionTemplate.execute(status -> {
+                try {
+                    // 사용자(Proxy) 및 일정 조회
+                    User user = userRepository.getReferenceById(userId);
+                    Schedule schedule = scheduleRepository.findById(request.scheduleId())
+                            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND_ERROR));
 
-            reservationSeatRepository.saveAll(reservationSeats);
+                    ScreenType screenType = schedule.getScreen().getScreenType();
 
-            // flush를 호출하여 트랜잭션 종료 전 DB 제약 조건 위반을 즉시 확인
-            reservationSeatRepository.flush();
+                    // 좌석 조회 및 검증
+                    List<Seat> seats = request.seats().stream()
+                            .map(req -> {
+                                Seat seat = seatRepository.findByScreenTypeAndSeatRowAndSeatCol(
+                                                screenType, req.row().toUpperCase(), req.column())
+                                        .orElseThrow(() -> new BusinessException(ErrorCode.SEAT_NOT_FOUND_ERROR));
 
-            return ReservationResponse.from(reservation);
+                                if (reservationSeatRepository.existsByScheduleIdAndSeatId(schedule.getId(), seat.getId())) {
+                                    throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
+                                }
+                                return seat;
+                            }).toList();
 
-        } catch (DataIntegrityViolationException e) {
-            // 두 명의 유저가 동시에 insert를 시도하여 DB Unique 제약 조건이 발동한 경우
-            throw new IllegalStateException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR.getMessage());
+                    // 예매 생성 및 저장
+                    Reservation reservation = Reservation.create(user, schedule);
+                    reservationRepository.save(reservation);
+
+                    List<ReservationSeat> reservationSeats = seats.stream()
+                            .map(seat -> ReservationSeat.create(reservation, seat, schedule))
+                            .toList();
+                    reservationSeatRepository.saveAll(reservationSeats);
+
+                    // DB 제약 조건 즉시 확인
+                    reservationSeatRepository.flush();
+
+                    return ReservationResponse.from(reservation);
+
+                } catch (DataIntegrityViolationException e) {
+                    throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
+                }
+            });
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        } finally {
+            if (multiLock.isHeldByCurrentThread()) {
+                multiLock.unlock();
+            }
         }
     }
 
-    // 취소하기
+    @Transactional
     public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.RESERVATION_NOT_FOUND_ERROR.getMessage()));
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND_ERROR));
 
         if (reservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new IllegalStateException(ErrorCode.ALREADY_CANCELED_RESERVATION_ERROR.getMessage());
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION_ERROR);
         }
 
-        // 예매 상태를 취소로 변경
         reservation.cancel();
-
-        // 연결된 좌석 데이터 처리
         reservationSeatRepository.deleteByReservationId(reservationId);
     }
 }

@@ -79,6 +79,16 @@ public enum ErrorCode {
     ORDER_NOT_FOUND_ERROR(404, "해당 주문을 찾을 수 없습니다."),
     ORDER_NOT_MINE(400, "본인의 주문 내역만 조회할 수 있습니다."),
 
+    // 결제 관련 에러
+    PAYMENT_NOT_FOUND(404, "존재하지 않는 결제 내역입니다."),
+    STORE_NOT_FOUND(404, "존재하지 않는 가맹점입니다."),
+    STORE_ID_MISMATCH(403, "토큰의 가맹점과 요청의 storeId가 일치하지 않습니다."),
+    DUPLICATE_PAYMENT_ID(409, "이미 존재하는 결제 ID입니다."),
+    PAYMENT_NOT_CANCELLABLE(409, "PAID 상태가 아닌 결제는 취소할 수 없습니다."),
+    ALREADY_CANCELLED_PAYMENT(409, "이미 취소된 결제 내역입니다."),
+    PAYMENT_FAILED(500, "외부 결제 서버 에러로 결제에 실패하였습니다."),
+    INVALID_PAYMENT_STATUS(400, "잘못된 결제 상태 변경 시도입니다."),
+
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(500, "Internal Server Error Exception"),
 

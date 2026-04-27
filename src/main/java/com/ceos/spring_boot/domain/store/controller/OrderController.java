@@ -31,7 +31,7 @@ public class OrderController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid OrderRequest request
     ) {
-        OrderResponse response = storeService.createOrder(userDetails.getUser().getId(), request);
+        OrderResponse response = storeService.createOrder(userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponse.of(response, SuccessCode.INSERT_SUCCESS));
     }
 
@@ -41,7 +41,7 @@ public class OrderController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long orderId
     ) {
-        List<OrderItemResponse> responses = storeService.getOrderItems(userDetails.getUser().getId(), orderId);
+        List<OrderItemResponse> responses = storeService.getOrderItems(userDetails.getId(), orderId);
         return ResponseEntity.ok(ApiResponse.of(responses, SuccessCode.GET_SUCCESS));
     }
 }

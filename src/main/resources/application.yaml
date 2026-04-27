@@ -13,6 +13,11 @@ spring:
       hibernate:
         format_sql: false
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 logging:
   level:
     org.hibernate.SQL: debug
@@ -20,6 +25,12 @@ logging:
 jwt:
   secret: ${JWT_SECRET_KEY}
   token-validity-in-seconds: ${JWT_VALIDITY}
+
+payment:
+  base-url: ${PAYMENT_SERVER} # 결제 서버 주소
+  store-id: ${GITHUB_ID}      # 가맹점 식별자
+  secret-key: ${PAYMENT_SECRET_KEY}
+
 
 springdoc:
   swagger-ui:

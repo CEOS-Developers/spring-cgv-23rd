@@ -31,7 +31,7 @@ public class LikeController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long movieId) {
 
-        MovieLikeResponse response = likeService.toggleMovieLike(userDetails.getUser().getId(), movieId);
+        MovieLikeResponse response = likeService.toggleMovieLike(userDetails.getId(), movieId);
 
         return ResponseEntity.ok(ApiResponse.of(response, SuccessCode.UPDATE_SUCCESS));
     }
@@ -43,7 +43,7 @@ public class LikeController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long cinemaId) {
 
-        CinemaLikeResponse response = likeService.toggleCinemaLike(userDetails.getUser().getId(), cinemaId);
+        CinemaLikeResponse response = likeService.toggleCinemaLike(userDetails.getId(), cinemaId);
 
         return ResponseEntity.ok(ApiResponse.of(response, SuccessCode.UPDATE_SUCCESS));
     }

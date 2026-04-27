@@ -1,5 +1,7 @@
 package com.ceos.spring_boot.domain.movie.entity;
 
+import com.ceos.spring_boot.domain.cinema.entity.Cinema;
+import com.ceos.spring_boot.domain.cinema.entity.CinemaStatus;
 import com.ceos.spring_boot.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,4 +31,14 @@ public class Movie extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private AgeRating ageRating;
+
+    public static Movie create(String title, Integer runningTime, String genre, LocalDate releaseDate, AgeRating ageRating) {
+        return Movie.builder()
+                .title(title)
+                .runningTime(runningTime)
+                .genre(genre)
+                .releaseDate(releaseDate)
+                .ageRating(ageRating)
+                .build();
+    }
 }

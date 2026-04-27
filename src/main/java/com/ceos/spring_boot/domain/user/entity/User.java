@@ -36,5 +36,15 @@ public class User extends BaseEntity {
     @Column(name = "role", nullable = false)
     private UserRole role;
 
+    public static User create(String name, String nickname, String email, String password, String phone) {
+        return User.builder()
+                .name(name)
+                .nickname(nickname)
+                .email(email)
+                .password(password)
+                .phone(phone)
+                .role(UserRole.ROLE_USER)
+                .build();
+    }
 
 }

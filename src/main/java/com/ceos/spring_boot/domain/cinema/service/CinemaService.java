@@ -6,6 +6,7 @@ import com.ceos.spring_boot.domain.cinema.dto.CinemaResponse;
 import com.ceos.spring_boot.domain.cinema.entity.Cinema;
 import com.ceos.spring_boot.domain.cinema.repository.CinemaRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
+import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,38 +22,37 @@ public class CinemaService {
     // 영화관 생성
     @Transactional
     public CinemaResponse createCinema(CinemaCreateRequest request) {
-        Cinema cinema = Cinema.builder()
-                .name(request.name())
-                .region(request.region())
-                .address(request.address())
-                .status(request.status())
-                .build();
+        Cinema cinema = Cinema.create(
+                request.name(),
+                request.region(),
+                request.address(),
+                request.status()
+        );
 
-        Cinema savedCinema = cinemaRepository.save(cinema);
-        return CinemaResponse.from(savedCinema);
+        return CinemaResponse.from(cinemaRepository.save(cinema));
     }
 
     // 모든 영화관 조회
     public CinemaListResponse findAllCinemas() {
-        List<CinemaResponse> cinemaResponses = cinemaRepository.findAll().stream()
-                .map(CinemaResponse::from)
-                .toList();
-        return CinemaListResponse.from(cinemaResponses);
+        return CinemaListResponse.from(
+                cinemaRepository.findAll().stream().map(CinemaResponse::from).toList()
+        );
     }
 
     // 영화관 id로 영화관 조회
     public CinemaResponse findCinemaById(Long id) {
-        Cinema cinema = cinemaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.CINEMA_NOT_FOUND_ERROR.getMessage()));
-        return CinemaResponse.from(cinema);
+        return CinemaResponse.from(findEntityById(id));
     }
 
     // 영화관 삭제
     @Transactional
     public void deleteCinema(Long id) {
-        Cinema cinema = cinemaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(ErrorCode.CINEMA_NOT_FOUND_ERROR.getMessage()));
+        cinemaRepository.delete(findEntityById(id));
+    }
 
-        cinemaRepository.delete(cinema);
+    // 내부에서 공통으로 사용하는 엔티티 조회 로직 분리 (-> 중복 제거)
+    private Cinema findEntityById(Long id) {
+        return cinemaRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CINEMA_NOT_FOUND_ERROR));
     }
 }

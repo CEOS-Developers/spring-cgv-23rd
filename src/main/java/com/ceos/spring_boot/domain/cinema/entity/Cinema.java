@@ -25,4 +25,13 @@ public class Cinema extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     private CinemaStatus status; // 지점 상태(운영 중, 운영 마감, 폐점 등)
+
+    public static Cinema create(String name, String region, String address, CinemaStatus status) {
+        return Cinema.builder()
+                .name(name)
+                .region(region)
+                .address(address)
+                .status(status)
+                .build();
+    }
 }

@@ -1,6 +1,7 @@
 package com.ceos.spring_boot.domain.like.repository;
 
 import com.ceos.spring_boot.domain.like.entity.CinemaLike;
+import com.ceos.spring_boot.domain.like.entity.MovieLike;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

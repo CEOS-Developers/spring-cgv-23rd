@@ -28,7 +28,7 @@ public class ReservationController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody @Valid ReservationRequest request
     ) {
-        ReservationResponse response = reservationService.createReservation(userDetails.getUser().getId(), request);
+        ReservationResponse response = reservationService.createReservation(userDetails.getId(), request);
         return ResponseEntity.ok(ApiResponse.of(response, SuccessCode.INSERT_SUCCESS));
     }
 
