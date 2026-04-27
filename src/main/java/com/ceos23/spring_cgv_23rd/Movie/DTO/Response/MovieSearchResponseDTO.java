@@ -13,11 +13,11 @@ public record MovieSearchResponseDTO(
         List<MovieWrapperDTO> movie
 ) {
     public static List<MovieWrapperDTO> from(Movie movie){
-        return Collections.singletonList(MovieWrapperDTO.from(movie));
+        return Collections.singletonList(MovieWrapperDTO.create(movie));
     }
 
     public static List<MovieWrapperDTO> from(List<Movie> movies){
         List<MovieWrapperDTO> res = new ArrayList<>();
-        return MovieWrapperDTO.from(movies);
+        return MovieWrapperDTO.create(movies);
     }
 }

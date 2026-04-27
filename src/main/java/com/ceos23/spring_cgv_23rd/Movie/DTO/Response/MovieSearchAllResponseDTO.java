@@ -11,6 +11,6 @@ public record MovieSearchAllResponseDTO(
         List<MovieWrapperDTO> searchedMovies
 ) {
     public static List<MovieWrapperDTO> from(List<Movie> movie){
-        return MovieWrapperDTO.from(movie);
+        return MovieWrapperDTO.create(movie);
     }
 }
