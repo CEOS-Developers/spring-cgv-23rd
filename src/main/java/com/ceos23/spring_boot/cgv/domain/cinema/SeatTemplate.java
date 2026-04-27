@@ -45,4 +45,12 @@ public class SeatTemplate {
         this.colNumber = colNumber;
         this.seatLayout = seatLayout;
     }
+
+    public boolean belongsTo(Long seatLayoutId) {
+        return seatLayout.getId().equals(seatLayoutId);
+    }
+
+    public String getSeatNumber() {
+        return rowName + colNumber;
+    }
 }

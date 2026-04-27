@@ -9,8 +9,10 @@ public record ReservationResponse(
         Long reservationId,
         Long userId,
         Long screeningId,
+        String paymentId,
         String status,
         LocalDateTime reservedAt,
+        LocalDateTime expiresAt,
         List<Long> seatTemplateIds
 ) {
     public static ReservationResponse of(Reservation reservation, List<ReservationSeat> reservationSeats) {
@@ -18,8 +20,10 @@ public record ReservationResponse(
                 reservation.getId(),
                 reservation.getUser().getId(),
                 reservation.getScreening().getId(),
+                reservation.getPaymentId(),
                 reservation.getStatus().name(),
                 reservation.getReservedAt(),
+                reservation.getExpiresAt(),
                 reservationSeats.stream()
                         .map(reservationSeat -> reservationSeat.getSeatTemplate().getId())
                         .toList()

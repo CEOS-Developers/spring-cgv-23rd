@@ -1,5 +1,15 @@
 package com.ceos23.spring_boot.cgv.service.reservation;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
+
 import com.ceos23.spring_boot.cgv.domain.cinema.Cinema;
 import com.ceos23.spring_boot.cgv.domain.cinema.Screen;
 import com.ceos23.spring_boot.cgv.domain.cinema.ScreenType;
@@ -7,9 +17,11 @@ import com.ceos23.spring_boot.cgv.domain.cinema.SeatLayout;
 import com.ceos23.spring_boot.cgv.domain.cinema.SeatTemplate;
 import com.ceos23.spring_boot.cgv.domain.movie.Movie;
 import com.ceos23.spring_boot.cgv.domain.movie.Screening;
+import com.ceos23.spring_boot.cgv.domain.payment.PaymentLog;
 import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
 import com.ceos23.spring_boot.cgv.domain.reservation.ReservationStatus;
 import com.ceos23.spring_boot.cgv.domain.user.User;
+import com.ceos23.spring_boot.cgv.domain.user.UserRole;
 import com.ceos23.spring_boot.cgv.global.exception.BadRequestException;
 import com.ceos23.spring_boot.cgv.global.exception.ConflictException;
 import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
@@ -18,7 +30,8 @@ import com.ceos23.spring_boot.cgv.repository.movie.ScreeningRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationSeatRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
-import com.ceos23.spring_boot.cgv.domain.user.UserRole;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentCreateCommand;
+import com.ceos23.spring_boot.cgv.service.payment.PaymentService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -26,18 +39,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
+
+    private static final String PAYMENT_ID = "pay-001";
 
     @Mock
     private UserRepository userRepository;
@@ -54,6 +64,9 @@ class ReservationServiceTest {
     @Mock
     private ReservationSeatRepository reservationSeatRepository;
 
+    @Mock
+    private PaymentService paymentService;
+
     @InjectMocks
     private ReservationService reservationService;
 
@@ -64,19 +77,19 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
-        user = new User("오지송", "jisong@example.com", "encoded-password", UserRole.USER);
+        user = new User("jisong", "jisong@example.com", "encoded-password", UserRole.USER);
         ReflectionTestUtils.setField(user, "id", 1L);
 
-        Cinema cinema = new Cinema("CGV 신촌", "서울 서대문구 신촌로");
+        Cinema cinema = new Cinema("CGV Gangnam", "Seoul");
         ReflectionTestUtils.setField(cinema, "id", 1L);
 
-        SeatLayout seatLayout = new SeatLayout("일반관 기본 좌석", 3, 3);
+        SeatLayout seatLayout = new SeatLayout("General", 3, 3);
         ReflectionTestUtils.setField(seatLayout, "id", 1L);
 
-        Screen screen = new Screen("1관", ScreenType.GENERAL, cinema, seatLayout);
+        Screen screen = new Screen("1", ScreenType.GENERAL, cinema, seatLayout);
         ReflectionTestUtils.setField(screen, "id", 1L);
 
-        Movie movie = new Movie("왕과사는남자", 120, "12세 이상 관람가", "단종 영화");
+        Movie movie = new Movie("Movie", 120, "12", "Description");
         ReflectionTestUtils.setField(movie, "id", 1L);
 
         screening = new Screening(
@@ -92,129 +105,235 @@ class ReservationServiceTest {
 
         seatTemplate2 = new SeatTemplate("A", 2, seatLayout);
         ReflectionTestUtils.setField(seatTemplate2, "id", 2L);
+
+        lenient().when(reservationRepository.findAllByStatusAndExpiresAtBefore(
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
+        )).thenReturn(List.of());
     }
 
     @Test
-    @DisplayName("예매 생성 성공")
+    @DisplayName("create reservation success creates pending payment hold")
     void createReservation_success() {
-        // given
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L, 2L)))
                 .willReturn(List.of(seatTemplate1, seatTemplate2));
-
-        given(reservationSeatRepository.existsByScreeningAndSeatTemplate(screening, seatTemplate1))
-                .willReturn(false);
-        given(reservationSeatRepository.existsByScreeningAndSeatTemplate(screening, seatTemplate2))
-                .willReturn(false);
-
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1, seatTemplate2)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
+        )).willReturn(List.of());
+        given(paymentService.startPayment(any(PaymentCreateCommand.class)))
+                .willReturn(new PaymentLog(PAYMENT_ID, "Movie reservation", 28_000L, "screeningId=1"));
         given(reservationRepository.save(any(Reservation.class)))
                 .willAnswer(invocation -> invocation.getArgument(0));
 
-        // when
         Reservation result = reservationService.createReservation(1L, 1L, List.of(1L, 2L));
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getUser()).isEqualTo(user);
         assertThat(result.getScreening()).isEqualTo(screening);
-        assertThat(result.getStatus()).isEqualTo(ReservationStatus.RESERVED);
+        assertThat(result.getPaymentId()).isNotBlank();
+        assertThat(result.getStatus()).isEqualTo(ReservationStatus.PENDING_PAYMENT);
+        assertThat(result.getExpiresAt()).isAfter(result.getReservedAt());
 
+        then(paymentService).should().startPayment(any(PaymentCreateCommand.class));
         then(reservationRepository).should().save(any(Reservation.class));
-        then(reservationSeatRepository).should().saveAll(anyList());
+        then(reservationSeatRepository).should().saveAllAndFlush(anyList());
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 좌석 요청이 비어있음")
+    @DisplayName("create reservation fails when seats are empty")
     void createReservation_fail_emptySeats() {
-        // when & then
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of()))
                 .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 사용자 없음")
+    @DisplayName("create reservation fails when user is missing")
     void createReservation_fail_userNotFound() {
-        // given
         given(userRepository.findById(1L)).willReturn(Optional.empty());
 
-        // when & then
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(NotFoundException.class);
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 상영 정보 없음")
+    @DisplayName("create reservation fails when screening is missing")
     void createReservation_fail_screeningNotFound() {
-        // given
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.empty());
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.empty());
 
-        // when & then
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(NotFoundException.class);
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 요청 좌석 중복")
+    @DisplayName("create reservation fails when seat request is duplicated")
     void createReservation_fail_duplicateSeatRequest() {
-        // when & then
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L, 1L)))
                 .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("예매 생성 실패 - 이미 예매된 좌석")
+    @DisplayName("create reservation fails when seat is already reserved")
     void createReservation_fail_alreadyReservedSeat() {
-        // given
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(screeningRepository.findById(1L)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
         given(seatTemplateRepository.findAllById(List.of(1L)))
                 .willReturn(List.of(seatTemplate1));
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
+        )).willReturn(List.of(1L));
 
-        given(reservationSeatRepository.existsByScreeningAndSeatTemplate(screening, seatTemplate1))
-                .willReturn(true);
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
+                .isInstanceOf(ConflictException.class);
+        verifyNoInteractions(paymentService);
+    }
 
-        // when & then
+    @Test
+    @DisplayName("create reservation fails when seat does not belong to screening")
+    void createReservation_fail_invalidSeatForScreening() {
+        SeatLayout otherSeatLayout = new SeatLayout("Special", 2, 2);
+        ReflectionTestUtils.setField(otherSeatLayout, "id", 2L);
+        SeatTemplate invalidSeat = new SeatTemplate("B", 1, otherSeatLayout);
+        ReflectionTestUtils.setField(invalidSeat, "id", 3L);
+
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
+        given(seatTemplateRepository.findAllById(List.of(3L)))
+                .willReturn(List.of(invalidSeat));
+
+        assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(3L)))
+                .isInstanceOf(BadRequestException.class);
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    @DisplayName("create reservation fails when payment hold creation fails")
+    void createReservation_fail_paymentStartConflict() {
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(screeningRepository.findByIdWithPessimisticLock(1L)).willReturn(Optional.of(screening));
+        given(seatTemplateRepository.findAllById(List.of(1L)))
+                .willReturn(List.of(seatTemplate1));
+        given(reservationSeatRepository.findActiveSeatTemplateIdsByScreeningAndSeatTemplates(
+                eq(screening),
+                eq(List.of(seatTemplate1)),
+                eq(ReservationStatus.CONFIRMED),
+                eq(ReservationStatus.PENDING_PAYMENT),
+                any(LocalDateTime.class)
+        )).willReturn(List.of());
+        given(paymentService.startPayment(any(PaymentCreateCommand.class)))
+                .willThrow(new ConflictException(com.ceos23.spring_boot.cgv.global.exception.ErrorCode.DUPLICATE_PAYMENT_ID));
+        given(reservationRepository.save(any(Reservation.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+
         assertThatThrownBy(() -> reservationService.createReservation(1L, 1L, List.of(1L)))
                 .isInstanceOf(ConflictException.class);
     }
 
     @Test
-    @DisplayName("예매 취소 성공")
-    void cancelReservation_success() {
-        // given
-        Reservation reservation = new Reservation(user, screening);
-        given(reservationRepository.findById(1L)).willReturn(Optional.of(reservation));
+    @DisplayName("get reservations uses repository query by user id")
+    void getReservations_success() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(reservationRepository.findAllByUserId(1L)).willReturn(List.of(reservation));
 
-        // when
-        reservationService.cancelReservation(1L);
+        List<Reservation> reservations = reservationService.getReservations(1L);
 
-        // then
-        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
+        assertThat(reservations).containsExactly(reservation);
+        then(reservationRepository).should().findAllByUserId(1L);
     }
 
     @Test
-    @DisplayName("예매 취소 실패 - 이미 취소된 예매")
-    void cancelReservation_fail_alreadyCanceled() {
-        // given
-        Reservation reservation = new Reservation(user, screening);
-        reservation.cancel();
-        given(reservationRepository.findById(1L)).willReturn(Optional.of(reservation));
+    @DisplayName("confirm payment success")
+    void confirmPayment_success() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        PaymentLog paymentLog = new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1");
+        paymentLog.complete();
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+        given(paymentService.completePayment(PAYMENT_ID)).willReturn(paymentLog);
 
-        // when & then
-        assertThatThrownBy(() -> reservationService.cancelReservation(1L))
+        Reservation result = reservationService.confirmPayment(1L, 1L);
+
+        assertThat(result.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        assertThat(result.getExpiresAt()).isNull();
+        then(paymentService).should().completePayment(PAYMENT_ID);
+    }
+
+    @Test
+    @DisplayName("confirm payment fails when payment window is expired")
+    void confirmPayment_fail_expired() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().minusMinutes(1));
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+
+        assertThatThrownBy(() -> reservationService.confirmPayment(1L, 1L))
                 .isInstanceOf(ConflictException.class);
+
+        verifyNoInteractions(paymentService);
     }
 
     @Test
-    @DisplayName("예매 취소 실패 - 존재하지 않는 예매")
-    void cancelReservation_fail_notFound() {
-        // given
-        given(reservationRepository.findById(1L)).willReturn(Optional.empty());
+    @DisplayName("cancel reservation success releases seat hold")
+    void cancelReservation_success() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        reservation.confirmPayment(LocalDateTime.now());
+        PaymentLog paymentLog = new PaymentLog(PAYMENT_ID, "Movie reservation", 14_000L, "screeningId=1");
+        paymentLog.complete();
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+        given(paymentService.cancelPayment(PAYMENT_ID)).willReturn(paymentLog);
 
-        // when & then
-        assertThatThrownBy(() -> reservationService.cancelReservation(1L))
+        reservationService.cancelReservation(1L, 1L);
+
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
+        then(paymentService).should().cancelPayment(PAYMENT_ID);
+        then(reservationSeatRepository).should().deleteAllByReservation(reservation);
+        then(reservationSeatRepository).should().flush();
+    }
+
+    @Test
+    @DisplayName("cancel reservation fails when already canceled")
+    void cancelReservation_fail_alreadyCanceled() {
+        Reservation reservation = new Reservation(user, screening, PAYMENT_ID, LocalDateTime.now().plusMinutes(5));
+        reservation.cancel(LocalDateTime.now());
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(reservation));
+
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 1L))
+                .isInstanceOf(ConflictException.class);
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    @DisplayName("cancel reservation fails when reservation is missing")
+    void cancelReservation_fail_notFound() {
+        given(reservationRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 1L))
                 .isInstanceOf(NotFoundException.class);
+
+        verifyNoInteractions(paymentService);
+    }
+
+    @Test
+    @DisplayName("cancel reservation fails when reservation belongs to another user")
+    void cancelReservation_fail_forbiddenUser() {
+        given(reservationRepository.findByIdAndUserId(1L, 2L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> reservationService.cancelReservation(1L, 2L))
+                .isInstanceOf(NotFoundException.class);
+
+        verifyNoInteractions(paymentService);
     }
 }

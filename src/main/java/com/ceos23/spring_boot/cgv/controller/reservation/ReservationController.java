@@ -3,11 +3,13 @@ package com.ceos23.spring_boot.cgv.controller.reservation;
 import com.ceos23.spring_boot.cgv.domain.reservation.Reservation;
 import com.ceos23.spring_boot.cgv.dto.reservation.ReservationCreateRequest;
 import com.ceos23.spring_boot.cgv.dto.reservation.ReservationResponse;
+import com.ceos23.spring_boot.cgv.global.security.CustomUserDetails;
 import com.ceos23.spring_boot.cgv.service.reservation.ReservationService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,9 +21,12 @@ public class ReservationController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ReservationResponse createReservation(@RequestBody @Valid ReservationCreateRequest request) {
+    public ReservationResponse createReservation(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody @Valid ReservationCreateRequest request
+    ) {
         Reservation reservation = reservationService.createReservation(
-                request.userId(),
+                userDetails.getUserId(),
                 request.screeningId(),
                 request.seatTemplateIds()
         );
@@ -33,8 +38,10 @@ public class ReservationController {
     }
 
     @GetMapping
-    public List<ReservationResponse> getReservations(@RequestParam Long userId) {
-        return reservationService.getReservations(userId).stream()
+    public List<ReservationResponse> getReservations(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return reservationService.getReservations(userDetails.getUserId()).stream()
                 .map(reservation -> ReservationResponse.of(
                         reservation,
                         reservationService.getReservationSeats(reservation)
@@ -45,9 +52,22 @@ public class ReservationController {
     @GetMapping("/{reservationId}")
     public ReservationResponse getReservation(
             @PathVariable Long reservationId,
-            @RequestParam Long userId
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Reservation reservation = reservationService.getReservation(reservationId, userId);
+        Reservation reservation = reservationService.getReservation(reservationId, userDetails.getUserId());
+
+        return ReservationResponse.of(
+                reservation,
+                reservationService.getReservationSeats(reservation)
+        );
+    }
+
+    @PostMapping("/{reservationId}/confirm-payment")
+    public ReservationResponse confirmPayment(
+            @PathVariable Long reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Reservation reservation = reservationService.confirmPayment(reservationId, userDetails.getUserId());
 
         return ReservationResponse.of(
                 reservation,
@@ -57,7 +77,10 @@ public class ReservationController {
 
     @DeleteMapping("/{reservationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void cancelReservation(@PathVariable Long reservationId) {
-        reservationService.cancelReservation(reservationId);
+    public void cancelReservation(
+            @PathVariable Long reservationId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        reservationService.cancelReservation(reservationId, userDetails.getUserId());
     }
 }

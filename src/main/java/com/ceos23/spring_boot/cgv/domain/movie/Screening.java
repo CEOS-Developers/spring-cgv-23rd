@@ -39,4 +39,8 @@ public class Screening {
         this.movie = movie;
         this.screen = screen;
     }
+
+    public Long getSeatLayoutId() {
+        return screen.getSeatLayout().getId();
+    }
 }
