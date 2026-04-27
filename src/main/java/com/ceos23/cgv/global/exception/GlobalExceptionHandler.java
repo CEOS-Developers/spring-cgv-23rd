@@ -3,6 +3,7 @@ package com.ceos23.cgv.global.exception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -45,14 +46,31 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * [Exception] 우리가 리팩토링하기 전 남아있는 기본 IllegalArgumentException 처리
+     * [Exception] 요청 본문 역직렬화 중 발생한 예외 처리
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    protected ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException e) {
+        log.error("handleHttpMessageNotReadableException", e);
+
+        CustomException customException = findCustomException(e);
+        if (customException != null) {
+            return handleCustomException(customException);
+        }
+
+        return ResponseEntity
+                .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ErrorResponse.from(ErrorCode.INVALID_INPUT_VALUE));
+    }
+
+    /**
+     * [Exception] 외부 변환/프레임워크에서 발생하는 기본 IllegalArgumentException 처리
      */
     @ExceptionHandler(IllegalArgumentException.class)
     protected ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
         log.error("handleIllegalArgumentException", e);
-        // 에러 코드와 형식을 맞추기 위해 임시로 처리
-        ErrorResponse response = new ErrorResponse(400, "C001", e.getMessage(), null);
-        return ResponseEntity.badRequest().body(response);
+        return ResponseEntity
+                .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())
+                .body(ErrorResponse.from(ErrorCode.INVALID_INPUT_VALUE));
     }
 
     /**
@@ -64,5 +82,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.INTERNAL_SERVER_ERROR.getStatus())
                 .body(ErrorResponse.from(ErrorCode.INTERNAL_SERVER_ERROR));
+    }
+
+    private CustomException findCustomException(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof CustomException customException) {
+                return customException;
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 }

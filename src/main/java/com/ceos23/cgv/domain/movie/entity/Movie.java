@@ -42,4 +42,17 @@ public class Movie extends BaseTimeEntity {
 
     @Column(columnDefinition = "TEXT")
     private String prologue;
+
+    public static Movie create(String title, int runningTime, LocalDate releaseDate,
+                               MovieRating movieRating, Genre genre, String prologue) {
+        return Movie.builder()
+                .title(title)
+                .runningTime(runningTime)
+                .releaseDate(releaseDate)
+                .movieRating(movieRating)
+                .genre(genre)
+                .prologue(prologue)
+                .salesRate(0.0)
+                .build();
+    }
 }

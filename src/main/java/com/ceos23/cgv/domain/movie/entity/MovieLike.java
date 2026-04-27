@@ -23,4 +23,11 @@ public class MovieLike {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
+
+    public static MovieLike create(User user, Movie movie) {
+        return MovieLike.builder()
+                .user(user)
+                .movie(movie)
+                .build();
+    }
 }

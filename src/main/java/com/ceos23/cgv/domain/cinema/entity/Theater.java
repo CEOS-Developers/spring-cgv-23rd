@@ -33,4 +33,14 @@ public class Theater {
 
     @Column(name = "max_col", nullable = false)
     private int maxCol;    // 예: 12 (1~12열까지 존재)
+
+    public static Theater create(Cinema cinema, String name, TheaterType type, String maxRow, int maxCol) {
+        return Theater.builder()
+                .cinema(cinema)
+                .name(name)
+                .type(type)
+                .maxRow(maxRow)
+                .maxCol(maxCol)
+                .build();
+    }
 }

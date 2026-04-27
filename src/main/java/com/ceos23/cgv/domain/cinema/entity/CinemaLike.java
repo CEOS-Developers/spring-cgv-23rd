@@ -24,4 +24,10 @@ public class CinemaLike {
     @JoinColumn(name = "cinema_id", nullable = false)
     private Cinema cinema;
 
+    public static CinemaLike create(User user, Cinema cinema) {
+        return CinemaLike.builder()
+                .user(user)
+                .cinema(cinema)
+                .build();
+    }
 }

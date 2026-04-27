@@ -23,4 +23,11 @@ public class Cinema extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private Region region;
+
+    public static Cinema create(String name, Region region) {
+        return Cinema.builder()
+                .name(name)
+                .region(region)
+                .build();
+    }
 }

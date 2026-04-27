@@ -30,12 +30,13 @@ public class EventService {
      */
     @Transactional
     public Event createEvent(EventCreateRequest request) {
-        Event event = Event.builder()
-                .title(request.title())
-                .content(request.content())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
-                .build();
+        Event event = Event.create(
+                request.title(),
+                request.content(),
+                request.startDate(),
+                request.endDate()
+        );
+
         return eventRepository.save(event);
     }
 
@@ -44,18 +45,21 @@ public class EventService {
      */
     @Transactional
     public MovieEvent linkEventToMovie(Long eventId, Long movieId) {
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new CustomException(ErrorCode.EVENT_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        MovieEvent movieEvent = MovieEvent.builder()
-                .event(event)
-                .movie(movie)
-                .build();
+        Event event = findEvent(eventId);
+        Movie movie = findMovie(movieId);
+        MovieEvent movieEvent = MovieEvent.link(event, movie);
 
         return movieEventRepository.save(movieEvent);
+    }
+
+    private Event findEvent(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new CustomException(ErrorCode.EVENT_NOT_FOUND));
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 
     /**

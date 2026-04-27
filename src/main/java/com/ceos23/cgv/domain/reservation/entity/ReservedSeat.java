@@ -35,4 +35,13 @@ public class ReservedSeat {
 
     @Column(name = "seat_col", nullable = false)
     private int seatCol;
+
+    public static ReservedSeat create(Reservation reservation, Screening screening, String seatRow, int seatCol) {
+        return ReservedSeat.builder()
+                .reservation(reservation)
+                .screening(screening)
+                .seatRow(seatRow)
+                .seatCol(seatCol)
+                .build();
+    }
 }

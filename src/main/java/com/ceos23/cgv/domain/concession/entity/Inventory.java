@@ -31,6 +31,16 @@ public class Inventory {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
+    public static Inventory create(Cinema cinema, Product product, int stockQuantity) {
+        validatePositiveStock(stockQuantity);
+
+        return Inventory.builder()
+                .cinema(cinema)
+                .product(product)
+                .stockQuantity(stockQuantity)
+                .build();
+    }
+
     // 재고 차감 로직
     public void removeStock(int quantity) {
         if (this.stockQuantity < quantity) {
@@ -40,8 +50,27 @@ public class Inventory {
         this.stockQuantity -= quantity;
     }
 
+    public void changeStockBy(int quantity) {
+        int changedStockQuantity = this.stockQuantity + quantity;
+        validateSufficientStock(changedStockQuantity);
+        this.stockQuantity = changedStockQuantity;
+    }
+
     // 재고 수정 메서드
     public void updateStock(int stockQuantity) {
+        validatePositiveStock(stockQuantity);
         this.stockQuantity = stockQuantity;
+    }
+
+    private static void validatePositiveStock(int stockQuantity) {
+        if (stockQuantity < 1) {
+            throw new CustomException(ErrorCode.INVALID_STOCK_QUANTITY);
+        }
+    }
+
+    private static void validateSufficientStock(int stockQuantity) {
+        if (stockQuantity < 1) {
+            throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
+        }
     }
 }

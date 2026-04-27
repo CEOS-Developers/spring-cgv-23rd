@@ -49,8 +49,7 @@ public class MovieService {
      * 4. 특정 영화 상세 정보 조회
      */
     public Movie getMovieDetails(Long movieId) {
-        return movieRepository.findById(movieId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
+        return findMovie(movieId);
     }
 
     /**
@@ -59,17 +58,7 @@ public class MovieService {
     @Transactional
     public Movie createMovie(String title, int runningTime, LocalDate releaseDate,
                              MovieRating movieRating, Genre genre, String prologue) {
-
-        Movie newMovie = Movie.builder()
-                .title(title)
-                .runningTime(runningTime)
-                .releaseDate(releaseDate)
-                .movieRating(movieRating)
-                .genre(genre)
-                .prologue(prologue)
-                .salesRate(0.0)
-                .build();
-
+        Movie newMovie = Movie.create(title, runningTime, releaseDate, movieRating, genre, prologue);
         return movieRepository.save(newMovie);
     }
 
@@ -85,10 +74,12 @@ public class MovieService {
      */
     @Transactional
     public void deleteMovie(Long movieId) {
-        // 영화가 존재하는지 먼저 확인
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 영화를 찾을 수 없습니다."));
-
+        Movie movie = findMovie(movieId);
         movieRepository.delete(movie);
+    }
+
+    private Movie findMovie(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 }

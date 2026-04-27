@@ -28,4 +28,12 @@ public class WorkParticipation {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private RoleType role;
+
+    public static WorkParticipation create(Movie movie, Person person, RoleType role) {
+        return WorkParticipation.builder()
+                .movie(movie)
+                .person(person)
+                .role(role)
+                .build();
+    }
 }

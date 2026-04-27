@@ -31,31 +31,33 @@ public class CinetalkService {
      */
     @Transactional
     public Cinetalk createCinetalk(Long userId, String content, Long movieId, Long cinemaId) {
-        // 1. 작성자(User) 조회 (필수)
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        // 2. 영화(Movie)와 극장(Cinema) 조회 (선택적)
-        Movie movie = null;
-        if (movieId != null) {
-            movie = movieRepository.findById(movieId).orElse(null);
-        }
-
-        Cinema cinema = null;
-        if (cinemaId != null) {
-            cinema = cinemaRepository.findById(cinemaId).orElse(null);
-        }
-
-        // 3. 엔티티 생성 및 저장
-        Cinetalk cinetalk = Cinetalk.builder()
-                .user(user)
-                .content(content)
-                .likeCount(0)
-                .movie(movie)
-                .cinema(cinema)
-                .build();
+        User user = findUser(userId);
+        Movie movie = findMovieOrNull(movieId);
+        Cinema cinema = findCinemaOrNull(cinemaId);
+        Cinetalk cinetalk = Cinetalk.create(user, content, movie, cinema);
 
         return cinetalkRepository.save(cinetalk);
+    }
+
+    private User findUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Movie findMovieOrNull(Long movieId) {
+        if (movieId == null) {
+            return null;
+        }
+
+        return movieRepository.findById(movieId).orElse(null);
+    }
+
+    private Cinema findCinemaOrNull(Long cinemaId) {
+        if (cinemaId == null) {
+            return null;
+        }
+
+        return cinemaRepository.findById(cinemaId).orElse(null);
     }
 
     /**

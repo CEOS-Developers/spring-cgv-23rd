@@ -7,8 +7,6 @@ import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "reviews")
 @Getter
@@ -38,4 +36,14 @@ public class Review extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "movie_id", nullable = false)
     private Movie movie;
+
+    public static Review create(User user, Movie movie, TheaterType type, String content) {
+        return Review.builder()
+                .user(user)
+                .movie(movie)
+                .type(type)
+                .content(content)
+                .likeCount(0)
+                .build();
+    }
 }

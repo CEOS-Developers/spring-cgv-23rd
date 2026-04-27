@@ -28,4 +28,13 @@ public class Event {
 
     @Column(nullable = false)
     private LocalDateTime endDate;
+
+    public static Event create(String title, String content, LocalDateTime startDate, LocalDateTime endDate) {
+        return Event.builder()
+                .title(title)
+                .content(content)
+                .startDate(startDate)
+                .endDate(endDate)
+                .build();
+    }
 }

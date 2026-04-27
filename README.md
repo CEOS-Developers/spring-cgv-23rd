@@ -1,6 +1,294 @@
 # spring-cgv-23rd
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+<details>
+<summary>리팩토링 내역 및 설계 의도</summary>
+
+## 리팩토링 개요
+
+기능 동작과 API 요청/응답 형식을 유지하면서, 서비스에 몰려 있던 유스케이스 흐름과 도메인 규칙을 점진적으로 분리하는 방향으로 진행했습니다. 큰 아키텍처 전환 대신 현재 프로젝트 규모에 맞춰 Entity factory, 도메인 메서드, 정책 클래스, 전역 예외 처리 정리를 적용했습니다.
+
+## 주요 변경 사항
+
+### 1. Service 책임 축소와 유스케이스 흐름 정리
+- 변경 내용: `ReservationService`, `ConcessionService`, `InventoryService`, `PhotoService`, `MovieService`, `CinemaService`, `EventService`, `PersonService`, `UserService` 등에서 조회, 검증, 생성, 저장 흐름을 private 메서드로 분리했습니다.
+- 리팩토링 이유: 하나의 Service 메서드에 권한 체크, 검증, 엔티티 생성, 저장, 계산이 함께 있으면 변경 지점이 불명확해지기 때문입니다.
+- 기대 효과: Service는 유스케이스 흐름을 조율하고, 세부 규칙은 이름 있는 메서드나 도메인 객체로 이동해 읽기와 변경이 쉬워집니다.
+
+### 2. 도메인 객체의 생성과 규칙 응집
+- 변경 내용: `Reservation.create`, `FoodOrder.create`, `OrderItem.create`, `Inventory.create`, `Photo.create`, `Movie.create`, `User.create` 등 Entity 정적 factory를 추가했습니다. `Reservation.validateCancelableBy`, `Inventory.changeStockBy`, `Inventory.updateStock`처럼 상태 변경 규칙도 도메인 메서드로 모았습니다.
+- 리팩토링 이유: Service에서 builder를 직접 조립하면 생성 기본값과 상태 규칙이 여러 곳으로 퍼질 수 있기 때문입니다.
+- 기대 효과: 엔티티 생성 규칙과 상태 변경 조건이 한 곳에 모여, 이후 필드나 정책이 바뀌어도 수정 범위를 좁힐 수 있습니다.
+
+### 3. 예외 코드 기반 응답 통일
+- 변경 내용: 직접 `IllegalArgumentException`, `IllegalStateException`을 던지던 흐름을 `CustomException`과 `ErrorCode` 기반으로 바꿨습니다. 회원, 예약, 쿠폰, 사진 대상, 지역, 재고 수량 등에 필요한 에러 코드를 추가했습니다.
+- 리팩토링 이유: 문자열 예외는 API 응답 형식과 상태 코드를 일관되게 유지하기 어렵고, 클라이언트가 에러를 안정적으로 분기하기 어렵기 때문입니다.
+- 기대 효과: 예외 발생 시 도메인별 에러 코드와 HTTP status가 명확해지고, 응답 형식이 전역 핸들러를 통해 통일됩니다.
+
+### 4. 역직렬화 예외와 전역 예외 처리 보강
+- 변경 내용: `PhotoCreateRequest`, `Region.from`에서 발생하는 `CustomException`이 Jackson 역직렬화 중 `HttpMessageNotReadableException`으로 감싸질 수 있어, `GlobalExceptionHandler`에서 cause chain을 확인해 원래 `CustomException` 응답으로 변환하도록 했습니다. `IllegalArgumentException` 처리도 `INVALID_INPUT_VALUE` 기반 응답으로 통일했습니다.
+- 리팩토링 이유: 요청 본문 변환 중 발생한 도메인 예외가 500으로 내려가면 실제 클라이언트 오류를 서버 오류처럼 전달할 수 있기 때문입니다.
+- 기대 효과: 잘못된 사진 대상, 지원하지 않는 지역 값 등도 의도한 에러 코드(`PH002`, `RG001`)로 응답할 수 있습니다.
+
+### 5. 쿠폰 할인 정책 분리
+- 변경 내용: `ReservationService` 안에 있던 `WELCOME_CGV`, `VIP_HALF_PRICE` 할인 규칙을 `CouponDiscountPolicy`로 분리했습니다.
+- 리팩토링 이유: 쿠폰 할인은 예약 저장 흐름보다 가격 정책에 가까운 도메인 규칙이므로, Service가 직접 조건문을 계속 갖고 있으면 확장과 테스트가 어려워집니다.
+- 기대 효과: 예약 Service는 가격 계산 흐름만 조율하고, 쿠폰 규칙은 작은 순수 정책 객체로 테스트하기 쉬워졌습니다.
+
+### 6. 매점 주문과 재고 처리 의도 개선
+- 변경 내용: `ConcessionService`에서 상품 Map 로딩, 필수 상품 조회, 재고 차감, 주문 항목 생성을 `loadProductMap`, `getRequiredProduct`, `decreaseInventoryStock`, `createOrderItem`으로 분리했습니다. `Inventory`에서는 재고 부족과 잘못된 재고 수량을 각각 `INVENTORY_SHORTAGE`, `INVALID_STOCK_QUANTITY`로 구분했습니다.
+- 리팩토링 이유: 주문 생성은 조회, 검증, 재고 차감, 주문 항목 생성이 섞이기 쉬운 흐름이어서, 단계별 의도를 드러내는 이름이 필요했습니다.
+- 기대 효과: 주문 처리 흐름을 따라가기 쉬워지고, 재고 관련 실패 사유도 더 정확히 표현됩니다.
+
+### 7. Gradle wrapper 복구와 테스트 보정
+- 변경 내용: 누락되어 있던 `gradle/wrapper/gradle-wrapper.jar`를 복구하고 `.gitignore`에서 wrapper jar가 추적되도록 예외를 추가했습니다. `ConcessionServiceTest`, `InventoryServiceTest`, `ReservationServiceTest`는 리팩토링된 서비스 흐름과 에러 코드에 맞게 보정했습니다.
+- 리팩토링 이유: wrapper jar가 없으면 `./gradlew test` 실행 자체가 어려워지고, 리팩토링 후 테스트가 실제 서비스 의존성과 맞지 않으면 회귀 검증이 약해지기 때문입니다.
+- 기대 효과: 로컬에서 Gradle wrapper 기반 테스트 실행이 가능해졌고, 변경된 도메인 규칙을 테스트가 따라가도록 정리되었습니다.
+
+## 리팩토링 기준
+
+- 기능 동작과 API 요청/응답 형식은 유지했습니다.
+- 큰 구조 전환보다 현재 구조 안에서 Service, Entity, Policy, Exception의 책임을 조금씩 분리했습니다.
+- 도메인 규칙은 가능하면 도메인 메서드나 정책 클래스로 모았습니다.
+- 예외는 가능한 한 `ErrorCode`를 통해 응답 코드와 메시지를 일관되게 관리했습니다.
+
+</details>
+
+<details>
+<summary>결제 시스템 연동 및 티켓팅/커머스 케이스 비교</summary>
+
+## 결제 시스템 연동 개요
+
+CGV 예매는 좌석이라는 한정 자원을 다룬다. 따라서 예매는 결제 완료 후 좌석을 차감하는 커머스 방식보다, 예매 시점에 좌석을 먼저 선점하고 결제 실패나 취소 시 좌석을 복구하는 티켓팅 방식이 적합하다.
+
+반면 매점 상품 주문은 동일 상품의 수량 재고를 다룬다. 좌석처럼 특정 자원을 결제 전에 점유할 필요가 상대적으로 낮으므로, 결제 성공 후 재고를 차감하는 커머스 방식을 적용했다.
+
+이번 연동은 CEOS 결제 서버 명세를 기준으로 `POST /payments/{paymentId}/instant` 즉시 결제와 `POST /payments/{paymentId}/cancel` 결제 취소를 사용한다. 외부 결제 API 호출은 DB 트랜잭션 밖에서 수행하고, 내부 예약 상태 변경은 별도 DB 트랜잭션으로 분리한다.
+
+## 티켓팅 케이스와 커머스 케이스 비교
+
+### 티켓팅 케이스
+- 재고/좌석 차감 시점: 결제 전 예매 생성 또는 결제창 진입 시점에 좌석을 선점한다.
+- 장점: 같은 좌석을 여러 사용자가 동시에 결제하는 상황을 줄일 수 있다.
+- 단점: 결제 실패, 이탈, 취소 시 좌석 복구 로직이 필요하다.
+- 적합한 상황: 영화 좌석, 공연 티켓처럼 특정 좌석이 한 번만 판매되어야 하는 경우.
+
+### 커머스 케이스
+- 재고/재고 차감 시점: 결제 성공 후 상품 재고를 차감한다.
+- 장점: 결제 실패 시 재고 복구가 단순하다.
+- 단점: 결제 중 재고가 사라질 수 있고, 한정 좌석처럼 개별 자원이 중요한 경우 사용자 경험이 나빠질 수 있다.
+- 적합한 상황: 일반 상품처럼 동일한 재고가 여러 개 있고 결제 후 차감해도 되는 경우.
+
+## 우리 CGV 서비스에 선택한 방식
+
+- 예매 선택 방식: 티켓팅 케이스
+- 예매 선택 이유: 같은 상영 회차의 같은 좌석은 중복 예매되면 안 되므로, 결제 전에 좌석을 선점해야 한다.
+- 좌석 선점/복구 흐름: `Screening` 비관적 락 조회 후 `Reservation(PENDING)`과 `ReservedSeat`를 저장한다. 결제 실패 또는 취소 시 `Reservation`을 `CANCELED`로 변경하고 `ReservedSeat`를 삭제해 좌석을 복구한다.
+- 매점 선택 방식: 커머스 케이스
+- 매점 선택 이유: 매점 상품은 동일 상품의 수량 재고를 다루므로, 결제 성공 후 재고를 차감하면 결제 실패 시 재고 복구가 필요 없어 흐름이 단순하다.
+
+## HTTP Client 방식 비교
+
+### Feign Client
+- 장점: 인터페이스 기반 선언형 클라이언트라 외부 API 계약을 표현하기 쉽다.
+- 단점: Spring Cloud OpenFeign 의존성과 설정이 추가된다.
+- 적합한 상황: 외부 API가 많고 클라이언트 인터페이스를 명확히 분리해야 하는 경우.
+
+### RestClient 또는 WebClient
+- 장점: Spring에서 제공하는 HTTP Client를 직접 사용할 수 있다. `RestClient`는 동기 MVC 서비스에 잘 맞고, `WebClient`는 비동기/논블로킹에 강하다.
+- 단점: Feign보다 선언형 인터페이스 느낌은 약하다. `WebClient`는 현재 MVC 구조에는 상대적으로 과하다.
+- 적합한 상황: 현재처럼 Spring MVC 기반 서비스에서 외부 API 호출 수가 많지 않은 경우 `RestClient`가 적합하다.
+
+### 이 프로젝트에서 선택한 방식
+- 선택한 방식: `RestClient`
+- 선택 이유: 현재 프로젝트는 `spring-boot-starter-webmvc` 기반이고 OpenFeign 의존성이 없다. 결제 API 수가 많지 않아 별도 의존성을 추가하지 않고 동기 흐름으로 명확히 처리하는 방식이 가장 작다.
+
+## 결제 API 연동 흐름
+
+1. 좌석 선점
+   - DB 트랜잭션 1에서 `Screening`을 비관적 락으로 조회한다.
+   - `Reservation`을 `PENDING` 상태로 저장하고 결제 요청 전에 생성한 `paymentId`를 함께 저장한다.
+   - `ReservedSeat` 저장으로 좌석을 선점한다.
+2. 결제 요청
+   - DB 트랜잭션 밖에서 CEOS 결제 서버의 즉시 결제 API를 호출한다.
+3. 결제 성공 처리
+   - DB 트랜잭션 2에서 `paymentId`로 예약을 다시 조회하고 `PENDING` 상태를 검증한 뒤 `COMPLETED`로 변경한다.
+4. 결제 실패 시 좌석 복구
+   - DB 트랜잭션으로 예약 상태를 `CANCELED`로 변경하고 선점 좌석을 삭제한다.
+5. 결제 취소 시 외부 결제 취소 + 좌석 복구
+   - 외부 결제 취소 API가 성공한 뒤 내부 예약을 `CANCELED`로 변경하고 좌석을 삭제한다.
+
+## 매점 결제 API 연동 흐름
+
+1. 주문 생성
+   - DB 트랜잭션 1에서 `FoodOrder(PENDING)`와 `OrderItem`을 저장하고 결제 요청 전에 생성한 `paymentId`를 함께 저장한다.
+   - 이 시점에는 아직 `Inventory`를 차감하지 않는다.
+2. 결제 요청
+   - DB 트랜잭션 밖에서 CEOS 결제 서버의 즉시 결제 API를 호출한다.
+3. 결제 성공 후 재고 차감
+   - DB 트랜잭션 2에서 `paymentId`로 주문을 다시 조회한다.
+   - 주문 상태가 `PENDING`인지 검증한 뒤, 상품별 `Inventory`를 비관적 락으로 조회해 재고를 차감하고 주문을 `COMPLETED`로 변경한다.
+4. 결제 실패 처리
+   - 외부 결제 요청이 실패하면 주문을 `CANCELED`로 변경한다. 재고는 아직 차감 전이므로 복구할 필요가 없다.
+5. 결제 성공 후 재고 차감 실패
+   - 결제는 성공했지만 재고 부족 또는 내부 DB 오류로 주문 완료에 실패하면 외부 결제 취소 API를 보상 호출하고 주문을 `CANCELED`로 변경한다.
+
+## 예외 및 보상 처리
+
+- 결제 실패: 외부 즉시 결제 요청이 실패하면 `PAYMENT_FAILED` 예외를 발생시키고, 내부 예약을 `CANCELED`로 바꾸며 좌석을 복구한다.
+- 결제 취소 실패: 외부 결제 취소가 실패하면 내부 예약 취소와 좌석 복구는 수행하지 않는다.
+- 내부 DB 저장 실패: 외부 결제 성공 후 내부 `COMPLETED` 처리 중 실패하면 외부 결제 취소 API를 호출하고 내부 예약/좌석 취소를 보상 처리한다.
+- 매점 결제 실패: 주문만 `CANCELED`로 변경한다. 커머스 흐름에서는 결제 성공 전 재고를 차감하지 않으므로 재고 복구가 필요 없다.
+- 매점 재고 부족: 결제 성공 후 재고 차감 단계에서 재고 부족이 확인되면 외부 결제를 취소하고 주문을 `CANCELED`로 변경한다.
+- 중복 paymentId: UUID 기반 `reservation-{uuid}` 형식으로 생성한다. 외부 서버에서 중복이 발생하면 결제 실패로 처리한다.
+- 중복 좌석 예매: 기존 `PESSIMISTIC_WRITE`와 `ReservedSeat` 유니크 제약을 유지한다.
+
+## 현재 구조의 한계
+
+- 외부 결제 API 호출과 내부 DB 상태 변경은 완전한 분산 트랜잭션이 아니다.
+- 서버가 외부 결제 성공 직후 종료되면 내부 상태 보정이 필요할 수 있다.
+- 운영 환경에서는 Outbox, 결제 이력 테이블, 재시도 큐, 스케줄러 기반 결제 상태 보정이 필요할 수 있다.
+
+## 테스트/검증 결과
+
+- 실행한 테스트:
+  - `database=cgv password=dngur1213 PAYMENT_API_SECRET_KEY=placeholder ./gradlew test --tests com.ceos23.cgv.domain.reservation.service.ReservationServiceTest`
+  - `database=cgv password=dngur1213 PAYMENT_API_SECRET_KEY=placeholder ./gradlew test --tests com.ceos23.cgv.domain.concession.service.ConcessionServiceTest`
+- 외부 CEOS 결제 서버는 테스트에서 직접 호출하지 않고 `PaymentService`를 mock 처리했다.
+
+</details>
+
+<details>
+<summary>보안 리뷰 반영 내용 보기</summary>
+
+## JWT 설정
+
+- `jwt.secret`은 설정 파일에 직접 두지 않고 `JWT_SECRET` 환경변수로 주입한다.
+- 로컬 실행 시에는 충분히 긴 Base64 인코딩 secret을 `JWT_SECRET`으로 설정해야 한다.
+- 실제 secret 값은 저장소와 README에 기록하지 않는다.
+
+## 인증/인가 실패 응답
+
+- 인증 실패는 `401`, 인가 실패는 `403`으로 분리한다.
+- 응답 형식은 기존 전역 예외 응답과 맞춰 `status`, `code`, `message`, `errors` 구조를 사용한다.
+
+## JWT 검증 로그
+
+- JWT 검증 실패 시 `warn` 로그를 남긴다.
+- 토큰 원문은 민감 정보이므로 로그에 남기지 않고, 예외 타입과 메시지만 기록한다.
+
+## Authentication credential 처리
+
+- JWT는 서명 검증으로 신뢰성을 판단하므로 `UsernamePasswordAuthenticationToken`의 credential에는 토큰 원문 대신 `null`을 넣는다.
+- 현재 코드에서는 credential 값을 직접 참조하지 않으므로 동작 영향 없이 토큰 노출 가능성을 줄일 수 있다.
+
+## Refresh Token Cookie 전환
+
+- HttpOnly Cookie 방식은 XSS로 인한 refresh token 탈취 위험을 줄일 수 있다.
+- 로그인과 토큰 재발급 응답 body에는 access token만 포함한다.
+- refresh token은 `Set-Cookie` 헤더의 `refreshToken` HttpOnly Cookie로 내려준다.
+- 토큰 재발급 API는 request body 대신 `refreshToken` Cookie를 읽어 처리한다.
+- 현재 로컬 개발 환경은 HTTPS가 아니므로 Cookie `secure` 옵션은 `false`로 둔다. 운영 HTTPS 환경에서는 `secure=true` 적용이 필요하다.
+
+</details>
+
+<details>
+<summary>동시성 문제와 해결 방법</summary>
+
+## 동시성 문제가 발생할 수 있는 상황
+
+Spring은 일반적으로 요청마다 별도 스레드가 처리되는 Thread Per Request 방식으로 동작한다. 따라서 여러 사용자가 같은 상영 회차의 같은 좌석을 동시에 예매하면 같은 공유 자원에 동시에 접근할 수 있다.
+
+기존 좌석 예매 흐름은 `Reservation` 생성과 `ReservedSeat` 저장이 분리되어 있었다. 이 경우 좌석 저장이 실패하면 좌석 없는 `Reservation`이 남을 수 있고, 동시에 같은 상영 회차 좌석 저장 요청이 들어오면 여러 트랜잭션이 같은 좌석 저장을 시도하는 Race Condition 상황이 발생할 수 있다.
+
+현재는 `POST /api/reservations` 요청에서 예매 정보와 좌석 목록을 함께 받아, `Reservation` 생성과 `ReservedSeat` 저장을 하나의 트랜잭션으로 처리한다. 좌석 중복이 발생하면 `SEAT_ALREADY_RESERVED` 예외가 발생하고 전체 트랜잭션이 rollback되어 좌석 없는 예약이 남지 않는다.
+
+## 해결 방법 비교
+
+### 1. synchronized
+- 개념: JVM 내부에서 특정 코드 블록을 한 번에 하나의 스레드만 실행하도록 막는다.
+- 장점: 구현이 단순하고 별도 인프라가 필요 없다.
+- 단점: 단일 서버/JVM 안에서만 동작하며, 서버가 여러 대면 중복 요청을 막지 못한다.
+- 적합한 상황: 단일 JVM 내부의 짧고 단순한 임계 구역 보호.
+- 우리 서비스에 적용하기 어려운 이유 또는 적합성: 예매 좌석은 DB에 저장되는 공유 자원이고, 멀티 서버 확장 가능성을 고려하면 부적합하다.
+
+### 2. 비관적 락
+- 개념: 트랜잭션이 데이터를 읽을 때 DB row에 락을 걸어 다른 트랜잭션의 동시 수정을 기다리게 한다.
+- 장점: 충돌 가능성이 높은 자원을 DB 수준에서 직렬화할 수 있다.
+- 단점: 락 대기 시간이 생기며, 락 순서가 꼬이면 Deadlock 위험이 있다.
+- 적합한 상황: 같은 좌석, 같은 상영 회차처럼 동시에 접근하면 안 되는 자원이 명확한 경우.
+- 우리 서비스에 적합한지: 같은 `Screening`의 좌석 저장 요청을 순서대로 처리하기에 적합하다.
+
+### 3. 낙관적 락
+- 개념: `@Version` 값으로 수정 충돌을 감지하고, 충돌 시 예외를 발생시킨다.
+- 장점: 락 대기 비용이 적고 읽기 많은 환경에 유리하다.
+- 단점: 충돌 후 재시도/예외 처리가 필요하고, insert 중복 문제에는 직접적이지 않다.
+- 적합한 상황: 같은 엔티티를 자주 읽지만 동시에 수정하는 빈도는 낮은 경우.
+- 우리 서비스에 적합한지: 좌석 중복 예매는 `ReservedSeat` 신규 insert 충돌이 핵심이라 `@Version`만으로는 직접 해결하기 어렵다.
+
+### 4. Redis 분산 락
+- 개념: Redis에 특정 key를 락으로 저장해 여러 서버 간 동시 접근을 제어한다.
+- 장점: 멀티 서버 환경에서 좌석 단위 락을 정교하게 걸 수 있다.
+- 단점: Redis 인프라, 락 만료, 장애 상황 처리가 필요해 복잡도가 높다.
+- 적합한 상황: 트래픽이 크고 애플리케이션 서버가 여러 대인 운영 환경.
+- 우리 서비스에 적합한지: 현재 프로젝트 규모에서는 과하다. 추후 멀티 서버와 대규모 트래픽을 고려할 때 후보가 될 수 있다.
+
+### 5. 유니크 제약 조건
+- 개념: DB에서 특정 컬럼 조합의 중복 저장을 금지한다.
+- 장점: 멀티 서버 환경에서도 DB가 최종적으로 중복 데이터를 막는다.
+- 단점: 충돌을 사전에 막기보다 저장 시점에 예외로 감지한다.
+- 적합한 상황: 같은 상영 회차의 같은 좌석처럼 절대 중복되면 안 되는 데이터.
+- 우리 서비스에 적합한지: 이미 `ReservedSeat`에 적용되어 있으며, 반드시 유지해야 하는 최종 방어선이다.
+
+## CGV 서비스에 선택한 해결 방법
+
+선택한 방법은 **DB 유니크 제약 조건 유지 + 상영 회차 row에 비관적 락 적용**이다.
+
+선택 근거는 다음과 같다.
+- 현재 프로젝트는 Spring/JPA 기반이므로 `@Lock(LockModeType.PESSIMISTIC_WRITE)`를 Repository에 적용하는 방식이 가장 작다.
+- 같은 상영 회차의 같은 좌석 중복 예매를 막는 것이 핵심이므로, 좌석 저장 전에 해당 `Screening` row를 잠그면 같은 회차 좌석 저장 흐름을 직렬화할 수 있다.
+- 기존 `(screening_id, seat_row, seat_col)` 유니크 제약은 유지해 DB 최종 방어선을 남긴다.
+- Redis 분산 락은 현재 규모에는 복잡하고, `synchronized`는 멀티 서버에서 동작하지 않는다.
+- 낙관적 락은 기존 row 업데이트 충돌 감지에는 좋지만, 현재 문제처럼 좌석 row insert 중복을 직접 막는 데는 유니크 제약과 비관적 락 조합보다 덜 적합하다.
+
+## 적용 내용
+
+- `ScreeningRepository.findByIdForUpdate()`를 추가하고 `PESSIMISTIC_WRITE` 락을 적용했다.
+- `ReservationService.createReservation()`에서 `Screening`을 비관적 락으로 조회하고, `Reservation` 생성과 `ReservedSeat` 저장을 하나의 트랜잭션으로 묶었다.
+- `ReservationCreateRequest`에 좌석 목록을 추가해 예매 확정 API에서 좌석까지 함께 받도록 변경했다.
+- `ReservedSeat`의 유니크 제약과 `DataIntegrityViolationException`을 `SEAT_ALREADY_RESERVED`로 변환하는 기존 방어 로직은 유지했다.
+
+예매 생성 요청 예시:
+
+```json
+{
+  "screeningId": 1,
+  "peopleCount": 2,
+  "payment": "APP_CARD",
+  "couponCode": "WELCOME_CGV",
+  "seats": [
+    { "row": "G", "col": 4 },
+    { "row": "G", "col": 5 }
+  ]
+}
+```
+
+## 검증 내용
+
+- `database=cgv password=dngur1213 ./gradlew test --tests com.ceos23.cgv.domain.reservation.service.ReservationServiceTest`
+- `database=cgv password=dngur1213 ./gradlew test --tests com.ceos23.cgv.domain.reservation.service.ReservedSeatServiceTest`
+- `database=cgv password=dngur1213 ./gradlew test`
+
+동시성 통합 테스트는 별도 테스트 DB가 분리되어 있지 않고 현재 테스트가 로컬 MySQL 환경변수에 의존하므로, 이번 변경에서는 서비스 단위 테스트와 전체 테스트로 회귀 여부를 확인했다.
+
+</details>
+
+<details>
+<summary>이전 README 내용</summary>
+
+# spring-cgv-23rd
+CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
+
 ## ❓EntityManager는 누가 생성하고, DB와의 연결은 어떻게 이루어질까요?
 
 ### EntityManager는 누가 생성할까?
@@ -769,4 +1057,6 @@ https://www.erdcloud.com/d/PhXPysc9AfrTJbSYq
   <img width="673" height="552" alt="Image" src="https://github.com/user-attachments/assets/ad9cbc21-fbb3-4c9f-9783-73f240caf68d" />
 
 </div>
+</details>
+
 </details>
