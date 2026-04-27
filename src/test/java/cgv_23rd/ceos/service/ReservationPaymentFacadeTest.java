@@ -2,6 +2,7 @@ package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import cgv_23rd.ceos.entity.movie.Movie;
 import cgv_23rd.ceos.entity.movie.MovieScreen;
@@ -59,8 +60,8 @@ class ReservationPaymentFacadeTest {
     }
 
     @Test
-    @DisplayName("결제 실패 시 예매를 원상복구 취소한다")
-    void processPayment_fail_rollsBackReservation() {
+    @DisplayName("결제 실패 시 예매는 유지되고 결제 실패 상태만 기록한다")
+    void processPayment_fail_marksPaymentFailed() {
         Reservation reservation = createPendingReservation(1L, 1L);
         given(reservationService.getOwnedReservationWithLock(1L, 1L)).willReturn(reservation);
         given(paymentService.requestInstantPayment(anyString(), anyString(), anyInt(), anyString()))
@@ -68,7 +69,7 @@ class ReservationPaymentFacadeTest {
 
         assertThrows(GeneralException.class, () -> reservationPaymentFacade.processPayment(1L, 1L));
 
-        verify(reservationService).rollbackReservation(reservation);
+        verify(reservationService).markPaymentFailed(reservation);
         verify(reservationService, never()).confirmReservation(reservation);
     }
 
@@ -104,6 +105,7 @@ class ReservationPaymentFacadeTest {
         Reservation reservation = Reservation.create(user, movieScreen, LocalDateTime.now());
         ReflectionTestUtils.setField(reservation, "id", reservationId);
         ReflectionTestUtils.setField(reservation, "totalPrice", 15000);
+        ReflectionTestUtils.setField(reservation, "paymentStatus", PaymentStatus.READY);
         return reservation;
     }
 
@@ -111,6 +113,7 @@ class ReservationPaymentFacadeTest {
         Reservation reservation = createPendingReservation(reservationId, userId);
         ReflectionTestUtils.setField(reservation, "paymentId", paymentId);
         ReflectionTestUtils.setField(reservation, "status", ReservationStatus.완료);
+        ReflectionTestUtils.setField(reservation, "paymentStatus", PaymentStatus.PAID);
         return reservation;
     }
 

@@ -4,6 +4,7 @@ import cgv_23rd.ceos.controller.support.ControllerTestSupport;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
 import cgv_23rd.ceos.dto.reservation.request.ReservationRequestDto;
 import cgv_23rd.ceos.dto.reservation.response.ReservationResponseDto;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,6 +89,7 @@ class ReservationControllerTest extends ControllerTestSupport {
                         .seatInfo(List.of("A1", "A2"))
                         .totalPrice(30000)
                         .status(ReservationStatus.완료)
+                        .paymentStatus(PaymentStatus.PAID)
                         .reservationAt(LocalDateTime.of(2026, 4, 20, 10, 0))
                         .build()
         ));

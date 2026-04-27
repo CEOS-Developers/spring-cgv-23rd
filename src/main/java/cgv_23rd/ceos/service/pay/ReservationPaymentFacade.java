@@ -48,13 +48,15 @@ public class ReservationPaymentFacade {
                 return new PaymentResultDto(true, "결제가 완료되었습니다.");
             } catch (RuntimeException e) {
                 paymentService.cancelPayment(paymentId);
+                reservationService.markPaymentCancelled(reservation);
+                reservation.cancel(java.time.LocalDateTime.now());
                 throw e;
             }
         } catch (GeneralException e) {
-            rollbackReservationIfPending(reservation);
+            updatePaymentStatusOnFailure(reservation, e);
             throw e;
         } catch (Exception e) {
-            rollbackReservationIfPending(reservation);
+            reservationService.markPaymentUnknown(reservation);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 처리 중 알 수 없는 오류가 발생했습니다.");
         }
     }
@@ -73,6 +75,7 @@ public class ReservationPaymentFacade {
             if (response == null || response.data() == null || !"CANCELLED".equals(response.data().paymentStatus())) {
                 throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
             }
+            reservationService.markPaymentCancelled(reservation);
         }
 
         reservationService.cancelReservation(userId, reservationId);
@@ -84,9 +87,15 @@ public class ReservationPaymentFacade {
         }
     }
 
-    private void rollbackReservationIfPending(Reservation reservation) {
-        if (reservation.getStatus() == ReservationStatus.대기) {
-            reservationService.rollbackReservation(reservation);
+    private void updatePaymentStatusOnFailure(Reservation reservation, GeneralException e) {
+        if (e.getCode() == GeneralErrorCode.PAYMENT_FAILED) {
+            reservationService.markPaymentFailed(reservation);
+            return;
+        }
+
+        if (e.getCode() == GeneralErrorCode.PAYMENT_SERVER_FAILED
+                || e.getCode() == GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT) {
+            reservationService.markPaymentUnknown(reservation);
         }
     }
 }

@@ -6,6 +6,7 @@ import cgv_23rd.ceos.dto.food.request.FoodOrderRequestDto;
 import cgv_23rd.ceos.dto.food.response.FoodOrderItemResponseDto;
 import cgv_23rd.ceos.dto.food.response.FoodOrderResponseDto;
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,7 @@ class FoodOrderControllerTest extends ControllerTestSupport {
                         .theaterName("CGV 강남")
                         .totalPrice(12000)
                         .status(FoodOrderStatus.완료)
+                        .paymentStatus(PaymentStatus.PAID)
                         .createdAt(LocalDateTime.of(2026, 4, 24, 12, 0))
                         .items(List.of(
                                 FoodOrderItemResponseDto.builder()

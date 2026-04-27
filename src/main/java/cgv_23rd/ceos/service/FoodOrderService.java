@@ -75,6 +75,20 @@ public class FoodOrderService {
     }
 
     @Transactional(noRollbackFor = GeneralException.class)
+    public void assignPaymentId(Long userId, Long orderId, String paymentId) {
+        FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+
+        validateUserExists(userId);
+
+        if (!foodOrder.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        foodOrder.assignPaymentId(paymentId);
+    }
+
+    @Transactional(noRollbackFor = GeneralException.class)
     public void confirmOrderAndDeductStock(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -96,12 +110,50 @@ public class FoodOrderService {
 
             theaterFood.decreaseStock(item.getQuantity());
         }
+        foodOrder.markPaymentPaid();
         foodOrder.confirm();
     }
 
-    // 주문 취소 처리
     @Transactional(noRollbackFor = GeneralException.class)
-    public void cancelOrder(FoodOrder foodOrder) {
+    public void markPaymentFailed(Long userId, Long orderId) {
+        FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+
+        validateUserExists(userId);
+
+        if (!foodOrder.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        foodOrder.markPaymentFailed();
+    }
+
+    @Transactional(noRollbackFor = GeneralException.class)
+    public void markPaymentUnknown(Long userId, Long orderId) {
+        FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+
+        validateUserExists(userId);
+
+        if (!foodOrder.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        foodOrder.markPaymentUnknown();
+    }
+
+    @Transactional(noRollbackFor = GeneralException.class)
+    public void cancelOrderAfterPaymentCancellation(Long userId, Long orderId) {
+        FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+
+        validateUserExists(userId);
+
+        if (!foodOrder.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        foodOrder.markPaymentCancelled();
         foodOrder.cancel();
     }
 
@@ -146,6 +198,7 @@ public class FoodOrderService {
                 .theaterName(order.getTheater().getName())
                 .totalPrice(order.getTotalPrice())
                 .status(order.getStatus())
+                .paymentStatus(order.getPaymentStatus())
                 .createdAt(order.getCreatedAt())
                 .items(order.getFoodOrderItems().stream()
                         .map(this::toFoodOrderItemResponse)

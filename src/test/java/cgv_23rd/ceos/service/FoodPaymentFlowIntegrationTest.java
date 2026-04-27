@@ -4,6 +4,7 @@ import cgv_23rd.ceos.dto.food.request.FoodOrderItemRequestDto;
 import cgv_23rd.ceos.dto.food.request.FoodOrderRequestDto;
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.enums.Region;
 import cgv_23rd.ceos.entity.food.Food;
 import cgv_23rd.ceos.entity.food.FoodOrder;
@@ -130,11 +131,12 @@ class FoodPaymentFlowIntegrationTest {
         assertEquals(10, stockAtPaymentCall.get());
         assertEquals(8, currentStock());
         assertEquals(FoodOrderStatus.완료, order.getStatus());
+        assertEquals(PaymentStatus.PAID, order.getPaymentStatus());
     }
 
     @Test
-    @DisplayName("결제가 실패하면 매점 재고는 차감되지 않고 주문은 취소된다")
-    void paymentFailure_doesNotDeductStockAndCancelsOrder() {
+    @DisplayName("결제가 실패하면 매점 재고는 차감되지 않고 주문은 대기 상태를 유지하며 결제 실패로 기록된다")
+    void paymentFailure_doesNotDeductStockAndMarksPaymentFailed() {
         Long orderId = foodOrderService.createFoodOrder(
                 userId,
                 new FoodOrderRequestDto(theaterId, List.of(new FoodOrderItemRequestDto(foodId, 2)))
@@ -148,7 +150,8 @@ class FoodPaymentFlowIntegrationTest {
         FoodOrder order = foodOrderRepository.findById(orderId).orElseThrow();
 
         assertEquals(10, currentStock());
-        assertEquals(FoodOrderStatus.취소, order.getStatus());
+        assertEquals(FoodOrderStatus.대기, order.getStatus());
+        assertEquals(PaymentStatus.FAILED, order.getPaymentStatus());
     }
 
     private int currentStock() {

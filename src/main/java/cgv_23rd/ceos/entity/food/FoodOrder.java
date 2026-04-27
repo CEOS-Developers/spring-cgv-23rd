@@ -2,6 +2,7 @@ package cgv_23rd.ceos.entity.food;
 
 import cgv_23rd.ceos.entity.BaseEntity;
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.theater.Theater;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
@@ -32,6 +33,13 @@ public class FoodOrder extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private FoodOrderStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentStatus paymentStatus;
+
+    @Column(length = 100)
+    private String paymentId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -48,9 +56,19 @@ public class FoodOrder extends BaseEntity {
                 .user(user)
                 .theater(theater)
                 .status(FoodOrderStatus.대기)
+                .paymentStatus(PaymentStatus.READY)
+                .paymentId(null)
                 .totalPrice(0)
                 .foodOrderItems(new ArrayList<>())
                 .build();
+    }
+
+    public void assignPaymentId(String paymentId) {
+        if (this.status != FoodOrderStatus.대기) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY);
+        }
+        this.paymentId = paymentId;
+        this.paymentStatus = PaymentStatus.PROCESSING;
     }
 
     public void confirm() {
@@ -59,6 +77,9 @@ public class FoodOrder extends BaseEntity {
                     GeneralErrorCode.PAYMENT_ALREADY_PROCESSED,
                     "대기 상태의 주문만 완료할 수 있습니다."
             );
+        }
+        if (this.paymentStatus != PaymentStatus.PAID) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "결제 완료 상태의 주문만 확정할 수 있습니다.");
         }
         this.status = FoodOrderStatus.완료;
     }
@@ -74,6 +95,26 @@ public class FoodOrder extends BaseEntity {
         }
 
         this.status = FoodOrderStatus.취소;
+    }
+
+    public void markPaymentPaid() {
+        validatePaymentIdExists();
+        this.paymentStatus = PaymentStatus.PAID;
+    }
+
+    public void markPaymentFailed() {
+        validatePaymentIdExists();
+        this.paymentStatus = PaymentStatus.FAILED;
+    }
+
+    public void markPaymentUnknown() {
+        validatePaymentIdExists();
+        this.paymentStatus = PaymentStatus.UNKNOWN;
+    }
+
+    public void markPaymentCancelled() {
+        validatePaymentIdExists();
+        this.paymentStatus = PaymentStatus.CANCELLED;
     }
 
     public boolean isOwnedBy(Long userId) {
@@ -96,5 +137,11 @@ public class FoodOrder extends BaseEntity {
 
         this.foodOrderItems.add(orderItem);
         this.totalPrice += itemTotalPrice;
+    }
+
+    private void validatePaymentIdExists() {
+        if (this.paymentId == null || this.paymentId.isBlank()) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "결제 식별자가 없는 주문입니다.");
+        }
     }
 }

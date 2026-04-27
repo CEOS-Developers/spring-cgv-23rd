@@ -26,6 +26,7 @@ public class FoodPaymentFacade {
         // 매점 결제용 고유 paymentId 생성
         String paymentId = "FOOD_" + orderId + "_" + UUID.randomUUID().toString().substring(0, 8);
         String orderName = order.getTheater().getName() + " 매점 주문";
+        foodOrderService.assignPaymentId(userId, orderId, paymentId);
 
         try {
             // 외부 결제 서버 API 호출
@@ -45,24 +46,32 @@ public class FoodPaymentFacade {
                 } catch (GeneralException e) {
                     // 재고 차감 실패 시 (OUT_OF_STOCK) 결제 취소 API 호출
                     paymentService.cancelPayment(paymentId);
+                    paymentCompensationService.cancelFoodOrder(orderId);
                     throw e;
                 }
             } else {
+                foodOrderService.markPaymentUnknown(userId, orderId);
                 throw new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED);
             }
 
         } catch (GeneralException e) {
-            rollbackFoodOrderIfPending(order);
+            updatePaymentStatusOnFailure(userId, orderId, e);
             throw e;
         } catch (Exception e) {
-            rollbackFoodOrderIfPending(order);
+            foodOrderService.markPaymentUnknown(userId, orderId);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED);
         }
     }
 
-    private void rollbackFoodOrderIfPending(FoodOrder order) {
-        if (order.getStatus() == FoodOrderStatus.대기) {
-            paymentCompensationService.cancelFoodOrder(order.getId());
+    private void updatePaymentStatusOnFailure(Long userId, Long orderId, GeneralException e) {
+        if (e.getCode() == GeneralErrorCode.PAYMENT_FAILED) {
+            foodOrderService.markPaymentFailed(userId, orderId);
+            return;
+        }
+
+        if (e.getCode() == GeneralErrorCode.PAYMENT_SERVER_FAILED
+                || e.getCode() == GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT) {
+            foodOrderService.markPaymentUnknown(userId, orderId);
         }
     }
 }

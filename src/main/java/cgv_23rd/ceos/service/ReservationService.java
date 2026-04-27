@@ -60,6 +60,7 @@ public class ReservationService {
 
     @Transactional(noRollbackFor = GeneralException.class)
     public void confirmReservation(Reservation reservation) {
+        reservation.markPaymentPaid();
         reservation.confirm();
     }
 
@@ -68,10 +69,19 @@ public class ReservationService {
         reservation.assignPaymentId(paymentId);
     }
 
-    // 결제 실패 시 예약 취소 (보상 트랜잭션)
     @Transactional(noRollbackFor = GeneralException.class)
-    public void rollbackReservation(Reservation reservation) {
-        reservation.cancel(LocalDateTime.now());
+    public void markPaymentFailed(Reservation reservation) {
+        reservation.markPaymentFailed();
+    }
+
+    @Transactional(noRollbackFor = GeneralException.class)
+    public void markPaymentUnknown(Reservation reservation) {
+        reservation.markPaymentUnknown();
+    }
+
+    @Transactional(noRollbackFor = GeneralException.class)
+    public void markPaymentCancelled(Reservation reservation) {
+        reservation.markPaymentCancelled();
     }
 
     @Transactional(noRollbackFor = GeneralException.class)
@@ -178,6 +188,7 @@ public class ReservationService {
                 .seatInfo(res.getSeatLabels())
                 .totalPrice(res.getTotalPrice())
                 .status(res.getStatus())
+                .paymentStatus(res.getPaymentStatus())
                 .reservationAt(res.getCreatedAt())
                 .build();
     }

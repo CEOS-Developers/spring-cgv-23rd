@@ -24,6 +24,7 @@ public class PaymentCompensationService {
     public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
+        reservation.markPaymentCancelled();
         reservation.cancel(LocalDateTime.now());
     }
 
@@ -31,6 +32,7 @@ public class PaymentCompensationService {
     public void cancelFoodOrder(Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findById(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+        foodOrder.markPaymentCancelled();
         foodOrder.cancel();
     }
 }
