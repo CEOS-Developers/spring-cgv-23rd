@@ -600,3 +600,859 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 2. **`@AuthenticationPrincipal`**
     - **전역 저장소(`SecurityContext`)에 넣어두었던 유저 정보를 파라미터로 넣어줌**
         - DB 조회 없이 `userDetails.getUserId()`를 바로 사용 가능!!
+---
+## 코드 리팩토링
+
+### `TheaterService` 리팩토링
+
+1. `updateTheater`
+- **KISS**
+    - 조건이 복잡해 이해하기 힘든 로직을 `validateDuplicateTheaterName`으로 분리해, 메서드 명으로 쉽게 파악 가능
+- **SRP**
+    - **극장을 조회**하는 로직과 **중복된 극장명 검증** 로직을 **극장 업데이트** 로직과 분리
+
+**리팩토링 전**
+
+```jsx
+@Transactional
+public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
+    Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+
+    if (!theater.getName().equals(command.name()) && theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
+        throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+
+    theater.update(command.name(), command.location());
+
+    return TheaterInfo.from(theater);
+}
+```
+
+**리팩토링 후**
+
+```jsx
+@Transactional
+public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
+		// 리팩토링된 부분
+    Theater theater = findExistedTheater(id);
+
+		// 리팩토링된 부분
+    validateDuplicateTheaterName(theater, command.name());
+
+    theater.update(command.name(), command.location());
+
+    return TheaterInfo.from(theater);
+}
+
+private Theater findExistedTheater(Long id) {
+    return theaterRepository.findByIdAndDeletedAtIsNull(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+}
+
+private void validateDuplicateTheaterName(Theater theater, String name) {
+    if (!theater.getName().equals(name) && theaterRepository.existsByNameAndDeletedAtIsNull(name))
+        throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+}
+```
+
+2. `createTheater`
+- **KISS**
+    - 복잡한 람다식을 간단하게 **메서드 추출**을 통해 간단하게 표현
+- **SRP**
+    - **삭제된 극장을 복구**하는 로직과 **새 극장을 생성** 로직을 **극장 생성** 로직과 분리
+
+**리팩토링 전**
+
+```jsx
+@Transactional
+public TheaterInfo createTheater(TheaterCreateCommand command) {
+    if (theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
+        throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+
+    return theaterRepository.findByNameAndDeletedAtIsNotNull(command.name())
+            .map(existedTheater -> {
+                existedTheater.restoreDelete();
+                existedTheater.update(command.name(), command.location());
+                return TheaterInfo.from(existedTheater);
+            })
+            .orElseGet(()->{
+                Theater newTheater = Theater.builder()
+                        .name(command.name())
+                        .location(command.location())
+                        .build();
+                theaterRepository.save(newTheater);
+                return TheaterInfo.from(newTheater);
+                    }
+            );
+}
+```
+
+**리팩토링 후**
+
+```jsx
+@Transactional
+public TheaterInfo createTheater(TheaterCreateCommand command) {
+    if (theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
+        throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
+
+		// 리팩토링된 부분
+    Optional<Theater> deletedTheater 
+		    = theaterRepository.findByNameAndDeletedAtIsNotNull(command.name());
+		    
+		// 리팩토링된 부분
+    return deletedTheater
+            .map(theater -> restoreTheater(theater, command))
+            .orElseGet(() -> createNewTheater(command));
+}
+
+private TheaterInfo restoreTheater(Theater deletedTheater, TheaterCreateCommand command){
+    deletedTheater.restoreDelete();
+    deletedTheater.update(command.name(), command.location());
+    return TheaterInfo.from(deletedTheater);
+}
+
+private TheaterInfo createNewTheater(TheaterCreateCommand command) {
+    Theater newTheater = Theater.builder()
+            .name(command.name())
+            .location(command.location())
+            .build();
+    theaterRepository.save(newTheater);
+    return TheaterInfo.from(newTheater);
+}
+```
+
+### `MovieService` 리팩토링
+
+`upateMovie`
+- **Rich domain**
+    - `Movie` 엔티티에  비지니스 로직 포함시키기
+
+**리팩토링 전**
+
+```jsx
+@Transactional
+public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
+    Movie movie = findMovieById(id);
+
+    boolean isUniqueKeyChanged = !movie.getTitle().equals(command.title()) ||
+            !movie.getReleaseDate().isEqual(command.releaseDate());
+
+    if (isUniqueKeyChanged) {
+        if (movieRepository.existsByTitleAndReleaseDate(command.title(), command.releaseDate()))
+            throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
+    }
+
+    movie.update(
+            command.title(),
+            command.runtime(),
+            command.releaseDate(),
+            command.ageRating(),
+            command.posterUrl(),
+            command.description()
+    );
+
+    return MovieInfo.from(movie);
+}
+```
+
+**리팩토링 후**
+
+```jsx
+@Entity
+@Getter
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_Movie", columnNames = {"title", "release_date"})
+})
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Movie extends BaseSoftDeleteEntity {
+    ...
+		// 리팩토링된 부분
+    public boolean uniqueKeyChanged(String title, LocalDate releaseDate) {
+        return !this.title.equals(title) ||
+                !this.releaseDate.isEqual(releaseDate);
+    }
+}
+```
+
+```jsx
+@Transactional
+public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
+    Movie movie = findMovieById(id);
+
+		// 리팩토링된 부분
+    if (movie.uniqueKeyChanged(command.title(), command.releaseDate())) {
+        if (movieRepository.existsByTitleAndReleaseDate(
+				        command.title(), command.releaseDate()))
+            throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
+    }
+
+    movie.update(
+            command.title(),
+            command.runtime(),
+            command.releaseDate(),
+            command.ageRating(),
+            command.posterUrl(),
+            command.description()
+    );
+
+    return MovieInfo.from(movie);
+}
+```
+
+### `OrderService` 리팩토링
+
+`createOrder` 리팩토링
+- **Rich domain**
+    - `Order`, `OrderItem` 엔티티에  비지니스 로직 포함시키기
+
+**리팩토링 전**
+
+```jsx
+@Transactional
+public OrderInfo createOrder(OrderCommand command) {
+    User user = userRepository.findByEmailAndDeletedAtIsNull(command.email())
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+
+    int totalPrice = 0;
+    List<OrderItem> orderItems = new ArrayList<>();
+
+    for (OrderItemCommand itemCommand : command.orderItems()) {
+        Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+
+        Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+
+        inventory.decreaseStock(itemCommand.count());
+
+        int currentOrderPrice = menu.getPrice();
+        totalPrice += (currentOrderPrice * itemCommand.count());
+
+        OrderItem orderItem = OrderItem.builder()
+                .menu(menu)
+                .orderPrice(currentOrderPrice)
+                .count(itemCommand.count())
+                .build();
+        orderItems.add(orderItem);
+    }
+
+    Order order = Order.builder()
+            .user(user)
+            .theater(theater)
+            .totalPrice(totalPrice)
+            .refundable(false)
+            .build();
+    orderRepository.save(order);
+
+    for (OrderItem orderItem : orderItems) {
+        orderItem.updateOrder(order);
+    }
+    orderItemRepository.saveAll(orderItems);
+
+    return OrderInfo.from(order, orderItems);
+}
+```
+
+**리팩토링 후**
+
+```jsx
+@Entity
+public class OrderItem extends BaseSoftDeleteEntity {
+    ...
+    // 리팩토링된 부분
+    public static OrderItem create(Menu menu, int count) {
+        return OrderItem.builder()
+                .menu(menu)
+                .orderPrice(menu.getPrice())
+                .count(count)
+                .build();
+    }
+
+		// 리팩토링된 부분	
+    public void updateOrder(Order order) {
+        this.order = order;
+    }
+}
+```
+
+```jsx
+@Entity
+public class Order extends BaseTimeEntity {
+	  ...
+	  // 리팩토링된 부분
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> orderItems = new ArrayList<>();
+		
+		// 리팩토링된 부분
+    public static Order create(User user, Theater theater, List<OrderItem> orderItems) {
+        Order order = Order.builder()
+                .user(user)
+                .theater(theater)
+                .refundable(false)
+                .build();
+
+        int totalPrice = 0;
+        for (OrderItem item : orderItems) {
+            order.addOrderItem(item);
+            totalPrice += (item.getOrderPrice() * item.getCount());
+        }
+        order.totalPrice = totalPrice;
+
+        return order;
+    }
+
+		// 리팩토링된 부분
+    private void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
+        orderItem.updateOrder(this);
+    }
+}
+```
+
+```jsx
+@Transactional
+public OrderInfo createOrder(OrderCommand command) {
+    User user = userRepository.findByEmailAndDeletedAtIsNull(command.email())
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+    
+    // 리팩토링된 부분
+    List<OrderItem> orderItems = command.orderItems().stream()
+            .map(itemCommand -> {
+                Menu menu = menuRepository.findByIdAndDeletedAtIsNull(itemCommand.menuId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+
+                Inventory inventory = inventoryRepository.findByTheaterIdAndMenuIdWithLock(theater.getId(), menu.getId())
+                        .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+
+                inventory.decreaseStock(itemCommand.count());
+
+                return OrderItem.create(menu, itemCommand.count());
+            }).toList();
+
+		// 리팩토링된 부분
+    Order order = Order.create(user, theater, orderItems);
+    
+    orderRepository.save(order);
+    
+    return OrderInfo.from(order, orderItems);
+}
+```
+
+### `ReservationService` 리팩토링
+
+`createReservation` 리팩토링
+- **Rich domain**
+    - `RservedSeat`, `Reservation` 엔티티에  비지니스 로직 포함시키기
+- **SRP**
+    - **좌석 유무 검증** 로직과 **좌석 예약 여부 검증** 로직을  **예약 생성** 로직과 분리
+
+**리팩토링 전**
+
+```jsx
+@Transactional
+public ReservationInfo createReservation(ReservationCreateCommand command) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(command.userId())
+            .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    Schedule schedule = scheduleRepository.findByIdAndDeletedAtIsNull(command.scheduleId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+    schedule.validateReservableTime(LocalDateTime.now());
+
+    Long screenId = schedule.getScreen().getId();
+
+    List<Seat> seats = seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(command.seatIds(), screenId);
+    if (seats.size() != command.seatIds().size()) {
+        throw new BusinessException(ErrorCode.INVALID_SEAT);
+    }
+
+    boolean isAlreadyReserved = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(
+            schedule.getId(),
+            command.seatIds(),
+            ReservationStatus.RESERVED
+    );
+
+    if (isAlreadyReserved) {
+        throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
+    }
+
+    int screenSurcharge = schedule.getScreen().getScreenType().getSurchargePrice();
+    int baseSeatPrice = schedule.getBasePrice() + screenSurcharge;
+
+    Map<Seat, Integer> seatPriceMap = new HashMap<>();
+    int totalPrice = 0;
+
+    for (Seat seat: seats) {
+        int seatSurcharge = seat.getSeatGrade().getSurchargePrice();
+
+        int seatPrice = baseSeatPrice + seatSurcharge;
+        seatPriceMap.put(seat, seatPrice);
+
+        totalPrice += seatPrice;
+    }
+
+    Reservation reservation = Reservation.builder()
+            .user(user)
+            .schedule(schedule)
+            .status(ReservationStatus.RESERVED)
+            .totalPrice(totalPrice)
+            .build();
+    reservationRepository.save(reservation);
+
+    List<ReservedSeat> reservedSeats = seats.stream()
+            .map(seat -> ReservedSeat.builder()
+                    .reservation(reservation)
+                    .seat(seat)
+                    .schedule(schedule)
+                    .price(seatPriceMap.get(seat))
+                    .build())
+            .toList();
+    reservedSeatRepository.saveAll(reservedSeats);
+
+    return ReservationInfo.from(reservation, reservedSeats);
+}
+```
+
+**리팩토링 후**
+
+```jsx
+@Entity
+public class ReservedSeat extends BaseSoftDeleteEntity {
+    ...
+    // 리팩토링된 부분
+    public static ReservedSeat create(
+				    Reservation reservation, Schedule schedule, Seat seat) {
+				    
+        int screenSurcharge = schedule.getScreen().getScreenType().getSurchargePrice();
+        int baseSeatPrice = schedule.getBasePrice() + screenSurcharge;
+        int seatSurcharge = seat.getSeatGrade().getSurchargePrice();
+        int finalPrice = baseSeatPrice + seatSurcharge;
+
+        return ReservedSeat.builder()
+                .reservation(reservation)
+                .schedule(schedule)
+                .seat(seat)
+                .price(finalPrice)
+                .build();
+    }
+
+		// 리팩토링된 부분
+    public void updateReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
+}
+```
+
+```jsx
+@Entity
+public class Reservation extends BaseTimeEntity {
+    ...
+		// 리팩토링된 부분
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservedSeat> reservedSeats = new ArrayList<>();
+
+		// 리팩토링된 부분
+    public static Reservation create(User user, Schedule schedule, List<Seat> seats) {
+        Reservation reservation = Reservation.builder()
+                .user(user)
+                .schedule(schedule)
+                .status(ReservationStatus.RESERVED)
+                .build();
+
+        int totalPrice = 0;
+        for (Seat seat : seats) {
+            ReservedSeat reservedSeat = ReservedSeat.create(reservation, schedule, seat);
+            reservation.addReservedSeat(reservedSeat);
+
+            totalPrice += reservedSeat.getPrice();
+        }
+
+        reservation.totalPrice = totalPrice;
+        return reservation;
+    }
+
+		// 리팩토링된 부분
+    private void addReservedSeat(ReservedSeat reservedSeat) {
+        this.reservedSeats.add(reservedSeat);
+        reservedSeat.updateReservation(this);
+    }
+}
+```
+
+```jsx
+@Transactional
+public ReservationInfo createReservation(ReservationCreateCommand command) {
+    User user = userRepository.findByIdAndDeletedAtIsNull(command.userId())
+            .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    Schedule schedule = scheduleRepository.findByIdAndDeletedAtIsNull(command.scheduleId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+    schedule.validateReservableTime(LocalDateTime.now());
+
+    Long screenId = schedule.getScreen().getId();
+		
+		// 리팩토링된 부분
+    List<Seat> seats = getValidSeats(command.seatIds(), schedule.getScreen().getId());
+    
+    // 리팩토링된 부분
+    validateSeatNotReserved(schedule.getId(), command.seatIds());
+
+		// 리팩토링된 부분
+    Reservation reservation = Reservation.create(user, schedule, seats);
+    
+    reservationRepository.save(reservation);
+
+    return ReservationInfo.from(reservation, reservation.getReservedSeats());
+}
+
+private List<Seat> getValidSeats(List<Long> seatIds, Long screenId) {
+    List<Seat> seats 
+		    = seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(
+				    seatIds, screenId
+		    );
+    if (seats.size() != seatIds.size()) {
+        throw new BusinessException(ErrorCode.INVALID_SEAT);
+    }
+    return seats;
+}
+
+private void validateSeatNotReserved(Long scheduleId, List<Long> seatIds) {
+    boolean isAlreadyReserved 
+		    = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(
+            scheduleId,
+            seatIds,
+            ReservationStatus.RESERVED
+		    );
+		    
+    if (isAlreadyReserved) {
+        throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
+    }
+}
+```
+
+## DB Lock
+
+### **낙관적 락 (Optimistic Lock)**
+
+> **충돌이 안 일어날 것이라고 낙관적으로 가정**
+> 
+- 특징
+    - 실제 **데이터베이스의 락 기능을 사용 X**
+    - 대신 테이블에 **버전 상태를 기록하는 열**을 추가하여, **애플리케이션 단**에서 데이터가 변경되었는지 감지하는 락
+        - `@Version`
+- **동작 방식**
+    1. 데이터를 읽을 때 버전 번호를 같이 읽음 
+    2. 데이터를 수정할 때 처음에 읽었던 버전과 현재 DB의 버전이 일치하는지 확인
+    3. 일치할 때만 버전을 증가시키고, 데이터 수정
+- **장점:** DB에 실제 락을 걸지 않으므로 동시 처리 성능 매우 좋음
+- **단점:** 업데이트 시점에 충돌이 발생할 수 있으므로, 재시도 로직이나 예외 처리를 구현해야함
+- **사용 시점**
+    - **충돌이 거의 발생하지 않는 상황**
+    - **조회 비중이 수정보다 압도적으로 높을 때**
+- **예)**
+    - 프로필 정보 수정
+    - 공지사항 게시글 수정
+
+### **비관적 락 (Pessimistic Lock)**
+
+> **무조건 충돌이 일어난다고 비관적으로 가정**
+> 
+- 특징
+    - 트랜잭션이 시작될 때 **데이터베이스가 제공하는 실제 DB 락(주로 배타 락)** 걸음
+        - 내가 데이터를 수정하는 동안, 다른 사람은 데이터를 읽거나 수정하기 위해 대기
+    - SQL의 `FOR UPDATE` 구문을 사용하여 **행 단위를 잠금**
+        - `@Lock(LockModeType.PESSIMISTIC_WRITE)`
+- **장점:** 데이터의 무결성을 완벽하게 보장 (충돌 자체가 발생 X)
+- **단점**
+    - 다른 트랜잭션들이 대기해야하므로 성능(동시 처리량)이 떨어짐
+    - 데드락 위험이 높음
+        - 거의 동시에 실행된 두 메서드가 동일한 엔티티들을 **수정하려는 순서**가 달라 서로가 필요한 락을 획득하게 된 경우
+        - 수정하기 전에 정렬을 하거나, 타임아웃 구현해야함
+- **사용 시점**
+    - **수정 시도가 동시에 몰릴 때 (충돌 빈번)**
+        - **낙관적 락**을 쓰면 계속 충돌이 나서 재시도 하느라 리소스(CPU, DB 커넥션) 낭비
+    - **데이터 정합성이 중요할 때 (결제, 재고 차감 등)**
+        - DB 행 자체를 잠그는게 제일 안전!!
+- 예)
+    - **선착순 이벤트:** 짧은 시간에 수만 명이 한정된 자원을 선점하려고 경쟁
+    - **계좌 이체:** 입금과 출금이 동시에 일어날 때 정확한 잔액 계산
+
+### **네임드 락 (Named Lock)**
+
+> **특정 이름(문자열)을 가진 키 선점해 락 획득**
+> 
+- 특징
+    - DB의 Lock Manager로 부터 락 획득
+        - 테이블의 특정 행이나 테이블을 잠그는 것 X
+    - 락의 키 값은 주로 **락을 걸고 싶은 자원이나 행위** 단위로 정의
+- **동작 방식 (MySQL의 경우)**
+    1. 1인 1매 중복 클릭(따닥) 방지하고 싶은 경우
+        - `SELECT GET_LOCK('user_1_coupon', 10);`
+            - 서버는 **DB의 Lock Manager**로부터 `user_1_coupon`이라는 락 획득
+                - 해당 락 없으면 `10`초 대기
+                - **대기하는 동안 DB 커넥션 계속 잡고 있음..**
+        - 유저가 네임드 락으로 `user_1_coupon` 잡고 있어도, **쿠폰 테이블 자체는 접근 가능**
+            - 따라서 2번 유저, 3번 유저는 아무런 대기 없이 정상적으로 쿠폰 테이블에 자신의 쿠폰 Insert 가능
+        - **오직 같은 이름표를 찾는 사람만 대기**
+            - 만약 또 다른 서버(다중 서버의 경우)가 `user_1_coupon` 요청하면, 그때만 대기시킴
+    2. 전체 재고 보호하고 싶은 경우
+        - 수량이 한정된 글로벌 재고를 깎아야 하는 경우, 위 경우처럼 유저별로 락을 열어주면 X
+            - 남은 재고가 1장일 때 유저 A와 유저 B가 동시에 각자의 락을 쥐고 들어와서 재고를 깎아버리면 **초과 발급(-1장) 버그**
+        - **모든 유저에게 통용되도록 키 이름을 하나로 통일**
+            - `SELECT GET_LOCK('coupon_event', 10);`
+        - 여러 명이 동시에 클릭해도 키는 모든 유저에게 공통적으로 1개이므로, 무조건 1명씩 순서대로 비즈니스 로직 수행
+- **장점**
+    - 데이터베이스의 데이터와 무관하게 추상적인 개념에 대해 락 가능
+    - timeout 구현하기 쉬움
+        - 락 얻기 위해 기다리는 시간
+    - Redis 분산 락을 위한 인프라 비용 없음
+- **단점**
+    - 트랜잭션이 종료된다고 락이 자동으로 풀리지 않음
+        - 직접 `RELEASE_LOCK()`을 호출해서 해제해야 함
+    - 커넥션 풀 관리 어려움
+        - 커넥션 고갈을 막기 위해 
+        **락을 획득하기 위한 커넥션**과 **실제 로직을 수행하는 커넥션 분리**해야함
+        - 분리 안하면 락을 획득하는라 로직을 수행할 커넥션 고갈될 수도..
+- **사용 시점**
+    - **분산 환경에서의 동기화**
+        - 여러 대의 서버가 하나의 DB를 공유할 때, 
+        특정 자원에 대해 전체 시스템에서 딱 하나만 실행되도록 보장해야 할 때
+    - **DB 레코드가 아직 존재하지 않을 때**
+        - 비관적,낙관적 락은 존재하는 DB에 존재하는 행을 잠그지만,
+        - 네임드 락은 임의의 문자열을 잠그므로, **데이터가 생성되기 전에 중복 방지 가능**
+    - **외부 API 호출 제한**
+        - 특정 유저가 외부 API를 연타해서 여러번 호출하는 것을 막음
+            - 해당 행위에 대해 락 걸면 됨
+- 예)
+    - **선착순 쿠폰 중복 발급 방지**
+---
+### Redis 분산락
+
+> 네임드 락에서 **DB가 해주던 락 관리 
+ → 메모리 전용 서버 Redis로 옮긴 것**
+> 
+
+현대 백엔드 아키텍처(**MSA**나 **대용량 트래픽** 환경)에서
+동시성 문제를 해결하는 **표준으로 Redis 분산 락 사용**
+- **Redis**
+    - 데이터를 메모리에 저장해서 엄청나게 빠름
+    - **싱글 스레드**로 동작
+        - 한 번에 하나의 명령어만 순차적으로 처리
+- **동작 방식**
+    1. 서버 1과 서버 2가 동시에 동일한 키를 선점하려고 시도
+    2. Redis는 싱글 스레드 → 동시에 키 접근 자체가 불가
+        - 먼저 도착한 서버 1의 요청만 성공, 서버 2의 요청은 실패
+    3. 성공한 서버 1은 비즈니스 로직을 수행하고, 끝나면 Lock 해제
+- Redis 락 구현 방식(라이브러리)
+    - **Lettuce (비추천)**
+        - 락을 얻을 때까지 서버가 `while(true)`문을 돌며 Redis에게 락 사용 여부 계속 확인
+            - Redis 서버 부하
+    - **Redisson (추천)**
+        - 락이 풀리면 Redis는 대기하고 있던 서버들에게 알림 보냄
+            - 스레드가 무한 루프를 돌지 않아 Redis에 부하 X
+            - 락 획득 대기 시간(Timeout)이나 락 유지 시간(Lease Time)을 쉽게 설정 가능
+- 장점
+    - 기능적으로 DB 네임드 락과 동일하지만, **안정성과 성능** 훨씬 좋음
+    1. **DB 커넥션 보호**
+        - 비관적, 네임드 락은 락을 얻기 위해 대기하는 동안 **DB 커넥션**을 계속 잡고 있음
+            - 대규모 트래픽이 몰리면 DB 커넥션 풀이 고갈되어 전체 서비스 마비
+        - Redis 락은 이 부하를 DB와 분리!!
+    2. **DB와 독립적**
+    - 비관적 락의 타임아웃 시간, 네임드 락의 락 가져오는 명령어 등 모두 DB에 종속적
+        - 즉, DB마다 사용 명령어 다름..
+    - **Redis 분산락**을 사용하면, 어느 DB든 동일 로직 사용 가능!!
+    3. **TTL 기능**
+        - **DB 락**은 락 최대로 잡을 수 있는 시간 설정하는 기능 제공 X (별도 구현 필요)
+            - 서버가 락을 잡고있다가 서버 자체가 다운되면, 락 계속 잡고 있게 됨
+        - **Redisson**은 `Lease Time` 제공
+            - 정해진 시간이 지나면 락이 **자동으로 소멸**되도록 안전하게 설계
+    4. **인메모리 속도**
+        - 디스크를 기반으로 하는 DB보다
+        **메모리 기반의 Redis**가 락을 획득하고 반납하는 속도가 훨씬 빠름
+    - 단점
+        - Redis 인프라 구축 비용
+---
+## 영화관 예매 서비스 특징
+
+**트래픽 많음**
+
+→ 유명 영화 예매 시작과 동시에 여러 사용자가 명당 자리 클릭 (무조건 충돌 발생)
+
+1. **낙관적 락**
+    - 충돌할 때마다, 계속해서 재시도 로직 수행되므로 CPU, DB 커넥션 낭비
+2. **비관전 락, 네임드 락**
+    - DB에 접근해 락을 획득하기 때문에 DB에 부하 발생
+        - 충돌을 막는 것 또한 DB에서 처리하므로
+    - DB는 디스크 기반으로 락 획득 속도 느림(메모리 기반 Redis보다)
+
+### Redis 분산 락
+
+1. **DB 보호**
+    - DB가 아닌 메모리 기반 Redis가 락 관리해줌
+2. **빠른 처리**
+    - 수만 명의 요청에 대한 락 관리를 Redis가 순식간에 처리
+        - 많은 양의 트래픽 처리에 용이
+3. **TTL 기능**
+    - 유저가 좌석 선택 후 결제 안 하거나 브라우저를 꺼도, 시간 만료되면 Redis가 알아서 해당 락 제거
+        - 별도 로직 없이 데드락 차단 가능
+---
+## 영화 예매 로직 흐름
+
+### 1. `ReservationLockFacade`
+
+1. **요청 수신 및 ID 정렬**
+    - 사용자가 선택한 좌석 ID 리스트 정렬
+        - 데드락 방지
+2. **Redis Key 리스트 생성**
+    - 정렬된 ID를 기반으로 좌석별 고유한 Redis Key(`lock:schedule:{id}:seat:{id}`)를 생성
+        - `(shedule, seat)`은 DB에서 unique 제약 조건 존재
+3. **역할 분리**
+    - 생성된 **Key 리스트 및 `ReservationService의 createReservation()` 메서드**를 
+    `RedisLockManager`에 전달
+        - `RedisLockManger`는 그저 전달받은 키를 통해 락을 획득하고, 메서드를 실행
+
+### 2. `RedisLockManager`
+
+1. **MultiLock 생성**
+    - 전달받은 Key 리스트를 통해 `RedissonMultiLock` 객체 생성
+2. **락 획득 (`tryLock()`)**
+    - `waitTime = 0`
+        - 1개의 좌석이라도 다른 사용자가 선점 중이라면 대기 없이 즉시 예외
+    - `leaseTime = -1`
+        - Redisson의 Watchdog 기능
+            - 비즈니스 로직이 끝날 때까지 락을 안전하게 유지해주며 서버 다운 시에만 락이 만료
+3. **로직 실행**
+    - 락 획득에 성공하면 전달 받은 비지니스 로직 실행
+        - **`createReservation()` 실행**
+4. **락 반납**
+    - 로직이 끝나면 `finally` 블록에서 획득한 모든 락 전부 반납
+---
+## HTTP 클라이언트
+
+- **일반적인 동기/외부 API 호출** → **`RestClient`**
+- **MSA 환경 내부 통신** → **`Feign Client`**
+- **비동기/대규모 트래픽** → **`WebClient`**
+
+### 1. RestTemplate → X
+
+> 스프링의 가장 전통적인 **동기식** HTTP 클라이언트
+> 
+
+이젠 `RestTemplate` 대신, `WebClient`나 `RestClient` 사용 권장
+
+- **장점**
+    - `spring-boot-starter-web`에 기본 포함
+- **단점**
+    - Http 헤더를 추가하거나 에러를 처리하는 코드 길고 복잡 등
+
+### 2. Java HttpClient → X
+
+> JDK에 내장된 **동기, 비동기** HTTP 클라이언트
+> 
+- **사용 시점**
+    - 일반적인 스프링 웹 애플리케이션 개발에서 잘 사용 X
+    - 스프링 프레임워크를 아예 안 쓰거나, 외부 라이브러리 의존성을 줄여야 하는 라이브러리 개발할 때나 사용
+- **장점**
+    - 스프링 프레임워크나 외부 라이브러리 없이 순수 Java만으로 사용
+    - **동기, 비동기 모두 지원**
+- **단점**
+    - 객체를 JSON으로 직렬화, 역직렬화하는 과정을 스프링이 자동으로 해주지 않아 직접 구현해야함..
+
+### 3. Spring Cloud OpenFeign (Feign Client)
+
+> **Spring Cloud 생태계 기반 동기식 클라이언트**
+> 
+- 사용 시점
+    - 주로 **MSA** 환경에서 **내부 서비스 간 통신**에 **많이 사용**
+- **장점**
+    - **Spring Cloud 생태계와 쉽게 연동 가능**
+        - **Spring Cloud**
+            - **MSA**를 쉽게 구축할 수 있도록 지원하는 **Toolkit**
+            - 서비스를 여러 개로 쪼개는 **MSA** 환경에서 서비스 간 통신, 장애 관리 등 관리해야 할 여러 문제를 쉽게 해결 가능
+- **단점**
+    - **동기 기반**
+        - 기본적으로 요청을 보내고 응답이 올 때까지 스레드가 대기
+        - 비동기 지원이 추가되고 있지만, 기본 생태계는 동기 중심
+    - **무거운 의존성**
+        - 단순히 외부 API 호출할 때 **Spring Cloud 의존성**을 추가하기는 무거움
+            - `spring-cloud-starter-openfeign'`
+            - Feign 뿐만 아니라 Spring Cloud와 연동을 위한 라이브러리 모두 포함
+
+### 4. WebClient
+
+> **비동기** HTTP 클라이언트
+> 
+- **사용 시점**
+    - 동시 사용자로 인해 **서버 스레드가 부족**한 상황
+    - **외부 API 응답이 느려** 우리 서버까지 같이 멈추는 현상 발생할 때 사용
+- **장점**
+    - 적은 스레드로도 많은 동시 요청을 처리
+        - 트래픽이 많거나 응답이 오래 걸리는 외부 API를 호출할 때 성능 좋음
+    - **체이닝 방식**을 사용해 코드가 유연하고 깔끔
+- **단점**
+    - 비동기 처리로 인한 로직 복잡함
+    - - `spring-boot-starter-webflux` 의존성 추가
+
+### 5. RestClient
+
+> **동기식 HTTP 클라이언트**
+> 
+- **사용 시점**
+    - **단순 API 호출**은 무겁고 복잡한 WebClient 대신, RestClient 사용
+- **장점**
+    - `WebClient`처럼 **체이닝 방식**을 사용해 코드가 유연
+    - 기존처럼 위에서 아래로 순차적으로 실행되는 **동기 방식**
+        - 코드를 짜고 에러를 추적하기 쉬움
+    - `spring-boot-starter-web`만 있으면 사용 가능
+- **단점**
+    - **동기의 한계**
+        - 요청을 보내면 응답이 올 때까지 스레드가 대기
+            - 수백 건의 외부 API를 동시에 지연 없이 처리해야 하는 극단적인 트래픽 환경에서는 `WebClient`가 유리
+    - Spring Boot 3.2 환경에서만 지원
+        - 버전이 낮은 레거시 프로젝트에 도입 불가
+---
+
+## 영화 예매 서비스 결제 API
+
+### **`RestClient` 사용**
+
+- `spring-boot-starter-web`에 기본으로 내장
+    - 추가 라이브러리 없이 가볍게 사용 가능
+    - 서버가 한 대뿐인 상황에서 외부 API 연동을 위해 `Feign Client` 사용하는 것은 비효율적
+- **동기 방식**
+    - **결제 로직과 같은 순차적(동기적) 흐름**을 안전하고 직관적으로 구현 가능
+    - `WebClient`로 비동기 코드 도입하는 것은 복잡하고 디버깅 힘듦..
+---
+## 결제 시스템 연동 흐름
+
+### 1. API Secret 조회
+
+1. **Redis 캐시 조회**
+    - 이전 요청으로 Redis에 저장된 `Secret Key`가 있는 지 확인
+    - 결제 API를 보낼 때마다, Secret Key를 발급받기 위한 추가 요청 안해도 됨!!
+2. **API 직접 호출 및 캐싱**
+    - 캐시에 없으면 `PaymentClient`를 통해 API 호출하여 새로 발급받고, Redis에 저장
+
+### 2. 예매 데이터 생성
+
+1. **분산 락 기반 예매**
+    - `reservationLockFacade`를 통해 동시성 문제 없이 `reservation` 생성
+    - 호출된 `createReservation()` 메서드에서 **트랜잭션이 및 락 종료**
+        - 결제 API 연동하는 동안 DB 커넥션 잡지 않음!!
+2. **금액 정합성 검증**
+    - 조작될 수 있는 **결제 요청 금액**과 **서버에서 계산된 실제 결제해야하 금액**을 비교
+        - 불일치 시 예매 취소하고 예외 발생
+
+### 3. 결제
+
+1. **결제 API 호출**
+    - `RestClient`를 통해 실제 결제 요청
+2. **상태 검증**
+    - 반환된 상태가 `PAID`인 경우에만 예매 상태를 확정

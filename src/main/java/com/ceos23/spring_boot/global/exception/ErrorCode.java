@@ -13,6 +13,10 @@ public enum ErrorCode {
     MOVIE_NOT_FOUND(HttpStatus.BAD_REQUEST, "M001", "존재하지 않는 영화입니다."),
     DUPLICATE_MOVIE(HttpStatus.BAD_REQUEST, "M002", "이미 존재하는 영화입니다."),
 
+    SCREEN_TYPE_NOT_FOUND(HttpStatus.NOT_FOUND, "ST001", "존재하지 않는 상영관 종류입니다."),
+
+    SEAT_TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "STP001", "존재하지 않는 좌석 템플릿입니다."),
+
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
     DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U002", "이미 사용 중인 이메일입니다."),
     INVALID_PASSWORD(HttpStatus.UNAUTHORIZED, "U003", "비밀번호가 틀렸습니다."),
@@ -29,6 +33,7 @@ public enum ErrorCode {
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R002", "존재하지 않는 예매 내역입니다."),
     UNAUTHORIZED_RESERVATION_ACCESS(HttpStatus.FORBIDDEN, "R003", "본인의 예매 내역만 접근할 수 있습니다."),
     ALREADY_CANCELED_RESERVATION(HttpStatus.BAD_REQUEST, "R004", "이미 취소된 예매입니다."),
+    INVALID_RESERVATION_STATUS(HttpStatus.BAD_REQUEST,"R005", "유효하지 않은 예매상태입니다."),
 
     MENU_NOT_FOUND(HttpStatus.NOT_FOUND, "ME001", "존재하지 않는 메뉴입니다."),
 
@@ -43,6 +48,16 @@ public enum ErrorCode {
 
     MISSING_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "CK001", "쿠키에 refreshToken이 없습니다."),
     INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "CK002", "유효하지 않거나 만료된 refreshToken입니다. "),
+
+    LOCK_ACQUISITION_FAILED(HttpStatus.CONFLICT, "L001", "현재 다른 사용자가 처리 중입니다. 잠시 후 다시 시도해주세요."),
+    LOCK_INTERRUPTED_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "L002", "시스템 처리 중 인터럽트가 발생했습니다."),
+
+    EXTERNAL_API_CLIENT_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "A001", "외부 API 요청 파라미터가 잘못되었습니다."),
+    EXTERNAL_API_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "A002", "외부 API 서버에 장애가 발생했습니다."),
+    INVALID_API_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "A003", "외부 API의 응답값이 비어있거나 유효하지 않습니다."),
+
+    PAYMENT_CANCEL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "P001", "결제 취소에 실패했습니다."),
+    INVALID_PAYMENT_AMOUNT(HttpStatus.BAD_REQUEST, "P002", "결제 금액이 일치하지 않습니다."),
 
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S001", "서버 내부에 오류가 발생했습니다.");
 

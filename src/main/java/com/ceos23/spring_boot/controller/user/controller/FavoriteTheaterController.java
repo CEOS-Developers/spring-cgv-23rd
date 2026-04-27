@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "4. FavoriteTheater (영화관 찜)", description = "영화관 찜 API")
+@Tag(name = "FavoriteTheater (영화관 찜)", description = "영화관 찜 API")
 @RestController
 @RequiredArgsConstructor
 public class FavoriteTheaterController {

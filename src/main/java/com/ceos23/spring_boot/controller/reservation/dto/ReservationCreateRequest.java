@@ -21,7 +21,7 @@ public record ReservationCreateRequest(
         @NotEmpty(message = "최소 1개 이상의 좌석을 선택해야 합니다.")
         List<Long> seatIds
 ) {
-    public ReservationCreateCommand toCommand() {
-        return new ReservationCreateCommand(userId, scheduleId, seatIds);
-    }
+//    public ReservationCreateCommand toCommand() {
+//        return new ReservationCreateCommand(userId, scheduleId, seatIds);
+//    }
 }
