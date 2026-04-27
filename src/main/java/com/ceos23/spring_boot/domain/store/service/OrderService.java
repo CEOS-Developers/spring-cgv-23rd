@@ -1,0 +1,78 @@
+package com.ceos23.spring_boot.domain.store.service;
+
+import com.ceos23.spring_boot.domain.store.dto.OrderCommand;
+import com.ceos23.spring_boot.domain.store.dto.OrderInfo;
+import com.ceos23.spring_boot.domain.store.dto.OrderItemCommand;
+import com.ceos23.spring_boot.domain.store.entity.Inventory;
+import com.ceos23.spring_boot.domain.store.entity.Menu;
+import com.ceos23.spring_boot.domain.store.entity.Order;
+import com.ceos23.spring_boot.domain.store.entity.OrderItem;
+import com.ceos23.spring_boot.domain.store.repository.InventoryRepository;
+import com.ceos23.spring_boot.domain.store.repository.MenuRepository;
+import com.ceos23.spring_boot.domain.store.repository.OrderItemRepository;
+import com.ceos23.spring_boot.domain.store.repository.OrderRepository;
+import com.ceos23.spring_boot.domain.theater.entity.Theater;
+import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
+import com.ceos23.spring_boot.domain.user.entity.User;
+import com.ceos23.spring_boot.domain.user.repository.UserRepository;
+import com.ceos23.spring_boot.global.exception.BusinessException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+    private final UserRepository userRepository;
+    private final TheaterRepository theaterRepository;
+    private final MenuRepository menuRepository;
+    private final InventoryRepository inventoryRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
+
+    @Transactional
+    public OrderInfo createOrder(OrderCommand command) {
+        User user = userRepository.findByEmailAndDeletedAtIsNull(command.email())
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        Theater theater = theaterRepository.findByIdAndDeletedAtIsNull(command.theaterId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.THEATER_NOT_FOUND));
+
+        List<Long> menuIds = command.orderItems().stream()
+                .map(OrderItemCommand::menuId)
+                .sorted()
+                .toList();
+
+        Map<Long, Menu> menuMap = menuRepository.findAllByIdInAndDeletedAtIsNull(menuIds).stream()
+                .collect(Collectors.toMap(Menu::getId, menu->menu));
+
+        Map<Long, Inventory> inventoryMap = inventoryRepository.findAllByTheaterIdAndMenuIdInWithLock(theater.getId(), menuIds).stream()
+                .collect(Collectors.toMap(inventory->inventory.getMenu().getId(), inventory -> inventory));
+
+        List<OrderItem> orderItems = command.orderItems().stream()
+                .map(itemCommand -> {
+                    Menu menu = Optional.ofNullable(menuMap.get(itemCommand.menuId()))
+                            .orElseThrow(() -> new BusinessException(ErrorCode.MENU_NOT_FOUND));
+
+                    Inventory inventory = Optional.ofNullable(inventoryMap.get(itemCommand.menuId()))
+                            .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+
+                    inventory.decreaseStock(itemCommand.count());
+
+                    return OrderItem.create(menu, itemCommand.count());
+                }).toList();
+
+        Order order = Order.create(user, theater, orderItems);
+        orderRepository.save(order);
+
+        return OrderInfo.from(order, orderItems);
+    }
+}

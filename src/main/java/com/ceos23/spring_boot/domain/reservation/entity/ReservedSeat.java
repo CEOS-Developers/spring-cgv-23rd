@@ -1,0 +1,67 @@
+package com.ceos23.spring_boot.domain.reservation.entity;
+
+import com.ceos23.spring_boot.domain.theater.entity.Seat;
+import com.ceos23.spring_boot.global.common.BaseSoftDeleteEntity;
+import com.ceos23.spring_boot.global.common.BaseTimeEntity;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_schedule_seat",
+            columnNames = {"schedule_id", "seat_id"}
+        )
+    }
+)
+public class ReservedSeat extends BaseSoftDeleteEntity {
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "reserved_seat_id")
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reservation_id", nullable = false)
+    private Reservation reservation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seat_id", nullable = false)
+    private Seat seat;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", nullable = false)
+    private Schedule schedule;
+
+    private Integer price;
+
+    @Builder
+    public ReservedSeat(Reservation reservation, Seat seat, Schedule schedule, Integer price) {
+        this.reservation = reservation;
+        this.seat = seat;
+        this.schedule = schedule;
+        this.price = price;
+    }
+
+    public static ReservedSeat create(Reservation reservation, Schedule schedule, Seat seat) {
+        int screenSurcharge = schedule.getScreen().getScreenType().getSurchargePrice();
+        int baseSeatPrice = schedule.getBasePrice() + screenSurcharge;
+        int seatSurcharge = seat.getSeatGrade().getSurchargePrice();
+        int finalPrice = baseSeatPrice + seatSurcharge;
+
+        return ReservedSeat.builder()
+                .reservation(reservation)
+                .schedule(schedule)
+                .seat(seat)
+                .price(finalPrice)
+                .build();
+    }
+
+    public void updateReservation(Reservation reservation) {
+        this.reservation = reservation;
+    }
+}
