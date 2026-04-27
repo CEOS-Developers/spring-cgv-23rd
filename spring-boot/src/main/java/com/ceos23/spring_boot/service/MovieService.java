@@ -1,6 +1,8 @@
 package com.ceos23.spring_boot.service;
 
 import com.ceos23.spring_boot.domain.Movie;
+import com.ceos23.spring_boot.exception.CustomException;
+import com.ceos23.spring_boot.global.exception.ErrorCode;
 import com.ceos23.spring_boot.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,6 @@ public class MovieService {
     // 단건 조회
     public Movie findById(Long id) {
         return movieRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("영화 없음"));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
     }
 }

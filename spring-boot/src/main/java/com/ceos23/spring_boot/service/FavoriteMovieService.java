@@ -50,19 +50,11 @@ public class FavoriteMovieService {
         validateId(userId);
         validateId(movieId);
 
-        if (!userRepository.existsById(userId)) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
+        FavoriteMovie favoriteMovie = favoriteMovieRepository
+                .findByUserIdAndMovieId(userId, movieId)
+                .orElseThrow(() -> new CustomException(ErrorCode.FAVORITE_MOVIE_NOT_FOUND));
 
-        if (!movieRepository.existsById(movieId)) {
-            throw new CustomException(ErrorCode.MOVIE_NOT_FOUND);
-        }
-
-        if (!favoriteMovieRepository.existsByUserIdAndMovieId(userId, movieId)) {
-            throw new CustomException(ErrorCode.FAVORITE_MOVIE_NOT_FOUND);
-        }
-
-        favoriteMovieRepository.deleteByUserIdAndMovieId(userId, movieId);
+        favoriteMovieRepository.delete(favoriteMovie);
     }
 
     public List<FavoriteMovieResponse> getFavoriteMovies(Long userId) {

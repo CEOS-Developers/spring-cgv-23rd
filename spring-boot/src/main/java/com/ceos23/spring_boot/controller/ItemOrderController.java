@@ -6,13 +6,18 @@ import com.ceos23.spring_boot.global.response.SuccessResponse;
 import com.ceos23.spring_boot.service.ItemOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping
+@RequestMapping("/api")
 public class ItemOrderController {
 
     private final ItemOrderService itemOrderService;
@@ -22,6 +27,14 @@ public class ItemOrderController {
             @RequestBody ItemOrderRequest request
     ) {
         ItemOrderResponse response = itemOrderService.orderItems(request);
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));
+    }
+
+    @PostMapping("/orders/{orderId}/cancel")
+    public ResponseEntity<SuccessResponse<ItemOrderResponse>> cancelOrder(
+            @PathVariable Long orderId
+    ) {
+        ItemOrderResponse response = itemOrderService.cancelOrder(orderId);
         return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));
     }
 

@@ -1,17 +1,30 @@
 package com.ceos23.spring_boot.service;
 
-import com.ceos23.spring_boot.domain.*;
+import com.ceos23.spring_boot.domain.Item;
+import com.ceos23.spring_boot.domain.ItemOrder;
+import com.ceos23.spring_boot.domain.OrderDetail;
+import com.ceos23.spring_boot.domain.OrderStatus;
+import com.ceos23.spring_boot.domain.Theater;
+import com.ceos23.spring_boot.domain.TheaterItemStock;
+import com.ceos23.spring_boot.domain.User;
 import com.ceos23.spring_boot.dto.ItemOrderRequest;
 import com.ceos23.spring_boot.dto.ItemOrderResponse;
 import com.ceos23.spring_boot.dto.OrderItemRequest;
 import com.ceos23.spring_boot.exception.CustomException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
-import com.ceos23.spring_boot.repository.*;
+import com.ceos23.spring_boot.infra.payment.PaymentGateway;
+import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
+import com.ceos23.spring_boot.repository.ItemOrderRepository;
+import com.ceos23.spring_boot.repository.ItemRepository;
+import com.ceos23.spring_boot.repository.TheaterItemStockRepository;
+import com.ceos23.spring_boot.repository.TheaterRepository;
+import com.ceos23.spring_boot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,59 +33,45 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ItemOrderService {
 
+    private static final DateTimeFormatter PAYMENT_ID_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
     private final ItemOrderRepository itemOrderRepository;
-    private final OrderDetailRepository orderDetailRepository;
     private final TheaterItemStockRepository theaterItemStockRepository;
     private final UserRepository userRepository;
     private final TheaterRepository theaterRepository;
     private final ItemRepository itemRepository;
+    private final PaymentGateway paymentGateway;
 
     @Transactional
     public ItemOrderResponse orderItems(ItemOrderRequest request) {
         validateRequest(request);
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        User user = loadUser(request.getUserId());
+        Theater theater = loadTheater(request.getTheaterId());
 
-        Theater theater = theaterRepository.findById(request.getTheaterId())
-                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
-
-        List<TheaterItemStock> stocks = new ArrayList<>();
         List<Item> items = new ArrayList<>();
-        int totalPrice = 0;
+        List<TheaterItemStock> stocks = new ArrayList<>();
+        int totalPrice = calculateTotalPriceAndPrepareOrderItems(request, items, stocks);
 
-        for (OrderItemRequest orderItemRequest : request.getItems()) {
-            validateOrderItem(orderItemRequest);
+        ItemOrder itemOrder = createItemOrder(user, theater, totalPrice);
+        ItemOrder savedOrder = itemOrderRepository.saveAndFlush(itemOrder);
 
-            Item item = itemRepository.findById(orderItemRequest.getItemId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.ITEM_NOT_FOUND));
+        String paymentId = createPaymentId(savedOrder.getId());
 
-            TheaterItemStock stock = theaterItemStockRepository
-                    .findByTheaterIdAndItemId(request.getTheaterId(), orderItemRequest.getItemId())
-                    .orElseThrow(() -> new CustomException(ErrorCode.ITEM_STOCK_NOT_FOUND));
+        try {
+            PaymentData payment = paymentGateway.pay(
+                    paymentId,
+                    createOrderName(savedOrder),
+                    totalPrice,
+                    createCustomData(savedOrder)
+            );
 
-            if (stock.getStock() < orderItemRequest.getCount()) {
-                throw new CustomException(ErrorCode.INSUFFICIENT_STOCK);
-            }
+            addOrderDetailsAndDecreaseStock(savedOrder, request.getItems(), items, stocks);
+            savedOrder.markPaid(paymentId, resolvePaidAt(payment));
 
-            items.add(item);
-            stocks.add(stock);
-            totalPrice += item.getPrice() * orderItemRequest.getCount();
-        }
-
-        ItemOrder itemOrder = ItemOrder.of(user, theater, totalPrice, LocalDateTime.now());
-        ItemOrder savedOrder = itemOrderRepository.save(itemOrder);
-
-        for (int i = 0; i < request.getItems().size(); i++) {
-            OrderItemRequest orderItemRequest = request.getItems().get(i);
-            Item item = items.get(i);
-            TheaterItemStock stock = stocks.get(i);
-
-            stock.decreaseStock(orderItemRequest.getCount());
-
-            OrderDetail orderDetail = OrderDetail.of(savedOrder, item, orderItemRequest.getCount());
-            savedOrder.addOrderDetail(orderDetail);
-            orderDetailRepository.save(orderDetail);
+        } catch (Exception e) {
+            savedOrder.markPaymentFailed(paymentId);
         }
 
         return ItemOrderResponse.from(savedOrder);
@@ -89,14 +88,132 @@ public class ItemOrderService {
 
     public List<ItemOrderResponse> getOrdersByUser(Long userId) {
         validateId(userId);
-
-        if (!userRepository.existsById(userId)) {
-            throw new CustomException(ErrorCode.USER_NOT_FOUND);
-        }
+        validateUserExists(userId);
 
         return itemOrderRepository.findAllByUserId(userId).stream()
                 .map(ItemOrderResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public ItemOrderResponse cancelOrder(Long orderId) {
+        validateId(orderId);
+
+        ItemOrder itemOrder = itemOrderRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ITEM_ORDER_NOT_FOUND));
+
+        if (itemOrder.getOrderStatus() != OrderStatus.PAID) {
+            throw new IllegalArgumentException("결제 완료된 주문만 취소할 수 있습니다.");
+        }
+
+        paymentGateway.cancel(itemOrder.getPaymentId());
+
+        restoreStocks(itemOrder);
+        itemOrder.cancel(LocalDateTime.now());
+
+        return ItemOrderResponse.from(itemOrder);
+    }
+
+    private int calculateTotalPriceAndPrepareOrderItems(
+            ItemOrderRequest request,
+            List<Item> items,
+            List<TheaterItemStock> stocks
+    ) {
+        int totalPrice = 0;
+
+        for (OrderItemRequest orderItemRequest : request.getItems()) {
+            validateOrderItem(orderItemRequest);
+
+            Item item = loadItem(orderItemRequest.getItemId());
+            TheaterItemStock stock = loadStock(request.getTheaterId(), orderItemRequest.getItemId());
+
+            stock.ensureEnough(orderItemRequest.getCount());
+
+            items.add(item);
+            stocks.add(stock);
+            totalPrice += calculateItemPrice(item, orderItemRequest.getCount());
+        }
+
+        return totalPrice;
+    }
+
+    private void addOrderDetailsAndDecreaseStock(
+            ItemOrder savedOrder,
+            List<OrderItemRequest> orderItemRequests,
+            List<Item> items,
+            List<TheaterItemStock> stocks
+    ) {
+        for (int i = 0; i < orderItemRequests.size(); i++) {
+            OrderItemRequest orderItemRequest = orderItemRequests.get(i);
+            Item item = items.get(i);
+            TheaterItemStock stock = stocks.get(i);
+
+            stock.decreaseStock(orderItemRequest.getCount());
+            savedOrder.addOrderDetail(item, orderItemRequest.getCount());
+        }
+    }
+
+    private void restoreStocks(ItemOrder itemOrder) {
+        Long theaterId = itemOrder.getTheater().getId();
+
+        for (OrderDetail orderDetail : itemOrder.getOrderDetails()) {
+            TheaterItemStock stock = loadStock(theaterId, orderDetail.getItem().getId());
+            stock.increaseStock(orderDetail.getCount());
+        }
+    }
+
+    private User loadUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Theater loadTheater(Long theaterId) {
+        return theaterRepository.findById(theaterId)
+                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
+    }
+
+    private Item loadItem(Long itemId) {
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ITEM_NOT_FOUND));
+    }
+
+    private TheaterItemStock loadStock(Long theaterId, Long itemId) {
+        return theaterItemStockRepository.findWithLockByTheaterIdAndItemId(theaterId, itemId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ITEM_STOCK_NOT_FOUND));
+    }
+
+    private int calculateItemPrice(Item item, Integer count) {
+        return item.getPrice() * count;
+    }
+
+    private ItemOrder createItemOrder(User user, Theater theater, int totalPrice) {
+        return ItemOrder.of(user, theater, totalPrice);
+    }
+
+    private String createPaymentId(Long orderId) {
+        return "ORD_" + orderId + "_" + LocalDateTime.now().format(PAYMENT_ID_FORMATTER);
+    }
+
+    private String createOrderName(ItemOrder itemOrder) {
+        return "CGV 매점 주문 #" + itemOrder.getId();
+    }
+
+    private String createCustomData(ItemOrder itemOrder) {
+        return "ITEM_ORDER:" + itemOrder.getId();
+    }
+
+    private LocalDateTime resolvePaidAt(PaymentData payment) {
+        if (payment.getPaidAt() != null) {
+            return payment.getPaidAt();
+        }
+
+        return LocalDateTime.now();
+    }
+
+    private void validateUserExists(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new CustomException(ErrorCode.USER_NOT_FOUND);
+        }
     }
 
     private void validateRequest(ItemOrderRequest request) {

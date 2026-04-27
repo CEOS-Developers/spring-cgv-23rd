@@ -8,6 +8,7 @@ import com.ceos23.spring_boot.service.ItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,27 +23,27 @@ public class ItemController {
 
     @Operation(summary = "아이템 생성", description = "새로운 아이템을 생성합니다.")
     @PostMapping
-    public SuccessResponse<ItemResponse> createItem(@RequestBody ItemRequest request) {
+    public ResponseEntity<SuccessResponse<ItemResponse>> createItem(@RequestBody ItemRequest request) {
         Item item = request.toEntity();
         Item saved = itemService.save(item);
-        return new SuccessResponse<>(200, "SUCCESS", ItemResponse.from(saved));
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", ItemResponse.from(saved)));
     }
 
     @Operation(summary = "아이템 전체 조회")
     @GetMapping
-    public SuccessResponse<List<ItemResponse>> getAllItems() {
+    public ResponseEntity<SuccessResponse<List<ItemResponse>>> getAllItems() {
         List<ItemResponse> items = itemService.findAll()
                 .stream()
                 .map(ItemResponse::from)
                 .toList();
 
-        return new SuccessResponse<>(200, "SUCCESS", items);
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", items));
     }
 
     @Operation(summary = "아이템 단건 조회")
     @GetMapping("/{itemId}")
-    public SuccessResponse<ItemResponse> getItem(@PathVariable Long itemId) {
+    public ResponseEntity<SuccessResponse<ItemResponse>> getItem(@PathVariable Long itemId) {
         Item item = itemService.findById(itemId);
-        return new SuccessResponse<>(200, "SUCCESS", ItemResponse.from(item));
+        return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", ItemResponse.from(item)));
     }
 }

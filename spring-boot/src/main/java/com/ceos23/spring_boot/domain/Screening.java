@@ -11,15 +11,16 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class Screening {
 
-    @Id @GeneratedValue
+    @Id
+    @GeneratedValue
     private Long id;
 
     private LocalDateTime startTime;
 
-    @ManyToOne(fetch = FetchType.LAZY) // EAGER에서 LAZY로 변경
+    @ManyToOne(fetch = FetchType.LAZY)
     private Movie movie;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Screen screen;
 
     public Screening(LocalDateTime startTime, Movie movie, Screen screen) {

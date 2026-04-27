@@ -11,6 +11,7 @@ public enum ErrorCode {
     // 잘못된 요청
     BAD_REQUEST(400, "BAD_REQUEST", "잘못된 요청입니다"),
     INVALID_INPUT_VALUE(400, "INVALID_INPUT_VALUE", "입력값이 올바르지 않습니다"),
+    INVALID_PASSWORD(400, "INVALID_PASSWORD", "비밀번호가 올바르지 않습니다"),
 
     // 조회 실패 (404)
     USER_NOT_FOUND(404, "USER_NOT_FOUND", "유저를 찾을 수 없습니다"),
