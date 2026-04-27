@@ -15,6 +15,15 @@ import java.util.Optional;
 
 public interface FoodOrderRepository extends JpaRepository<FoodOrder, Long> {
 
+    @Query("""
+        select fo
+          from FoodOrder fo
+          join fetch fo.user u
+          join fetch fo.theater t
+         where fo.id = :orderId
+    """)
+    Optional<FoodOrder> findByIdWithDetails(@Param("orderId") Long orderId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select fo from FoodOrder fo where fo.id = :orderId")
     Optional<FoodOrder> findByIdWithLock(@Param("orderId") Long orderId);

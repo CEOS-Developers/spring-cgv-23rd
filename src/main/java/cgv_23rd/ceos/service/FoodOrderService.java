@@ -60,9 +60,9 @@ public class FoodOrderService {
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
-    public FoodOrder getOwnedFoodOrderWithLock(Long userId, Long orderId) {
-        FoodOrder order = foodOrderRepository.findByIdWithLock(orderId)
+    @Transactional(readOnly = true)
+    public FoodOrder getOwnedFoodOrder(Long userId, Long orderId) {
+        FoodOrder order = foodOrderRepository.findByIdWithDetails(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
 
         validateUserExists(userId);
@@ -75,7 +75,19 @@ public class FoodOrderService {
     }
 
     @Transactional(noRollbackFor = GeneralException.class)
-    public void confirmOrderAndDeductStock(FoodOrder foodOrder) {
+    public void confirmOrderAndDeductStock(Long userId, Long orderId) {
+        FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+
+        validateUserExists(userId);
+
+        if (!foodOrder.isOwnedBy(userId)) {
+            throw new GeneralException(GeneralErrorCode.FORBIDDEN);
+        }
+
+        if (foodOrder.getStatus() != cgv_23rd.ceos.entity.enums.FoodOrderStatus.대기) {
+            throw new GeneralException(GeneralErrorCode.PAYMENT_ALREADY_PROCESSED);
+        }
 
         for (FoodOrderItem item : foodOrder.getFoodOrderItems()) {
             // 비관적 락으로 재고 조회하여 동시성 제어
@@ -107,7 +119,6 @@ public class FoodOrderService {
     }
 
     // Helper Method
-
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));

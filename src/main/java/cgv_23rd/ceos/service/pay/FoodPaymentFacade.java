@@ -9,7 +9,6 @@ import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.service.FoodOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -19,10 +18,10 @@ public class FoodPaymentFacade {
 
     private final FoodOrderService foodOrderService;
     private final PaymentService paymentService;
+    private final PaymentCompensationService paymentCompensationService;
 
-    @Transactional(noRollbackFor = GeneralException.class)
     public PaymentResultDto processPayment(Long userId ,Long orderId) {
-        FoodOrder order = foodOrderService.getOwnedFoodOrderWithLock(userId, orderId);
+        FoodOrder order = foodOrderService.getOwnedFoodOrder(userId, orderId);
 
         // 매점 결제용 고유 paymentId 생성
         String paymentId = "FOOD_" + orderId + "_" + UUID.randomUUID().toString().substring(0, 8);
@@ -39,8 +38,8 @@ public class FoodPaymentFacade {
 
             if (response != null && response.data() != null && "PAID".equals(response.data().paymentStatus())) {
                 try {
-                    // 결제 성공 시 비관적 락을 획득하며 재고 차감 진행
-                    foodOrderService.confirmOrderAndDeductStock(order);
+                    // 결제 성공 뒤에만 짧은 로컬 트랜잭션을 열어 재고 차감과 주문 확정을 수행
+                    foodOrderService.confirmOrderAndDeductStock(userId, orderId);
                     return new PaymentResultDto(true, "매점 결제 및 주문이 완료되었습니다.");
 
                 } catch (GeneralException e) {
@@ -63,7 +62,7 @@ public class FoodPaymentFacade {
 
     private void rollbackFoodOrderIfPending(FoodOrder order) {
         if (order.getStatus() == FoodOrderStatus.대기) {
-            foodOrderService.cancelOrder(order);
+            paymentCompensationService.cancelFoodOrder(order.getId());
         }
     }
 }
