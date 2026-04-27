@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.global.security;
 
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
@@ -32,6 +32,6 @@ public class AuthUserDetails implements UserDetails {
 
     @Override
     public String getUsername() {
-        return userId.toString();
+        return userId != null ? userId.toString() : UserRole.GUEST.name();
     }
 }

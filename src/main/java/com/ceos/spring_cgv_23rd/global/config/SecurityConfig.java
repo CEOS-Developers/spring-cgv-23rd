@@ -1,6 +1,6 @@
 package com.ceos.spring_cgv_23rd.global.config;
 
-import com.ceos.spring_cgv_23rd.domain.user.enums.UserRole;
+import com.ceos.spring_cgv_23rd.domain.user.domain.UserRole;
 import com.ceos.spring_cgv_23rd.global.jwt.filter.JwtTokenFilter;
 import com.ceos.spring_cgv_23rd.global.jwt.handler.JwtAccessDeniedHandler;
 import com.ceos.spring_cgv_23rd.global.jwt.handler.JwtAuthenticationEntryPoint;
@@ -60,6 +60,7 @@ public class SecurityConfig {
                         // public
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/auth/guest").permitAll()
+                        .requestMatchers("/api/v1/auth/refresh").permitAll()
                         // guest
                         .requestMatchers("/api/v1/auth/**").hasRole(UserRole.GUEST.name())
                         .requestMatchers("/api/v1/reservations/guest/**").hasRole(UserRole.GUEST.name())
