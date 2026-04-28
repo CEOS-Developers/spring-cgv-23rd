@@ -40,6 +40,8 @@ public class ReviewService {
         User user = getUser(userId);
         Movie movie = getMovie(requestDto.movieId());
 
+        validateRate(requestDto.rate());
+
         if (reviewRepository.existsByUserAndMovie(user, movie)) {
             throw new GeneralException(GeneralErrorCode.REVIEW_ALREADY_EXISTS);
         }
@@ -53,6 +55,12 @@ public class ReviewService {
         }
 
         movie.registerReview(requestDto.rate());
+    }
+
+    private static void validateRate(Double rate) {
+        if (rate == null || rate < 0.5 || rate > 5.0 || (rate * 10) % 5 != 0) {
+            throw new GeneralException(GeneralErrorCode.INVALID_PARAMETER, "별점은 0.5 ~ 5.0 사이의 0.5 단위여야 합니다.");
+        }
     }
 
     @Recover

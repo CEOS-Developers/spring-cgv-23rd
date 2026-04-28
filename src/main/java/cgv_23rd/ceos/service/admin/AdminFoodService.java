@@ -48,6 +48,7 @@ public class AdminFoodService {
     }
 
     //음식 재고 수정
+    @Transactional
     public void updateFoodStock(Long theaterFoodId, int stock){
         TheaterFood theaterFood = theaterFoodRepository.findById(theaterFoodId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.FOOD_NOT_FOUND));
