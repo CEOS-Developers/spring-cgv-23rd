@@ -75,7 +75,7 @@ public class FoodOrderService {
         return order;
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void preparePayment(Long userId, Long orderId, String paymentId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -89,7 +89,7 @@ public class FoodOrderService {
         foodOrder.assignPaymentId(paymentId);
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void confirmOrderAndDeductStock(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -119,7 +119,7 @@ public class FoodOrderService {
         foodOrder.confirm();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentFailed(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -133,7 +133,7 @@ public class FoodOrderService {
         foodOrder.markPaymentFailed();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentUnknown(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -147,7 +147,7 @@ public class FoodOrderService {
         foodOrder.markPaymentUnknown();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void cancelOrderAfterPaymentCancellation(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -173,7 +173,7 @@ public class FoodOrderService {
         foodOrder.cancelAfterPaymentCancellation();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void cancelPendingOrder(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));

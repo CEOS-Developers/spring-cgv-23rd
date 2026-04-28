@@ -2,6 +2,7 @@ package cgv_23rd.ceos.service.pay;
 
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import cgv_23rd.ceos.entity.reservation.Reservation;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
@@ -67,14 +68,17 @@ public class ReservationPaymentFacade {
                 throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_READY, "결제 식별자가 없는 완료 예매입니다.");
             }
 
-            cancelCompletedReservationPayment(userId, reservationId, reservation.getPaymentId());
+            reservationService.cancelPaidReservation(userId, reservationId, reservation.getPaymentId());
+            return;
         }
 
         reservationService.cancelReservation(userId, reservationId);
     }
 
     private void validatePaymentSuccess(PaymentResponse response) {
-        if (response == null || response.data() == null || !"PAID".equals(response.data().paymentStatus())) {
+        if (response == null
+                || response.data() == null
+                || PaymentStatus.from(response.data().paymentStatus()) != PaymentStatus.PAID) {
             throw new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED);
         }
     }
@@ -107,18 +111,4 @@ public class ReservationPaymentFacade {
         }
     }
 
-    private void cancelCompletedReservationPayment(Long userId, Long reservationId, String paymentId) {
-        PaymentResponse response;
-        try {
-            response = paymentService.cancelPayment(paymentId);
-        } catch (GeneralException e) {
-            reservationService.markPaymentUnknown(userId, reservationId);
-            throw e;
-        }
-
-        if (response == null || response.data() == null || !"CANCELLED".equals(response.data().paymentStatus())) {
-            reservationService.markPaymentUnknown(userId, reservationId);
-            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
-        }
-    }
 }

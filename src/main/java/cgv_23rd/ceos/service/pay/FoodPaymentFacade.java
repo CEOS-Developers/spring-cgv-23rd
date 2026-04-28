@@ -3,6 +3,7 @@ package cgv_23rd.ceos.service.pay;
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.dto.payment.response.PaymentResultDto;
 import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
@@ -37,7 +38,9 @@ public class FoodPaymentFacade {
                     "{\"orderId\":" + order.getId() + "}"
             );
 
-            if (response != null && response.data() != null && "PAID".equals(response.data().paymentStatus())) {
+            if (response != null
+                    && response.data() != null
+                    && PaymentStatus.from(response.data().paymentStatus()) == PaymentStatus.PAID) {
                 try {
                     // 결제 성공 뒤에만 짧은 로컬 트랜잭션을 열어 재고 차감과 주문 확정을 수행
                     foodOrderService.confirmOrderAndDeductStock(userId, orderId);
@@ -77,7 +80,9 @@ public class FoodPaymentFacade {
                 throw e;
             }
 
-            if (response == null || response.data() == null || !"CANCELLED".equals(response.data().paymentStatus())) {
+            if (response == null
+                    || response.data() == null
+                    || PaymentStatus.from(response.data().paymentStatus()) != PaymentStatus.CANCELLED) {
                 foodOrderService.markPaymentUnknown(userId, orderId);
                 throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
             }
