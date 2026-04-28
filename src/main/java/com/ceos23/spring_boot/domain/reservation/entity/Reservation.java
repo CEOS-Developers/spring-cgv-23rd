@@ -15,17 +15,24 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter
+@Table(uniqueConstraints = {
+        @UniqueConstraint(name = "UQ_PAYMENT_ID", columnNames = {"payment_id"})
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@SQLRestriction("is_deleted = false")
 public class Reservation extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reservation_id")
     private Long id;
+
+    @Column(name = "payment_id", nullable = false, length = 50)
+    private String paymentId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)
@@ -46,7 +53,8 @@ public class Reservation extends BaseTimeEntity {
     private List<ReservedSeat> reservedSeats = new ArrayList<>();
 
     @Builder
-    public Reservation(User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
+    public Reservation(String paymentId, User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
+        this.paymentId = paymentId;
         this.user = user;
         this.schedule = schedule;
         this.status = status;
@@ -54,10 +62,13 @@ public class Reservation extends BaseTimeEntity {
     }
 
     public static Reservation create(User user, Schedule schedule, List<Seat> seats) {
+        String paymentId = generatePaymentId();
+
         Reservation reservation = Reservation.builder()
+                .paymentId(paymentId)
                 .user(user)
                 .schedule(schedule)
-                .status(ReservationStatus.RESERVED)
+                .status(ReservationStatus.PENDING)
                 .build();
 
         int totalPrice = 0;
@@ -72,6 +83,12 @@ public class Reservation extends BaseTimeEntity {
         return reservation;
     }
 
+    private static String generatePaymentId() {
+        String prefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String uuid = UUID.randomUUID().toString().substring(0, 8);
+        return prefix + "_" + uuid;
+    }
+
     private void addReservedSeat(ReservedSeat reservedSeat) {
         this.reservedSeats.add(reservedSeat);
         reservedSeat.updateReservation(this);
@@ -79,16 +96,31 @@ public class Reservation extends BaseTimeEntity {
 
 
     public void validateCancelable(){
-        LocalDateTime currentTime = LocalDateTime.now();
-
-        if (ReservationStatus.CANCELED == this.status)
+        if (this.status == ReservationStatus.CANCELED)
             throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+
+        LocalDateTime currentTime = LocalDateTime.now();
 
         if (currentTime.isAfter(schedule.getStartTime().minusMinutes(15)))
             throw new BusinessException(ErrorCode.CANCELLATION_DEADLINE_PASSED);
     }
 
+    public void completePayment() {
+        if (this.status != ReservationStatus.PENDING)
+            throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+
+        this.status = ReservationStatus.PAID;
+    }
+
     public void cancel() {
+        if (this.status == ReservationStatus.CANCELED)
+            throw new BusinessException(ErrorCode.ALREADY_CANCELED_RESERVATION);
         this.status = ReservationStatus.CANCELED;
+
+        this.reservedSeats.clear();
+    }
+
+    public boolean isCanceled() {
+        return this.status == ReservationStatus.CANCELED;
     }
 }

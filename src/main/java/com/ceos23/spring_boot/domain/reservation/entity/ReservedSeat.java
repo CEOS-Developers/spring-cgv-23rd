@@ -20,7 +20,7 @@ import lombok.NoArgsConstructor;
         )
     }
 )
-public class ReservedSeat extends BaseSoftDeleteEntity {
+public class ReservedSeat extends BaseTimeEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "reserved_seat_id")
     private Long id;

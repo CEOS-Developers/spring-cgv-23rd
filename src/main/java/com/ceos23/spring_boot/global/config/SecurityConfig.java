@@ -1,4 +1,4 @@
-package com.ceos23.spring_boot.global.security.config;
+package com.ceos23.spring_boot.global.config;
 
 import com.ceos23.spring_boot.global.security.handler.CustomAccessDeniedHandler;
 import com.ceos23.spring_boot.global.security.handler.CustomAuthenticationEntryPoint;

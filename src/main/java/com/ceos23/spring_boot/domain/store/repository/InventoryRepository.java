@@ -22,6 +22,6 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     @Query("SELECT i FROM Inventory i WHERE i.theater.id = :theaterId AND i.menu.id in :menuIds")
     List<Inventory> findAllByTheaterIdAndMenuIdInWithLock(
             @Param("theaterId") Long theaterId,
-            @Param("menuId") List<Long> menuIds
+            @Param("menuIds") List<Long> menuIds
     );
 }

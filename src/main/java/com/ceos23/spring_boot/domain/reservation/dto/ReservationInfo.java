@@ -12,20 +12,24 @@ public record ReservationInfo(
         Long scheduleId,
         ReservationStatus status,
         Integer totalPrice,
-        List<Long> reservedSeatIds
+        String paymentId,
+        List<Long> reservedSeatIds,
+        String orderName
 ) {
-    public static ReservationInfo from(Reservation reservation, List<ReservedSeat> reservedSeats) {
+    public static ReservationInfo from(Reservation reservation, List<ReservedSeat> reservedSeats, String orderName) {
         List<Long> seatIds = reservedSeats.stream()
                 .map(rs -> rs.getSeat().getId())
                 .toList();
 
         return new ReservationInfo(
-                reservation.getId(),
+                reservation.getUser().getId(),
                 reservation.getId(),
                 reservation.getSchedule().getId(),
                 reservation.getStatus(),
                 reservation.getTotalPrice(),
-                seatIds
+                reservation.getPaymentId(),
+                seatIds,
+                orderName
         );
     }
 }

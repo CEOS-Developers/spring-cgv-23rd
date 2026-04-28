@@ -17,12 +17,16 @@ import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -34,9 +38,9 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservedSeatRepository reservedSeatRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationInfo createReservation(ReservationCreateCommand command) {
-        User user = userRepository.findByIdAndDeletedAtIsNull(command.userId())
+        User user = userRepository.findByEmailAndDeletedAtIsNull(command.email())
                 .orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         Schedule schedule = scheduleRepository.findByIdAndDeletedAtIsNull(command.scheduleId())
@@ -46,38 +50,63 @@ public class ReservationService {
 
         Long screenId = schedule.getScreen().getId();
 
-        List<Seat> seats = seatRepository.findAllByIdAndScreenIdAndDeletedAtIsNullWithLock(command.seatIds(), screenId);
-        if (seats.size() != command.seatIds().size()) {
-            throw new BusinessException(ErrorCode.INVALID_SEAT);
-        }
+        List<Seat> seats = getValidSeats(command.seatIds(), screenId);
 
-        boolean isAlreadyReserved = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatus(
-                schedule.getId(),
-                command.seatIds(),
-                ReservationStatus.RESERVED
-        );
-
-        if (isAlreadyReserved) {
-            throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
-        }
+        validateSeatNotReserved(schedule.getId(), command.seatIds());
 
         Reservation reservation = Reservation.create(user, schedule, seats);
 
         reservationRepository.save(reservation);
 
-        return ReservationInfo.from(reservation, reservation.getReservedSeats());
+        String orderName = getOrderName(schedule, seats);
+
+        return ReservationInfo.from(reservation, reservation.getReservedSeats(), orderName);
+    }
+
+    private List<Seat> getValidSeats(List<Long> seatIds, Long screenId) {
+        List<Seat> seats = seatRepository.findAllByIdInAndScreenIdAndDeletedAtIsNull(seatIds, screenId);
+        if (seats.size() != seatIds.size()) {
+            throw new BusinessException(ErrorCode.INVALID_SEAT);
+        }
+        return seats;
+    }
+
+    private void validateSeatNotReserved(Long scheduleId, List<Long> seatIds) {
+        boolean isAlreadyOccupied = reservedSeatRepository.existsByScheduleIdAndSeatIdInAndReservationStatusIn(
+                scheduleId,
+                seatIds,
+                List.of(ReservationStatus.PAID, ReservationStatus.PENDING)
+        );
+
+        if (isAlreadyOccupied) {
+            throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
+        }
+    }
+
+    private String getOrderName(Schedule schedule, List<Seat> seats) {
+        String movieTitle = schedule.getMovie().getTitle();
+        int seatCount = seats.size();
+
+        return movieTitle + " " + seatCount + "매";
     }
 
     @Transactional
-    public void cancelReservation(Long userId, Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
+    public void confirmPayment(String paymentId) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+        reservation.completePayment();
+    }
 
-        if (!reservation.getUser().getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_RESERVATION_ACCESS);
-        }
-
-        reservation.validateCancelable();
+    @Transactional
+    public void cancelReservation(String paymentId) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
         reservation.cancel();
+    }
+
+    public void verifyCancelable(String paymentId) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+        reservation.validateCancelable();
     }
 }

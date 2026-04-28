@@ -20,12 +20,12 @@ public class Seat extends BaseSoftDeleteEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "seat_grade_id")
-    private SeatGrade seatGrade;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "screen_id", nullable = false)
     private Screen screen;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seat_grade_id")
+    private SeatGrade seatGrade;
 
     @Column(name = "row_name", nullable = false, length = 50)
     private String rowName;
