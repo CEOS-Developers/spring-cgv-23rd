@@ -116,7 +116,10 @@ public class MovieService {
         try {
             movieLikeRepository.save(MovieLike.of(user, movie));
         } catch (DataIntegrityViolationException e) {
-            return;
+            if (movieLikeRepository.findMovieLikeByUserAndMovie(user, movie) != null) {
+                return;
+            }
+            throw e;
         }
     }
 
