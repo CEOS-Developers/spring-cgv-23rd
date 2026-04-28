@@ -14,7 +14,6 @@ import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.repository.movie.MovieActorRepository;
 import cgv_23rd.ceos.repository.MovieLikeRepository;
 import cgv_23rd.ceos.repository.movie.MovieRepository;
-import cgv_23rd.ceos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,7 @@ public class MovieService {
     private final MovieRepository movieRepository;
     private final MovieActorRepository movieActorRepository;
     private final MovieLikeRepository movieLikeRepository;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     // 2. 현재 상영중인 영화 목록 조회 (제목, 썸네일)
     @Transactional(readOnly = true)
@@ -86,8 +85,7 @@ public class MovieService {
     // 4. 출연진 조회
     @Transactional(readOnly = true)
     public List<ActorResponseDto> getMovieActors(Long movieId){
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(()-> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
+        Movie movie = getMovie(movieId);
 
         List<MovieActor> movieActorcs = movieActorRepository.findAllByMovieWithActor(movie);
 
@@ -106,7 +104,7 @@ public class MovieService {
     // 5. 영화 찜
     @Transactional
     public void likeMovie(Long userId, Long movieId) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Movie movie = getMovie(movieId);
 
         if (movieLikeRepository.findMovieLikeByUserAndMovie(user, movie) != null) {
@@ -125,7 +123,7 @@ public class MovieService {
 
     @Transactional
     public void unlikeMovie(Long userId, Long movieId) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Movie movie = getMovie(movieId);
 
         MovieLike movieLike = movieLikeRepository.findMovieLikeByUserAndMovie(user, movie);
@@ -134,12 +132,8 @@ public class MovieService {
         }
     }
 
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-    }
-
-    private Movie getMovie(Long movieId) {
+    @Transactional(readOnly = true)
+    public Movie getMovie(Long movieId) {
         return movieRepository.findById(movieId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
     }

@@ -10,7 +10,6 @@ import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.repository.TheaterLikeRepository;
 import cgv_23rd.ceos.repository.theater.TheaterRepository;
-import cgv_23rd.ceos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -22,8 +21,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TheaterService {
     private final TheaterRepository theaterRepository;
-    private final UserRepository userRepository;
     private final TheaterLikeRepository theaterLikeRepository;
+    private final UserService userService;
 
     // 1. 영화관 목록 조회 (지역 카테고리별)
     @Transactional(readOnly = true)
@@ -61,7 +60,7 @@ public class TheaterService {
     // 3. 영화관 찜
     @Transactional
     public void likeTheater(Long userId, Long theaterId) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Theater theater = getTheater(theaterId);
 
         if (theaterLikeRepository.findByUserAndTheater(user, theater) != null) {
@@ -80,18 +79,13 @@ public class TheaterService {
 
     @Transactional
     public void unlikeTheater(Long userId, Long theaterId) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Theater theater = getTheater(theaterId);
 
         TheaterLike theaterLike = theaterLikeRepository.findByUserAndTheater(user, theater);
         if (theaterLike != null) {
             theaterLikeRepository.delete(theaterLike);
         }
-    }
-
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND, "유저 조회 불가"));
     }
 
     private Theater getTheater(Long theaterId) {

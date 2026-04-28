@@ -12,7 +12,6 @@ import cgv_23rd.ceos.entity.theater.Theater;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
-import cgv_23rd.ceos.repository.*;
 import cgv_23rd.ceos.repository.food.FoodOrderRepository;
 import cgv_23rd.ceos.repository.food.FoodRepository;
 import cgv_23rd.ceos.repository.food.TheaterFoodRepository;
@@ -31,13 +30,13 @@ import java.util.stream.Collectors;
 public class FoodOrderService {
     private final FoodRepository foodRepository;
     private final FoodOrderRepository foodOrderRepository;
-    private final UserRepository userRepository;
     private final TheaterRepository theaterRepository;
     private final TheaterFoodRepository theaterFoodRepository;
+    private final UserService userService;
 
     // 1. 음식 주문
     public Long createFoodOrder(Long userId, FoodOrderRequestDto requestDto) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Theater theater = getTheater(requestDto.theaterId());
 
         FoodOrder foodOrder = FoodOrder.create(user, theater);
@@ -200,12 +199,6 @@ public class FoodOrderService {
                 .collect(Collectors.toList());
     }
 
-    // Helper Method
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-    }
-
     private Theater getTheater(Long theaterId) {
         return theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
@@ -217,9 +210,7 @@ public class FoodOrderService {
     }
 
     private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new GeneralException(GeneralErrorCode.USER_NOT_FOUND);
-        }
+        userService.getUser(userId);
     }
 
     private FoodOrderResponseDto toFoodOrderResponse(FoodOrder order) {

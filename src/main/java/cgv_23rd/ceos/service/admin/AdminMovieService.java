@@ -13,6 +13,7 @@ import cgv_23rd.ceos.repository.movie.MovieRepository;
 import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.theater.ScreenRepository;
 import cgv_23rd.ceos.repository.theater.TheaterRepository;
+import cgv_23rd.ceos.service.MovieService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class AdminMovieService {
     private final TheaterRepository theaterRepository;
     private final MovieScreenRepository movieScreenRepository;
     private final ScreenRepository screenRepository;
+    private final MovieService movieService;
 
     // 4. 극장 생성
     @Transactional
@@ -60,8 +62,7 @@ public class AdminMovieService {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
 
-        Movie movie = movieRepository.findById(requestDto.movieId())
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
+        Movie movie = movieService.getMovie(requestDto.movieId());
 
         Screen screen = screenRepository.findByIdWithLock(requestDto.screenId())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.SCREEN_NOT_FOUND));

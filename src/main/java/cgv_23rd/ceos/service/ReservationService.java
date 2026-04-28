@@ -11,7 +11,6 @@ import cgv_23rd.ceos.entity.theater.Seat;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
-import cgv_23rd.ceos.repository.*;
 import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
@@ -32,18 +31,18 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional
 public class ReservationService {
-    private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final MovieScreenRepository movieScreenRepository;
     private final SeatRepository seatRepository;
     private final ReservationNamedLockManager reservationNamedLockManager;
     private final PaymentService paymentService;
+    private final UserService userService;
 
     // 1. 영화 예매
     public Long createReservation(Long userId, ReservationRequestDto requestDto) {
         validateSeatRequest(requestDto);
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         MovieScreen movieScreen = getMovieScreen(requestDto.movieScreenId());
         List<Long> sortedSeatIds = requestDto.seatIds().stream().sorted().toList();
 
@@ -161,8 +160,7 @@ public class ReservationService {
     }
 
     private void validateOwner(Long userId, Reservation reservation) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
+        userService.getUser(userId);
 
         if (!reservation.isOwnedBy(userId)) {
             throw new GeneralException(GeneralErrorCode.FORBIDDEN);
@@ -170,11 +168,6 @@ public class ReservationService {
     }
 
     // --- Helper Methods ---
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-    }
-
     private void validateSeatRequest(ReservationRequestDto requestDto) {
         // 좌석 없는 예매 방지
         if (requestDto.seatIds() == null || requestDto.seatIds().isEmpty()) {
@@ -213,9 +206,7 @@ public class ReservationService {
     }
 
     private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new GeneralException(GeneralErrorCode.USER_NOT_FOUND);
-        }
+        userService.getUser(userId);
     }
 
     private MovieScreen getMovieScreen(Long id) {
