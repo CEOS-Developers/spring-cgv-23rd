@@ -7,6 +7,7 @@ import cgv_23rd.ceos.global.apiPayload.ApiResponse;
 import cgv_23rd.ceos.global.security.UserDetailsImpl;
 import cgv_23rd.ceos.service.ReservationService;
 import cgv_23rd.ceos.service.pay.ReservationPaymentFacade;
+import cgv_23rd.ceos.service.query.ReservationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final ReservationPaymentFacade reservationPaymentFacade;
+    private final ReservationQueryService reservationQueryService;
 
     // 1. 영화 예매
     @PostMapping("")
@@ -69,6 +71,6 @@ public class ReservationController {
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
         Long userId = userDetails.getUser().getId();
-        return ApiResponse.onSuccess("예매 내역 조회 성공",reservationService.getReservationList(userId));
+        return ApiResponse.onSuccess("예매 내역 조회 성공", reservationQueryService.getReservationList(userId));
     }
 }

@@ -3,7 +3,6 @@ package cgv_23rd.ceos.service;
 import cgv_23rd.ceos.dto.reservation.request.ReservationRequestDto;
 import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
 import cgv_23rd.ceos.entity.enums.PaymentStatus;
-import cgv_23rd.ceos.dto.reservation.response.ReservationResponseDto;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import cgv_23rd.ceos.entity.movie.MovieScreen;
 import cgv_23rd.ceos.entity.reservation.Reservation;
@@ -150,15 +149,6 @@ public class ReservationService {
         reservation.cancel(LocalDateTime.now());
     }
 
-    // 3. 예매 내역 조회
-    @Transactional(readOnly = true)
-    public List<ReservationResponseDto> getReservationList(Long userId) {
-        validateUserExists(userId);
-        return reservationRepository.findAllByUserIdWithDetails(userId).stream()
-                .map(this::toReservationResponse)
-                .toList();
-    }
-
     private void validateOwner(Long userId, Reservation reservation) {
         userService.getUser(userId);
 
@@ -212,20 +202,5 @@ public class ReservationService {
     private MovieScreen getMovieScreen(Long id) {
         return movieScreenRepository.findById(id)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIESCREEN_NOT_FOUND));
-    }
-
-    private ReservationResponseDto toReservationResponse(Reservation res) {
-        return ReservationResponseDto.builder()
-                .reservationId(res.getId())
-                .movieTitle(res.getMovieTitle())
-                .theaterName(res.getTheaterName())
-                .screenName(res.getScreenName())
-                .startAt(res.getMovieScreen().getStartAt())
-                .seatInfo(res.getSeatLabels())
-                .totalPrice(res.getTotalPrice())
-                .status(res.getStatus())
-                .paymentStatus(res.getPaymentStatus())
-                .reservationAt(res.getCreatedAt())
-                .build();
     }
 }

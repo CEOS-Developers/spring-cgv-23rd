@@ -2,8 +2,6 @@ package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.dto.food.request.FoodOrderItemRequestDto;
 import cgv_23rd.ceos.dto.food.request.FoodOrderRequestDto;
-import cgv_23rd.ceos.dto.food.response.FoodOrderItemResponseDto;
-import cgv_23rd.ceos.dto.food.response.FoodOrderResponseDto;
 import cgv_23rd.ceos.entity.food.Food;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.entity.food.FoodOrderItem;
@@ -22,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -186,19 +183,6 @@ public class FoodOrderService {
         foodOrder.cancel();
     }
 
-    // 2. 주문 내역 확인
-    @Transactional(readOnly = true)
-    public List<FoodOrderResponseDto> getFoodOrderList(Long userId) {
-        validateUserExists(userId);
-
-        List<FoodOrder> orders = foodOrderRepository.findAllByUserIdWithDetails(userId);
-
-        //foodOderItems 헬퍼 메서드를 반환하는 코드로 리팩토링
-        return orders.stream()
-                .map(this::toFoodOrderResponse)
-                .collect(Collectors.toList());
-    }
-
     private Theater getTheater(Long theaterId) {
         return theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
@@ -211,27 +195,5 @@ public class FoodOrderService {
 
     private void validateUserExists(Long userId) {
         userService.getUser(userId);
-    }
-
-    private FoodOrderResponseDto toFoodOrderResponse(FoodOrder order) {
-        return FoodOrderResponseDto.builder()
-                .orderId(order.getId())
-                .theaterName(order.getTheater().getName())
-                .totalPrice(order.getTotalPrice())
-                .status(order.getStatus())
-                .paymentStatus(order.getPaymentStatus())
-                .createdAt(order.getCreatedAt())
-                .items(order.getFoodOrderItems().stream()
-                        .map(this::toFoodOrderItemResponse)
-                        .toList())
-                .build();
-    }
-
-    private FoodOrderItemResponseDto toFoodOrderItemResponse(FoodOrderItem item) {
-        return FoodOrderItemResponseDto.builder()
-                .foodName(item.getFood().getName())
-                .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .build();
     }
 }

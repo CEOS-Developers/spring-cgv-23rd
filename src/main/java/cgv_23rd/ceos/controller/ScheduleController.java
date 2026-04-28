@@ -2,7 +2,7 @@ package cgv_23rd.ceos.controller;
 
 import cgv_23rd.ceos.dto.schedule.response.ScheduleResponseDto;
 import cgv_23rd.ceos.global.apiPayload.ApiResponse;
-import cgv_23rd.ceos.service.ScheduleService;
+import cgv_23rd.ceos.service.query.ScheduleQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.List;
 @RequestMapping("/api/schedules")
 @Tag(name = "상영시간표 API")
 public class ScheduleController {
-    private final ScheduleService scheduleService;
+    private final ScheduleQueryService scheduleQueryService;
 
     // 2. 극장별 상영 시간표 조회
     @GetMapping("/{theaterId}")
@@ -26,6 +26,6 @@ public class ScheduleController {
             @PathVariable Long theaterId,
             @RequestParam(name = "targetDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate targetDate) {
 
-        return ApiResponse.onSuccess("상영 시간표 조회 성공",scheduleService.getSchedules(theaterId, targetDate));
+        return ApiResponse.onSuccess("상영 시간표 조회 성공", scheduleQueryService.getSchedules(theaterId, targetDate));
     }
 }

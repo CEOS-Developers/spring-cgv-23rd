@@ -1,7 +1,6 @@
 package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.dto.review.request.ReviewRequestDto;
-import cgv_23rd.ceos.dto.review.response.ReviewResponseDto;
 import cgv_23rd.ceos.entity.movie.Movie;
 import cgv_23rd.ceos.entity.movie.Review;
 import cgv_23rd.ceos.entity.user.User;
@@ -16,10 +15,6 @@ import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -64,26 +59,5 @@ public class ReviewService {
     @Recover
     public void recoverReviewCreate(ObjectOptimisticLockingFailureException e, Long userId, ReviewRequestDto requestDto) {
         throw new GeneralException(GeneralErrorCode.INTERNAL_SERVER_ERROR, "리뷰 저장 충돌이 발생했습니다. 다시 시도해주세요.");
-    }
-
-    // 2. 특정 영화 리뷰 조회
-    @Transactional(readOnly = true)
-    public List<ReviewResponseDto> getMovieReviews(Long movieId) {
-        movieService.getMovie(movieId);
-
-        List<Review> reviews = reviewRepository.findAllByMovieId(movieId);
-
-        return reviews.stream()
-                .map(this::toReviewResponse)
-                .collect(Collectors.toList());
-    }
-
-    private ReviewResponseDto toReviewResponse(Review review) {
-        return ReviewResponseDto.builder()
-                .reviewId(review.getId())
-                .username(review.getUser().getName())
-                .rate(review.getRate())
-                .content(review.getContent())
-                .build();
     }
 }
