@@ -1727,3 +1727,15 @@ public static TheaterFood create(Theater theater, Food food) { ... }
 좌석 조회와 중복 검증 쿼리 수가 선형적으로 증가하지 않도록 정리되었다.
 
 </details>
+
+- 도커 실행
+<img width="571" height="326" alt="image" src="https://github.com/user-attachments/assets/456e4a9f-ed4b-4701-bcff-7575ea965f6d" />
+
+- 도커 컨테이너 확인
+  `shinae@shinaeui-MacBookAir downloads % docker ps
+CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS         PORTS                                         NAMES
+a4936b9a9daf   mysql:8.0.46   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp   some-mysql`
+
+- 배포 성공
+<img width="1419" height="706" alt="image" src="https://github.com/user-attachments/assets/97a813bc-e5bd-4c9f-9380-3a3fd75a47c1" />
+
