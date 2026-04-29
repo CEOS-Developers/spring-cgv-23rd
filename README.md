@@ -1891,7 +1891,7 @@ docker pull shinae1023/ceos-app:latest
 로컬에서 복사:
 
 ```bash
-scp -i <key.pem> .env ubuntu@<EC2_PUBLIC_IP>:~/.env.docker
+scp -i <key.pem> .env ubuntu@<EC2_PUBLIC_IP>:~/.env
 ```
 
 또는 EC2에서 직접 생성:
@@ -1996,4 +1996,3 @@ sudo certbot renew --dry-run
 - EC2 직접 확인: `http://<EC2_PUBLIC_IP>:8080`
 - Swagger: `http://<EC2_PUBLIC_IP>:8080/swagger-ui/index.html`
 - 도메인/Nginx 적용 후: `https://your-domain.com/swagger-ui/index.html`
-
