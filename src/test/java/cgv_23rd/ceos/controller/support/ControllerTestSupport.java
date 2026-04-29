@@ -3,11 +3,22 @@ package cgv_23rd.ceos.controller.support;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.entity.user.UserRole;
 import cgv_23rd.ceos.global.security.UserDetailsImpl;
-import cgv_23rd.ceos.service.*;
+import cgv_23rd.ceos.service.AuthService;
+import cgv_23rd.ceos.service.FoodOrderService;
+import cgv_23rd.ceos.service.MovieService;
+import cgv_23rd.ceos.service.ReservationService;
+import cgv_23rd.ceos.service.ReviewService;
+import cgv_23rd.ceos.service.TheaterService;
 import cgv_23rd.ceos.service.admin.AdminFoodService;
 import cgv_23rd.ceos.service.admin.AdminMovieService;
 import cgv_23rd.ceos.service.pay.FoodPaymentFacade;
 import cgv_23rd.ceos.service.pay.ReservationPaymentFacade;
+import cgv_23rd.ceos.service.query.FoodOrderQueryService;
+import cgv_23rd.ceos.service.query.MovieQueryService;
+import cgv_23rd.ceos.service.query.ReservationQueryService;
+import cgv_23rd.ceos.service.query.ReviewQueryService;
+import cgv_23rd.ceos.service.query.ScheduleQueryService;
+import cgv_23rd.ceos.service.query.TheaterQueryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -41,13 +52,25 @@ public abstract class ControllerTestSupport {
     protected MovieService movieService;
 
     @MockitoBean
+    protected MovieQueryService movieQueryService;
+
+    @MockitoBean
     protected TheaterService theaterService;
+
+    @MockitoBean
+    protected TheaterQueryService theaterQueryService;
 
     @MockitoBean
     protected ReviewService reviewService;
 
     @MockitoBean
+    protected ReviewQueryService reviewQueryService;
+
+    @MockitoBean
     protected ReservationService reservationService;
+
+    @MockitoBean
+    protected ReservationQueryService reservationQueryService;
 
     @MockitoBean
     protected ReservationPaymentFacade reservationPaymentFacade;
@@ -56,10 +79,13 @@ public abstract class ControllerTestSupport {
     protected FoodOrderService foodOrderService;
 
     @MockitoBean
+    protected FoodOrderQueryService foodOrderQueryService;
+
+    @MockitoBean
     protected FoodPaymentFacade foodPaymentFacade;
 
     @MockitoBean
-    protected ScheduleService scheduleService;
+    protected ScheduleQueryService scheduleQueryService;
 
     @MockitoBean
     protected AdminMovieService adminMovieService;

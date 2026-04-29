@@ -49,7 +49,7 @@ class ReviewControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("영화 리뷰 조회 성공")
     void getMovieReviewsSuccess() throws Exception {
-        given(reviewService.getMovieReviews(1L)).willReturn(List.of(
+        given(reviewQueryService.getMovieReviews(1L)).willReturn(List.of(
                 ReviewResponseDto.builder()
                         .reviewId(1L)
                         .username("tester")

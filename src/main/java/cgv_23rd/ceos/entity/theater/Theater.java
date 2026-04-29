@@ -12,7 +12,7 @@ import java.util.List;
 
 @Entity
 @Getter
-@Builder(access = AccessLevel.PRIVATE)
+@Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class Theater {
@@ -37,15 +37,19 @@ public class Theater {
     private String imageUrl;
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<Screen> screens = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<TheaterLike> theaterLikes = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<TheaterFood> theaterFoods = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<FoodOrder> foodOrders = new ArrayList<>();
 
     public static Theater create(

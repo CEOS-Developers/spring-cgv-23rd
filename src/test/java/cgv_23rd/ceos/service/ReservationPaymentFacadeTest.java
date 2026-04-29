@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -82,12 +83,10 @@ class ReservationPaymentFacadeTest {
     void cancelReservation_paidReservation_callsExternalCancelFirst() {
         Reservation reservation = createCompletedReservation(1L, 1L, "RES_1_12345678");
         given(reservationService.getOwnedReservation(1L, 1L)).willReturn(reservation);
-        given(paymentService.cancelPayment("RES_1_12345678")).willReturn(paidResponse("CANCELLED"));
 
         reservationPaymentFacade.cancelReservation(1L, 1L);
 
-        verify(paymentService).cancelPayment("RES_1_12345678");
-        verify(reservationService).cancelReservation(1L, 1L);
+        verify(reservationService).cancelPaidReservation(1L, 1L, "RES_1_12345678");
     }
 
     @Test
@@ -95,12 +94,12 @@ class ReservationPaymentFacadeTest {
     void cancelReservation_cancelPaymentFails_marksPaymentUnknown() {
         Reservation reservation = createCompletedReservation(1L, 1L, "RES_1_12345678");
         given(reservationService.getOwnedReservation(1L, 1L)).willReturn(reservation);
-        given(paymentService.cancelPayment("RES_1_12345678"))
-                .willThrow(new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED));
+        willThrow(new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED))
+                .given(reservationService).cancelPaidReservation(1L, 1L, "RES_1_12345678");
 
         assertThrows(GeneralException.class, () -> reservationPaymentFacade.cancelReservation(1L, 1L));
 
-        verify(reservationService).markPaymentUnknown(1L, 1L);
+        verify(reservationService).cancelPaidReservation(1L, 1L, "RES_1_12345678");
         verify(reservationService, never()).cancelReservation(1L, 1L);
     }
 
