@@ -18,14 +18,18 @@ public class SeatHoldAdapter implements SeatHoldPort {
 
     @Override
     public boolean holdSeats(Long screeningId, List<Long> seatIds, String holderKey, long ttlSeconds) {
-        for (int i = 0; i < seatIds.size(); i++) {
-            RBucket<String> bucket = redissonClient.getBucket(buildKey(screeningId, seatIds.get(i)));
+
+        // 좌석 정렬
+        List<Long> sortedSeatIds = seatIds.stream().sorted().toList();
+
+        for (int i = 0; i < sortedSeatIds.size(); i++) {
+            RBucket<String> bucket = redissonClient.getBucket(buildKey(screeningId, sortedSeatIds.get(i)));
             boolean success = bucket.setIfAbsent(holderKey, Duration.ofSeconds(ttlSeconds));
 
             if (!success) {
                 // 이전에 설정한 키 롤백
                 for (int j = 0; j < i; j++) {
-                    redissonClient.getBucket(buildKey(screeningId, seatIds.get(j))).delete();
+                    redissonClient.getBucket(buildKey(screeningId, sortedSeatIds.get(j))).delete();
                 }
 
                 return false;
