@@ -1,5 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.product.application.dto.result;
 
+import com.ceos.spring_cgv_23rd.domain.payment.application.dto.result.PaymentResult;
 import com.ceos.spring_cgv_23rd.domain.product.domain.OrderStatus;
 
 import java.time.LocalDateTime;
@@ -12,7 +13,8 @@ public record OrderDetailResult(
         String theaterName,
         List<OrderItemInfo> items,
         Integer totalPrice,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        PaymentResult payment
 ) {
     public record OrderItemInfo(
             Long productId,

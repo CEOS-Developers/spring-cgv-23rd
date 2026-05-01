@@ -16,7 +16,8 @@ public class ProductResponse {
             String theaterName,
             List<OrderItemInfo> items,
             Integer totalPrice,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            PaymentInfo payment
     ) {
     }
 
@@ -27,6 +28,18 @@ public class ProductResponse {
             Integer quantity,
             Integer price,
             Integer totalPrice
+    ) {
+    }
+
+
+    @Builder
+    public record PaymentInfo(
+            String paymentId,
+            String status,
+            Integer amount,
+            String orderName,
+            String pgProvider,
+            LocalDateTime paidAt
     ) {
     }
 }

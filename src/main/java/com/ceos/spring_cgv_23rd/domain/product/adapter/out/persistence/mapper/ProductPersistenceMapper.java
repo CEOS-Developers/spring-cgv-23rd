@@ -35,6 +35,7 @@ public class ProductPersistenceMapper {
                 .userId(entity.getUserId())
                 .theaterId(entity.getTheaterId())
                 .orderNumber(entity.getOrderNumber())
+                .paymentId(entity.getPaymentId())
                 .totalPrice(entity.getTotalPrice())
                 .status(entity.getStatus())
                 .orderItems(entity.getOrderItems().stream()
@@ -70,6 +71,7 @@ public class ProductPersistenceMapper {
                 .userId(domain.getUserId())
                 .theaterId(domain.getTheaterId())
                 .orderNumber(domain.getOrderNumber())
+                .paymentId(domain.getPaymentId())
                 .totalPrice(domain.getTotalPrice())
                 .status(domain.getStatus())
                 .build();

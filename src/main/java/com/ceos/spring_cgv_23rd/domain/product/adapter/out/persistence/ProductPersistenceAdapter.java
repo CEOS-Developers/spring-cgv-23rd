@@ -56,6 +56,11 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
     }
 
     @Override
+    public boolean tryDecreaseInventory(Long theaterId, Long productId, int count) {
+        return inventoryJpaRepository.decreaseQuantityIfEnough(theaterId, productId, count) > 0;
+    }
+
+    @Override
     public ProductOrder saveNewOrder(ProductOrder order) {
         List<Long> productIds = order.getOrderItems().stream()
                 .map(OrderItem::getProductId)

@@ -12,11 +12,14 @@ import com.ceos.spring_cgv_23rd.global.apiPayload.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping("/api/v1/products")
 @Tag(name = "Product", description = "상품 관련 API")
 public class ProductController {
@@ -30,8 +33,9 @@ public class ProductController {
     @PostMapping("/order")
     public ApiResponse<ProductResponse.OrderDetailResponse> createOrder(
             @LoginUser Long userId,
+            @RequestHeader(value = "Idempotency-Key") @NotBlank String idempotencyKey,
             @Valid @RequestBody ProductRequest.CreateOrderRequest request) {
-        OrderDetailResult result = createOrderUseCase.createOrder(userId, productRequestMapper.toCommand(request));
+        OrderDetailResult result = createOrderUseCase.createOrder(userId, productRequestMapper.toCommand(idempotencyKey, request));
         ProductResponse.OrderDetailResponse response = productResponseMapper.toResponse(result);
 
         return ApiResponse.onSuccess("매점 주문 성공", response);

@@ -7,8 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class ProductRequestMapper {
 
-    public CreateOrderCommand toCommand(ProductRequest.CreateOrderRequest request) {
+    public CreateOrderCommand toCommand(String idempotencyKey, ProductRequest.CreateOrderRequest request) {
         return new CreateOrderCommand(
+                idempotencyKey,
                 request.theaterId(),
                 request.items().stream()
                         .map(item -> new CreateOrderCommand.OrderItemCommand(
