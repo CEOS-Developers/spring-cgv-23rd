@@ -1,0 +1,8 @@
+.env
+*.env
+application-secret.yaml
+build/
+.gradle/
+.idea/
+.git/
+*.md
