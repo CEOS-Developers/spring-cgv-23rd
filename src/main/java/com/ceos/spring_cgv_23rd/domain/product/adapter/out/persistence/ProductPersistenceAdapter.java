@@ -1,6 +1,5 @@
 package com.ceos.spring_cgv_23rd.domain.product.adapter.out.persistence;
 
-import com.ceos.spring_cgv_23rd.domain.product.adapter.out.persistence.entity.InventoryEntity;
 import com.ceos.spring_cgv_23rd.domain.product.adapter.out.persistence.entity.ProductEntity;
 import com.ceos.spring_cgv_23rd.domain.product.adapter.out.persistence.entity.ProductOrderEntity;
 import com.ceos.spring_cgv_23rd.domain.product.adapter.out.persistence.mapper.ProductPersistenceMapper;
@@ -45,19 +44,15 @@ public class ProductPersistenceAdapter implements ProductPersistencePort {
                 .toList();
     }
 
-    @Override
-    public void updateAllInventoryQuantities(List<Inventory> inventories) {
-        for (Inventory inv : inventories) {
-            InventoryEntity entity = inventoryJpaRepository.findById(inv.getId())
-                    .orElseThrow(() -> new GeneralException(ProductErrorCode.INVENTORY_NOT_FOUND));
-
-            entity.updateQuantity(inv.getQuantity());
-        }
-    }
 
     @Override
     public boolean tryDecreaseInventory(Long theaterId, Long productId, int count) {
         return inventoryJpaRepository.decreaseQuantityIfEnough(theaterId, productId, count) > 0;
+    }
+
+    @Override
+    public boolean tryIncreaseInventory(Long theaterId, Long productId, int count) {
+        return inventoryJpaRepository.increaseQuantity(theaterId, productId, count) > 0;
     }
 
     @Override

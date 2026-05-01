@@ -19,4 +19,12 @@ public interface InventoryJpaRepository extends JpaRepository<InventoryEntity, L
             "AND i.product.id = :productId " +
             "AND i.quantity >= :count")
     int decreaseQuantityIfEnough(Long theaterId, Long productId, int count);
+
+
+    @Modifying
+    @Query("UPDATE InventoryEntity i " +
+            "SET i.quantity = i.quantity + :count " +
+            "WHERE i.theaterId = :theaterId " +
+            "AND i.product.id = :productId")
+    int increaseQuantity(Long theaterId, Long productId, int count);
 }

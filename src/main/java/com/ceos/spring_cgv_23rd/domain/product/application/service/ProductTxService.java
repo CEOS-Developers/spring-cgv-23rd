@@ -54,4 +54,28 @@ public class ProductTxService {
         // 주문 저장
         return productPersistencePort.saveNewOrder(order);
     }
+
+    @Transactional
+    public void applyCancellation(ProductOrder order) {
+
+        // 주문 상태 취소 처리
+        order.cancel();
+
+        // productId를 기준으로 정렬
+        List<OrderItem> orderItems = order.getOrderItems().stream()
+                .sorted(Comparator.comparing(OrderItem::getProductId))
+                .toList();
+
+        // 재고 복구
+        for (OrderItem item : orderItems) {
+            boolean ok = productPersistencePort.tryIncreaseInventory(order.getTheaterId(), item.getProductId(), item.getQuantity());
+
+            if (!ok) {
+                throw new GeneralException(ProductErrorCode.INVENTORY_NOT_FOUND);
+            }
+        }
+
+        // 주문 상태 DB 반영
+        productPersistencePort.updateOrderStatus(order.getId(), order.getStatus());
+    }
 }
