@@ -2,6 +2,6 @@ FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
-COPY *.jar app.jar
+COPY build/libs/*-SNAPSHOT.jar app.jar
 
-CMD ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
