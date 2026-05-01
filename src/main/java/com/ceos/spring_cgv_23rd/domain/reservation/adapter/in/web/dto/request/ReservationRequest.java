@@ -1,7 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.reservation.adapter.in.web.dto.request;
 
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -24,8 +23,6 @@ public class ReservationRequest {
     @Builder
     public record ConfirmReservationRequest(
 
-            @NotBlank(message = "reservationToken이 없습니다.")
-            String reservationToken,
 
             @NotNull(message = "screeningId가 없습니다.")
             Long screeningId,

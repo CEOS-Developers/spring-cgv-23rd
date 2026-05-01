@@ -10,7 +10,6 @@ public class ReservationResponse {
 
     @Builder
     public record CreateReservationResponse(
-            String reservationToken,
             Long screeningId,
             List<Long> seatIds,
             LocalDateTime expiresAt

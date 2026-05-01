@@ -56,14 +56,14 @@ public class PaymentCommandService implements PaymentUseCase, CancelPaymentUseCa
         Payment payment = paymentPersistencePort.findByPaymentId(paymentId)
                 .orElseThrow(() -> new GeneralException(PaymentErrorCode.PAYMENT_NOT_FOUND));
 
-        // 결제가 완료된 상태인지 검증
-        if (!payment.isPaid()) {
-            throw new GeneralException(PaymentErrorCode.CANNOT_CANCEL_NOT_PAID);
-        }
-
         // 결제가 이미 취소된 상태인지 검증
         if (payment.isCancelled()) {
             throw new GeneralException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
+        }
+
+        // 결제가 완료된 상태인지 검증
+        if (!payment.isPaid()) {
+            throw new GeneralException(PaymentErrorCode.CANNOT_CANCEL_NOT_PAID);
         }
 
         // 외부 PG사 결제 취소 API 호출
