@@ -87,7 +87,7 @@ public class ReservationServiceBasic{
             throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
         }
 
-        reservation.cancel();
+        reservation.cancelReserved();
     }
 
     private void validateAgeRestriction(User user, int ageRestriction) {

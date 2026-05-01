@@ -54,22 +54,10 @@ public class ReservationServiceNamedInner{
         int totalPrice = schedule.getScreen().getScreenType().getPrice() * request.getSeats().size();
         String paymentId = generatePaymentId();
 
-        Reservation reservation = Reservation.builder()
-                .reservedAt(LocalDateTime.now())
-                .totalPrice(totalPrice)
-                .status(ReservationStatus.PENDING)
-                .paymentId(paymentId)
-                .user(user)
-                .schedule(schedule)
-                .build();
+        Reservation reservation = Reservation.createPending(user, schedule, totalPrice, paymentId);
 
         for (String seatStr : request.getSeats()) {
-            ReservationSeat seat = ReservationSeat.builder()
-                    .seatRow(seatStr.charAt(0))
-                    .seatCol(Integer.parseInt(seatStr.substring(1)))
-                    .reservation(reservation)
-                    .schedule(schedule)
-                    .build();
+            ReservationSeat seat = ReservationSeat.create(reservation, schedule, seatStr);
             reservation.addReservationSeat(seat);
         }
 
@@ -90,7 +78,7 @@ public class ReservationServiceNamedInner{
 
         verifyPendingReservation(userId, reservation);
 
-        reservation.cancel();
+        reservation.cancelPending();
     }
 
     @Transactional(propagation = REQUIRES_NEW)
@@ -98,11 +86,7 @@ public class ReservationServiceNamedInner{
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if (reservation.getStatus() != ReservationStatus.PENDING) {
-            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
-        }
-
-        reservation.confirmReservation();
+        reservation.confirm();
         return ReservationResponse.from(reservation);
     }
 
@@ -111,12 +95,12 @@ public class ReservationServiceNamedInner{
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        verifyCancelReservation(userId, reservation);
+        verifyOwner(userId, reservation);
+        reservation.validateCancelable();
 
         return reservation.getPaymentId();
     }
 
-    // 예매 취소
     @Transactional(propagation = REQUIRES_NEW)
     public void cancelReservation(Long userId, Long reservationId) {
         userRepository.findById(userId)
@@ -125,9 +109,9 @@ public class ReservationServiceNamedInner{
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        verifyCancelReservation(userId, reservation);
+        verifyOwner(userId, reservation);
 
-        reservation.cancel();
+        reservation.cancelReserved();
     }
 
     @Transactional(readOnly = true, propagation = REQUIRES_NEW)
@@ -157,17 +141,9 @@ public class ReservationServiceNamedInner{
         }
     }
 
-    private void verifyCancelReservation(Long userId, Reservation reservation) {
+    private void verifyOwner(Long userId, Reservation reservation) {
         if (!reservation.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
-        }
-
-        if (reservation.getStatus() == ReservationStatus.CANCELED) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
-        }
-
-        if (reservation.getStatus() != ReservationStatus.RESERVED) {
-            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
     }
 
@@ -190,7 +166,6 @@ public class ReservationServiceNamedInner{
         }
 
         for (String seatStr : seats) {
-            // 2-2. 좌석 문자열 검사
             if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
@@ -198,13 +173,10 @@ public class ReservationServiceNamedInner{
             char row = seatStr.charAt(0);
             int col = Integer.parseInt(seatStr.substring(1));
 
-            // 2-3. 좌석 범위 검사
             if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
 
-            // 2-4. 좌석 중복 검사
-            // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
             if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }

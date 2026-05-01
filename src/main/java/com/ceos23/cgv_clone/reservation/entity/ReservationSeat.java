@@ -40,4 +40,13 @@ public class ReservationSeat {
         this.reservation = reservation;
         this.schedule = schedule;
     }
+
+    public static ReservationSeat create(Reservation reservation, Schedule schedule, String seatName) {
+        return ReservationSeat.builder()
+                .reservation(reservation)
+                .schedule(schedule)
+                .seatRow(seatName.charAt(0))
+                .seatCol(Integer.parseInt(seatName.substring(1)))
+                .build();
+    }
 }
