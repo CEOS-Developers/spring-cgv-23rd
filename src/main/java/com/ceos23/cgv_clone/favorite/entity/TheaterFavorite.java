@@ -37,4 +37,11 @@ public class TheaterFavorite extends BaseEntity {
         this.user = user;
         this.theater = theater;
     }
+
+    public static TheaterFavorite create(User user, Theater theater) {
+        return TheaterFavorite.builder()
+                .user(user)
+                .theater(theater)
+                .build();
+    }
 }
