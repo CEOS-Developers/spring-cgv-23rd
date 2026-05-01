@@ -43,7 +43,8 @@ public class OrderServicePessimistic implements OrderService {
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STORE_NOT_FOUND));
 
-        List<OrderRequest.OrderItemRequest> items = request.getItems();
+        List<OrderRequest.OrderItemRequest> items = sortItems(request.getItems());
+
         List<Inventory> inventories = validateAndDecreaseStock(store, items);
         int totalPrice = calculateTotalPrice(inventories, items);
 
@@ -52,13 +53,7 @@ public class OrderServicePessimistic implements OrderService {
 
         paymentService.pay(paymentId, orderName, totalPrice);
 
-        Order order = Order.builder()
-                .paymentId(paymentId)
-                .orderStatus(OrderStatus.PAID)
-                .totalPrice(totalPrice)
-                .user(user)
-                .store(store)
-                .build();
+        Order order = Order.createPaid(user, store, paymentId, totalPrice);
 
         addOrderItems(order, inventories, items);
         orderRepository.save(order);
@@ -87,7 +82,7 @@ public class OrderServicePessimistic implements OrderService {
             inv.increase(item.getQuantity());
         }
 
-        order.markCanceled();
+        order.cancel();
 
         return OrderResponse.from(order);
     }
@@ -105,27 +100,25 @@ public class OrderServicePessimistic implements OrderService {
                 .toList();
     }
 
+    private List<OrderRequest.OrderItemRequest> sortItems(List<OrderRequest.OrderItemRequest> items) {
+        return items.stream()
+                .sorted(Comparator.comparing(OrderRequest.OrderItemRequest::getInventoryId))
+                .toList();
+    }
+
     private void verifyOrderOwner(Long userId, Order order) {
         if(!order.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.INVALID_ORDER_OWNER);
-        }
-
-        if (order.getOrderStatus() != OrderStatus.PAID) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED_ORDER);
         }
     }
 
     private List<Inventory> validateAndDecreaseStock(Store store, List<OrderRequest.OrderItemRequest> items) {
         List<Inventory> inventories = new ArrayList<>();
 
-        // 순서에 따른 데드락 방지
-        items.sort(Comparator.comparing(OrderRequest.OrderItemRequest::getInventoryId));
-
         for (OrderRequest.OrderItemRequest item : items) {
             Inventory inventory = inventoryRepository.findByIdWithPessimisticLock(item.getInventoryId())
                     .orElseThrow(() -> new CustomException(ErrorCode.ITEM_NOT_FOUND));
 
-            // 다른 매점 재고 ID인지 확인
             if (!inventory.getStore().getId().equals(store.getId())) {
                 throw new CustomException(ErrorCode.INVALID_INVENTORY);
             }
@@ -147,12 +140,7 @@ public class OrderServicePessimistic implements OrderService {
 
     private void addOrderItems(Order order, List<Inventory> inventories, List<OrderRequest.OrderItemRequest> items) {
         for (int i = 0; i < items.size(); i++) {
-            order.addOrderItem(OrderItem.builder()
-                    .quantity(items.get(i).getQuantity())
-                    .unitPrice(inventories.get(i).getMenu().getPrice())
-                    .order(order)
-                    .inventory(inventories.get(i))
-                    .build());
+            order.addOrderItem(OrderItem.create(order, inventories.get(i), items.get(i).getQuantity()));
         }
     }
 

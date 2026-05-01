@@ -51,7 +51,7 @@ public class PaymentService {
         PaymentResponse payload = response.getPayload();
 
         if (payload.getPaymentStatus() != PaymentStatus.PAID) {
-            log.warn("결제 실패 응답 paymentId={}, status={}, elapseMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
+            log.warn("결제 실패 응답 paymentId={}, status={}, elapsedMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
 
@@ -81,7 +81,7 @@ public class PaymentService {
         PaymentResponse payload = response.getPayload();
 
         if (payload.getPaymentStatus() != PaymentStatus.CANCELLED) {
-            log.warn("결제 취소 실패 응답 paymentId={}, status={}, elapseMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
+            log.warn("결제 취소 실패 응답 paymentId={}, status={}, elapsedMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_CANCELLED_FAILED);
         }
 
