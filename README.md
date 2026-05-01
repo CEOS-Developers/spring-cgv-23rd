@@ -479,7 +479,7 @@ Java 기본 `HttpClient`나 Apache HttpClient 같은 저수준 HTTP 클라이언
 ## 1. 배포 모습
 
 ### 1. 수동 배포
-<img width="1512" height="982" alt="Image" src="https://github.com/user-attachments/assets/2ff5c3fa-98ea-46f7-8128-ad0139e081fc" />
+<img width="1016" height="30" alt="Image" src="https://github.com/user-attachments/assets/d70f88de-ae4d-47a1-8570-f1d371d2247f" />
 
 ### 2. CI/CD
 <img width="1127" height="460" alt="Image" src="https://github.com/user-attachments/assets/dc5526ed-c7b9-4912-b612-c111209042d8" />
