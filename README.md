@@ -1,7 +1,10 @@
 # spring-cgv-23rd
 ## CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
-# ERD
+<details>
+<summary><strong>ERD</strong></summary>
+
+<br />
 
 과제 요구사항은 다음과 같습니다.
 
@@ -234,9 +237,14 @@
 - 예매 취소는 상태값으로 관리 (삭제 X)
 - 찜 기능은 **N:M 관계 → 교차 테이블로 분리**
 
+</details>
+
 ---
 
-## 3주차 미션 관련 내용 정리
+<details>
+<summary><strong>3주차 미션 관련 내용 정리</strong></summary>
+
+<br />
 
 ### 1. Spring Security의 역할
 - 애플리케이션의 **인증(Authentication)** 과 **인가(Authorization)** 를 담당한다.
@@ -279,9 +287,14 @@
 - Spring Security를 쓰면 인증 정보를 컨트롤러까지 자연스럽게 전달할 수 있어서, 비즈니스 로직이 더 깔끔해진다.
 - 예외 처리도 MVC 예외 처리와 Security 예외 처리가 나뉘기 때문에, **어디서 발생한 예외인지에 따라 처리 지점이 다르다**는 점을 배웠다.
 
+</details>
+
 ---
 
-## 4주차 미션 관련 내용 정리
+<details>
+<summary><strong>4주차 미션 관련 내용 정리</strong></summary>
+
+<br />
 
 ## 1. 동시성 해결 방법 조사 및 적용
 
@@ -453,3 +466,47 @@ Java 기본 `HttpClient`나 Apache HttpClient 같은 저수준 HTTP 클라이언
 - 예약 취소와 함께 결제 취소가 정상적으로 수행되는 것을 확인했다.
 
 <img width="884" height="180" alt="Image" src="https://github.com/user-attachments/assets/5b057b40-ab92-4200-87bb-f5cac289fa9e" />
+
+</details>
+
+---
+
+<details>
+<summary><strong>5주차 미션 관련 내용 정리</strong></summary>
+
+<br />
+
+## 1. 배포 모습
+
+### 1. 수동 배포
+<img width="1512" height="982" alt="Image" src="https://github.com/user-attachments/assets/2ff5c3fa-98ea-46f7-8128-ad0139e081fc" />
+
+### 2. CI/CD
+<img width="1127" height="460" alt="Image" src="https://github.com/user-attachments/assets/dc5526ed-c7b9-4912-b612-c111209042d8" />
+
+### 3. CI/CD 이후 회원가입 API 테스트
+<img width="855" height="576" alt="Image" src="https://github.com/user-attachments/assets/ba8c3c77-aa1b-43b6-af93-a80593420d0a" />
+
+---
+
+## 2. 배포 관련 내용 정리
+
+### 1. 배포 과정 요약
+
+- CI/CD: GitHub Actions를 활용해 빌드부터 Docker Hub 이미지 푸시, EC2 배포까지 자동화했습니다.
+- 컨테이너: Docker를 사용해 환경 의존성 문제를 줄였고, 외부 `80` 포트와 내부 `8080` 포트를 연결해 배포했습니다.
+- 인프라: AWS EC2에는 애플리케이션을, AWS RDS에는 데이터베이스를 두는 구조로 분리해 연동했습니다.
+
+### 2. 문제 해결
+
+- 파일 경로 문제: Dockerfile 작성 과정에서 빌드 결과물인 `jar` 파일의 실제 위치와 `COPY` 대상 경로가 달라 에러가 발생했고, 빌드 산출물 경로를 다시 확인해 수정했습니다.
+- 라이브러리 버전 호환성: Hibernate 7 환경에서 더 이상 권장되지 않는 `MySQL8Dialect` 설정으로 인해 구동 에러가 발생했고, 해당 설정을 제거해 해결했습니다.
+- 네트워크 보안 설정: EC2에서 RDS로 연결할 때 `Connection Timeout`이 발생했고, AWS 보안 그룹에서 `3306` 포트를 허용하도록 수정해 해결했습니다.
+
+### 3. 배운 점
+
+- 서버가 정상적으로 실행되지 않을 때 `docker logs`를 확인하면서 `Caused by` 구문을 따라가면 실제 원인을 더 정확하게 파악할 수 있다는 점을 배웠습니다.
+- 로컬 환경과 배포 환경은 설정값이 조금만 달라도 다른 문제가 발생할 수 있어서, 환경별 설정 분리의 필요성을 체감했습니다.
+- GitHub Actions 파이프라인이 성공했다고 해서 배포가 끝난 것이 아니라, 실제로 API를 호출해 정상 응답까지 확인해야 배포가 완료된다고 볼 수 있다는 점을 배웠습니다.
+
+</details>
