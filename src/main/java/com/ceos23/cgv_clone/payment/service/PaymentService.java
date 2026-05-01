@@ -24,6 +24,10 @@ public class PaymentService {
     private String storeId;
 
     public PaymentResponse pay(String paymentId, String orderName, int totalAmount) {
+        long start = System.currentTimeMillis();
+
+        log.info("결제 요청 시작 paymentId={}, totalAmount={}", paymentId, totalAmount);
+
         PaymentRequest request = PaymentRequest.builder()
                 .storeId(storeId)
                 .orderName(orderName)
@@ -31,35 +35,80 @@ public class PaymentService {
                 .currency(Currency.KRW)
                 .build();
 
-        PaymentApiResponse response = paymentFeignClient.pay(paymentId, request);
+        PaymentApiResponse response;
+        try {
+            response = paymentFeignClient.pay(paymentId, request);
+        } catch (Exception e) {
+            log.error("결제 API 호출 실패 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start, e);
+            throw e;
+        }
 
         if (response == null || response.getPayload() == null) {
+            log.error("결제 응답 payload 없음 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
         }
+
         PaymentResponse payload = response.getPayload();
+
         if (payload.getPaymentStatus() != PaymentStatus.PAID) {
-            log.warn("결제 실패 응답 paymentId={}, status={}", paymentId, payload.getPaymentStatus());
+            log.warn("결제 실패 응답 paymentId={}, status={}, elapseMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_FAILED);
         }
+
+        log.info("결제 성공 paymentId={}, status={}, elapsedMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
+
         return payload;
     }
 
     public void cancel(String paymentId) {
-        PaymentApiResponse response = paymentFeignClient.cancel(paymentId);
+        long start = System.currentTimeMillis();
+
+        log.info("결제 취소 요청 시작 paymentId={}", paymentId);
+
+        PaymentApiResponse response;
+        try {
+            response = paymentFeignClient.cancel(paymentId);
+        } catch (Exception e) {
+            log.error("결제 취소 API 호출 실패 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start, e);
+            throw e;
+        }
+
         if (response == null || response.getPayload() == null) {
+            log.error("결제 취소 응답 payload 없음 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
         }
+
         PaymentResponse payload = response.getPayload();
+
         if (payload.getPaymentStatus() != PaymentStatus.CANCELLED) {
+            log.warn("결제 취소 실패 응답 paymentId={}, status={}, elapseMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_CANCELLED_FAILED);
         }
+
+        log.info("결제 취소 성공 paymentId={}, status={}, elapsedMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
     }
 
     public PaymentResponse find(String paymentId) {
-        PaymentApiResponse response = paymentFeignClient.find(paymentId);
+        long start = System.currentTimeMillis();
+
+        log.info("결제 조회 요청 시작 paymentId={}", paymentId);
+
+        PaymentApiResponse response;
+        try {
+            response = paymentFeignClient.find(paymentId);
+        } catch (Exception e) {
+            log.error("결제 조회 API 호출 실패 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start, e);
+            throw e;
+        }
+
         if (response == null || response.getPayload() == null) {
+            log.error("결제 조회 응답 payload 없음 paymentId={}, elapsedMs={}", paymentId, System.currentTimeMillis() - start);
             throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
         }
-        return response.getPayload();
+
+        PaymentResponse payload = response.getPayload();
+
+        log.info("결제 조회 성공 paymentId={}, status={}, elapsedMs={}", paymentId, payload.getPaymentStatus(), System.currentTimeMillis() - start);
+        return payload;
     }
 }

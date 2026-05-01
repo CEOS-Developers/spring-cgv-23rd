@@ -1,4 +1,4 @@
-package com.ceos23.cgv_clone.reservation.service;
+package com.ceos23.cgv_clone.reservation.service.dto;
 
 public record PendingReservation(
         Long reservationId,

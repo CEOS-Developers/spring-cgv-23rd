@@ -10,6 +10,7 @@ import com.ceos23.cgv_clone.reservation.entity.ReservationSeat;
 import com.ceos23.cgv_clone.reservation.entity.ReservationStatus;
 import com.ceos23.cgv_clone.reservation.repository.ReservationRepository;
 import com.ceos23.cgv_clone.reservation.repository.ReservationSeatRepository;
+import com.ceos23.cgv_clone.reservation.service.dto.PendingReservation;
 import com.ceos23.cgv_clone.theater.entity.Schedule;
 import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.user.entity.User;
@@ -43,7 +44,7 @@ public class ReservationServiceNamedInner{
     public PendingReservationResponse prepareReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+        Schedule schedule = scheduleRepository.findByIdWithMovieAndScreenType(request.getScheduleId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
         List<String> seats = request.getSeats();
 
@@ -80,28 +81,53 @@ public class ReservationServiceNamedInner{
     }
 
     @Transactional(propagation = REQUIRES_NEW)
-    public ReservationResponse confirmReservation(Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
-
-        reservation.confirmReservation();
-        return ReservationResponse.from(reservation);
-    }
-
-    // 예매 취소
-    @Transactional(propagation = REQUIRES_NEW)
-    public String cancelReservation(Long userId, Long reservationId) {
-        User user = userRepository.findById(userId)
+    public void cancelPendingReservation(Long userId, Long reservationId) {
+        userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        verifyCancel(user, reservation);
-
+        verifyPendingReservation(userId, reservation);
 
         reservation.cancel();
+    }
+
+    @Transactional(propagation = REQUIRES_NEW)
+    public ReservationResponse confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        if (reservation.getStatus() != ReservationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+
+        reservation.confirmReservation();
+        return ReservationResponse.from(reservation);
+    }
+
+    @Transactional(readOnly = true, propagation = REQUIRES_NEW)
+    public String loadPaymentIdForCancel(Long userId, Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyCancelReservation(userId, reservation);
+
         return reservation.getPaymentId();
+    }
+
+    // 예매 취소
+    @Transactional(propagation = REQUIRES_NEW)
+    public void cancelReservation(Long userId, Long reservationId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyCancelReservation(userId, reservation);
+
+        reservation.cancel();
     }
 
     @Transactional(readOnly = true, propagation = REQUIRES_NEW)
@@ -116,26 +142,32 @@ public class ReservationServiceNamedInner{
         return new PendingReservation(reservation.getId(), reservation.getPaymentId(), orderName, reservation.getTotalPrice());
     }
 
-    private void verifyCancel(User user, Reservation reservation) {
-        if (!reservation.getUser().getId().equals(user.getId())) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
-        }
-
-        if (reservation.getStatus().equals(ReservationStatus.CANCELED)) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
-        }
-    }
-
     private void verifyPendingReservation(Long userId, Reservation reservation) {
         if (!reservation.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
         }
+
         if (reservation.getStatus() != ReservationStatus.PENDING) {
             throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
+
         // 5분 경과 후 스케쥴러가 잡지 못했는데, 다른 유저가 들어와서 결제 시도하면 문제 생기므로 추가 검증.
         if (reservation.getReservedAt().plusMinutes(5).isBefore(LocalDateTime.now())) {
             throw new CustomException(ErrorCode.RESERVATION_EXPIRED);
+        }
+    }
+
+    private void verifyCancelReservation(Long userId, Reservation reservation) {
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
+        }
+
+        if (reservation.getStatus() == ReservationStatus.CANCELED) {
+            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
+        if (reservation.getStatus() != ReservationStatus.RESERVED) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
     }
 
