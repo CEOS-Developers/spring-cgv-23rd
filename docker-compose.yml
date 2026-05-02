@@ -9,7 +9,7 @@ services:
     restart: always
 
   app:
-    image: taeik21/cgv-app:latest
+    image: taeik21/cgv-app-new:latest
     container_name: test
     ports:
       - "80:8080"
