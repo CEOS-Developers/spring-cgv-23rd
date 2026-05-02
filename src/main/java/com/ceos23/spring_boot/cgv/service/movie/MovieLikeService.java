@@ -9,6 +9,7 @@ import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
 import com.ceos23.spring_boot.cgv.repository.like.MovieLikeRepository;
 import com.ceos23.spring_boot.cgv.repository.movie.MovieRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +33,11 @@ public class MovieLikeService {
 
     public void likeMovie(Long userId, Long movieId) {
         if (movieLikeRepository.existsByUserIdAndMovieId(userId, movieId)) {
-            throw new ConflictException(ErrorCode.CONFLICT);
+            throw new ConflictException(ErrorCode.ALREADY_LIKED_MOVIE);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
-
-        Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.MOVIE_NOT_FOUND));
+        User user = findUserById(userId);
+        Movie movie = findMovieById(movieId);
 
         MovieLike movieLike = new MovieLike(user, movie);
         movieLikeRepository.save(movieLike);
@@ -47,8 +45,24 @@ public class MovieLikeService {
 
     public void unlikeMovie(Long userId, Long movieId) {
         MovieLike movieLike = movieLikeRepository.findByUserIdAndMovieId(userId, movieId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.MOVIE_LIKE_NOT_FOUND));
 
         movieLikeRepository.delete(movieLike);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MovieLike> getLikedMovies(Long userId) {
+        findUserById(userId);
+        return movieLikeRepository.findAllByUserIdOrderByLikedAtDesc(userId);
+    }
+
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Movie findMovieById(Long movieId) {
+        return movieRepository.findById(movieId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.MOVIE_NOT_FOUND));
     }
 }

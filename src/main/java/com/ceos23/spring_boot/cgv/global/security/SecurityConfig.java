@@ -37,7 +37,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(
+                                "/api/cinemas/likes",
                                 "/api/cinemas/*/likes",
+                                "/api/movies/likes",
                                 "/api/movies/*/likes",
                                 "/api/store/purchases",
                                 "/api/reservations/**",

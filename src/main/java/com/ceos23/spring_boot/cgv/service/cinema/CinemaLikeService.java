@@ -9,6 +9,7 @@ import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
 import com.ceos23.spring_boot.cgv.repository.cinema.CinemaRepository;
 import com.ceos23.spring_boot.cgv.repository.like.CinemaLikeRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
+import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,14 +33,11 @@ public class CinemaLikeService {
 
     public void likeCinema(Long userId, Long cinemaId) {
         if (cinemaLikeRepository.existsByUserIdAndCinemaId(userId, cinemaId)) {
-            throw new ConflictException(ErrorCode.CONFLICT);
+            throw new ConflictException(ErrorCode.ALREADY_LIKED_CINEMA);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
-
-        Cinema cinema = cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.CINEMA_NOT_FOUND));
+        User user = findUserById(userId);
+        Cinema cinema = findCinemaById(cinemaId);
 
         CinemaLike cinemaLike = new CinemaLike(user, cinema);
         cinemaLikeRepository.save(cinemaLike);
@@ -47,8 +45,24 @@ public class CinemaLikeService {
 
     public void unlikeCinema(Long userId, Long cinemaId) {
         CinemaLike cinemaLike = cinemaLikeRepository.findByUserIdAndCinemaId(userId, cinemaId)
-                .orElseThrow(() -> new NotFoundException(ErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new NotFoundException(ErrorCode.CINEMA_LIKE_NOT_FOUND));
 
         cinemaLikeRepository.delete(cinemaLike);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CinemaLike> getLikedCinemas(Long userId) {
+        findUserById(userId);
+        return cinemaLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    private User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    private Cinema findCinemaById(Long cinemaId) {
+        return cinemaRepository.findById(cinemaId)
+                .orElseThrow(() -> new NotFoundException(ErrorCode.CINEMA_NOT_FOUND));
     }
 }

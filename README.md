@@ -2,6 +2,17 @@
 
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+## 로컬 실행 설정
+
+프로젝트 실행 전 아래 환경변수가 필요합니다.
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+
+편하게 시작할 수 있도록 루트에 `.env.example` 파일을 추가했습니다.
+
 ## 코드 리팩토링 정리
 
 리팩토링은 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 진행했습니다.
@@ -18,11 +29,29 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 - `CinemaMenuStock.decreaseStock()`이 수량 검증과 재고 부족 검증을 함께 책임지도록 바꿔, 재고 관련 규칙이 한곳에 모이도록 개선했습니다.
 - 매점 구매 실패 상황을 더 잘 드러내기 위해 `STORE_MENU_STOCK_NOT_FOUND`, `INSUFFICIENT_MENU_STOCK` 에러 코드를 추가했습니다.
 
-### 3. 테스트 가능성 개선
+### 3. 조회 기능 보강과 Query Service 분리
+
+- 예매 생성 전에 실제로 필요한 조회 기능을 채우기 위해 `GET /api/screenings`, `GET /api/screenings/{screeningId}/seats` API를 추가했습니다.
+- 매점 화면과 마이페이지에서 바로 사용할 수 있도록 `GET /api/store/menus`, `GET /api/store/purchases` API를 추가했습니다.
+- 찜 기능도 생성/취소에서 끝나지 않도록 `GET /api/cinemas/likes`, `GET /api/movies/likes` API를 추가했습니다.
+- 읽기 전용 흐름은 `ScreeningQueryService`, `StoreQueryService`로 분리해, 쓰기 서비스가 조회 책임까지 과하게 들고 있지 않도록 정리했습니다.
+
+### 4. 테스트 가능성 개선
 
 - 변경된 예매 로직에 맞춰 `ReservationServiceTest`를 정리했습니다.
 - `StorePurchaseServiceTest`를 추가해 재고 차감과 예외 흐름을 검증할 수 있게 했습니다.
+- `ScreeningQueryServiceTest`, `StoreQueryServiceTest`, `LikeQueryServiceTest`를 추가해 새 조회 API의 핵심 조회 흐름도 검증했습니다.
 - 테스트 전용 H2 설정을 추가해 로컬 MySQL 환경 없이도 `./gradlew test`가 실행되도록 개선했습니다.
+
+## 마무리 단계에서 추가한 API
+
+- `GET /api/screenings`
+- `GET /api/screenings/{screeningId}/seats`
+- `GET /api/store/menus?cinemaId={cinemaId}`
+- `GET /api/store/purchases`
+- `GET /api/cinemas/likes`
+- `GET /api/movies/likes`
+- `GET /api/payments/{paymentId}`
 
 ## 동시성 제어 정리
 
@@ -183,21 +212,20 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 ## 2. 매점 구매 기능
 
 ### 핵심 구현
-- `StoreMenu` + `StoreOrder` 구조로 설계
+- `StoreMenu` + `StorePurchase` 구조로 설계
 - 구매 시 재고 차감 + 주문 생성
+- 영화관별 메뉴/재고 조회와 사용자 구매 내역 조회 API까지 확장
 
 ### 구현 흐름
-1. 메뉴 조회
+1. 영화관별 메뉴 조회
 2. 재고 확인
 3. 재고 차감
 4. 주문 생성
 
 ```java
-if (menu.getStock() < quantity) {
-    throw new IllegalArgumentException("재고 부족");
-}
-menu.decreaseStock(quantity);
-storeOrderRepository.save(order);
+CinemaMenuStock stock = findCinemaMenuStock(request);
+stock.decreaseStock(request.quantity());
+storePurchaseRepository.save(new StorePurchase(request.quantity(), user, stock));
 ```
 
 </details>
@@ -672,6 +700,7 @@ if (token != null && tokenProvider.validateAccessToken(token)) {
 - `@AuthenticationPrincipal`을 사용해 로그인한 사용자 정보를 컨트롤러에서 바로 받아오도록 구현
 - 이를 활용해 토큰이 필요한 API로 영화관 찜, 영화 찜, 매점 구매 기능을 구현
 - 각 API에서는 `CustomUserDetails`에서 사용자 id를 꺼내 서비스 레이어로 전달하도록 구성
+- 마무리 단계에서 찜 목록 조회 API인 `/api/cinemas/likes`, `/api/movies/likes`도 함께 보호하도록 확장
 - `SecurityConfig`에서 `/api/cinemas/*/likes`, `/api/movies/*/likes`, `/api/store/purchases` 경로를 인증이 필요한 요청으로 설정
 - 토큰이 없는 요청은 보호된 API에 접근할 수 없도록 처리
 
