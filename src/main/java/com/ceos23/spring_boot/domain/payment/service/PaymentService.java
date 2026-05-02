@@ -25,6 +25,7 @@ public class PaymentService {
     private final ReservationLockFacade reservationLockFacade;
     private final PaymentClient paymentClient;
     private final ReservationService reservationService;
+    private final ReservationRepository reservationRepository;
 
     private static final String STOREID = "take21";
     private static final String CURRENCY = "KRW";
@@ -46,26 +47,37 @@ public class PaymentService {
                 ""
         );
 
+        PaymentData response;
+
         try {
-            PaymentData response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
-
-            if (!"PAID".equals(response.paymentStatus()))
-                throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
-
-            reservationService.confirmPayment(paymentId);
-            return PaymentDataInfo.from(response);
-
-        } catch (BusinessException be) {
-            reservationService.cancelReservation(paymentId);
-            throw be;
-
-        }catch (Exception e) {
+            response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
+        } catch (Exception e) {
             reservationService.cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+
+        if (!"PAID".equals(response.paymentStatus())) {
+            reservationService.cancelReservation(paymentId);
+            throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+
+        try {
+            reservationService.confirmPayment(paymentId);
+            return PaymentDataInfo.from(response);
+        } catch (Exception e) {
+            cancelPayment(paymentId, command.email());
+            throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+        }
     }
 
-    public void cancelPayment(String paymentId) {
+    public void cancelPayment(String paymentId, String email) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        if (!reservation.getUser().getEmail().equals(email)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
+        }
+
         reservationService.verifyCancelable(paymentId);
 
         PaymentData response = paymentClient.cancelPayment(paymentId);

@@ -47,9 +47,10 @@ public class PaymentController {
     public ResponseEntity<Void> cancelPayment(
             @PathVariable
             @Parameter(description = "결제 고유 ID (예매 번호)", required = true, example = "20240520_a1b2c3d4")
-            String paymentId
+            String paymentId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        paymentService.cancelPayment(paymentId);
+        paymentService.cancelPayment(paymentId, userDetails.getEmail());
 
         return ResponseEntity.ok().build();
     }
