@@ -912,7 +912,7 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 `4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했습니다. workflow 파일은 `.github/workflows/cicd.yml`에 있으며, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있습니다.
 
-이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있도록, `EC2 내부에서 Spring Boot 컨테이너와 MySQL 컨테이너를 함께 실행`하는 구조로 정리했습니다. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했습니다.
+이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있도록, `EC2 내부에서 Spring Boot 컨테이너를 직접 빌드/실행`하는 구조로 정리했습니다. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했습니다.
 
 ### 동작 흐름
 
@@ -928,8 +928,6 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 - `EC2_HOST`
 - `EC2_SSH_KEY`
-- `DB_USERNAME`
-- `DB_PASSWORD`
 - `JWT_SECRET`
 
 ### GitHub Actions Variables
@@ -938,8 +936,6 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
   - 기본값: `/home/ubuntu/spring-cgv-23rd`
 - `APP_PORT`
   - 기본값: `8080`
-- `MYSQL_DATABASE`
-  - 기본값: `cgv_db`
 - `JPA_DDL_AUTO`
   - 기본값: `update`
 - `JPA_SHOW_SQL`
@@ -959,6 +955,5 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 ### EC2에서 실행되는 구성
 
 - `app`: Spring Boot 애플리케이션 컨테이너
-- `mysql`: 애플리케이션 전용 MySQL 컨테이너
 
-CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, MySQL이 준비된 뒤 앱이 올라오도록 `depends_on + healthcheck`를 설정했습니다.
+CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, 자동 배포 환경에서는 가벼운 H2 데이터베이스 설정으로 앱을 띄우도록 구성했습니다.

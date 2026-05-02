@@ -13,7 +13,6 @@ permissions:
 env:
   APP_DIR: ${{ vars.APP_DIR || '/home/ubuntu/spring-cgv-23rd' }}
   APP_PORT: ${{ vars.APP_PORT || '8080' }}
-  MYSQL_DATABASE: ${{ vars.MYSQL_DATABASE || 'cgv_db' }}
 
 jobs:
   build:
@@ -86,17 +85,16 @@ jobs:
           script: |
             APP_DIR="${{ env.APP_DIR }}"
             APP_PORT="${{ env.APP_PORT }}"
-            MYSQL_DATABASE="${{ env.MYSQL_DATABASE }}"
 
             cd "$APP_DIR"
 
             cat > .env <<EOF
             APP_PORT=$APP_PORT
-            MYSQL_DATABASE=$MYSQL_DATABASE
-            MYSQL_ROOT_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_URL=jdbc:mysql://mysql:3306/$MYSQL_DATABASE?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_URL=jdbc:h2:file:/app/data/cgv_db;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+            DB_USERNAME=sa
+            DB_PASSWORD=
+            DB_DRIVER_CLASS_NAME=org.h2.Driver
+            HIBERNATE_DIALECT=org.hibernate.dialect.H2Dialect
             JWT_SECRET=${{ secrets.JWT_SECRET }}
             JPA_DDL_AUTO=${{ vars.JPA_DDL_AUTO || 'update' }}
             JPA_SHOW_SQL=${{ vars.JPA_SHOW_SQL || 'false' }}
@@ -108,5 +106,12 @@ jobs:
             sudo docker compose -f docker-compose.cicd.yml up --build -d
             sudo docker image prune -f
 
-            sleep 20
-            curl -fsS "http://localhost:$APP_PORT/actuator/health"
+            for i in $(seq 1 18); do
+              if curl -fsS "http://localhost:$APP_PORT/actuator/health"; then
+                exit 0
+              fi
+              sleep 10
+            done
+
+            sudo docker logs --tail 200 spring-cgv-app
+            exit 1
