@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/auth/guest").permitAll()
                         .requestMatchers("/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/actuator/health").permitAll()
                         // guest
                         .requestMatchers("/api/v1/auth/**").hasRole(UserRole.GUEST.name())
                         .requestMatchers("/api/v1/reservations/guest/**").hasRole(UserRole.GUEST.name())
