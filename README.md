@@ -907,3 +907,52 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 ![만료](images/W3/5_wrong_refresh.png)
 
 </details>
+
+## CI/CD 정리
+
+`4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했습니다. workflow 파일은 `.github/workflows/cicd.yml`에 있으며, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있습니다.
+
+### 동작 흐름
+
+1. `actions/checkout`으로 코드를 가져옵니다.
+2. JDK 21과 Gradle cache를 설정합니다.
+3. `./gradlew clean test bootJar`로 테스트와 jar 빌드를 수행합니다.
+4. Docker Hub에 로그인한 뒤 이미지를 build/push 합니다.
+5. EC2로 `docker-compose.yml`을 복사합니다.
+6. EC2에서 `.env`를 생성하고 `docker compose pull && docker compose up -d`를 실행합니다.
+7. 마지막으로 `http://localhost:<APP_PORT>/actuator/health`를 호출해 헬스체크를 확인합니다.
+
+### GitHub Actions Secrets
+
+- `DOCKER_USERNAME`
+- `DOCKER_PASSWORD`
+- `EC2_HOST`
+- `EC2_SSH_KEY`
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+
+### GitHub Actions Variables
+
+- `DOCKER_IMAGE_NAME`
+  - 예시: `ohjssorry/spring-cgv-23rd`
+- `APP_DIR`
+  - 기본값: `/home/ubuntu/spring-cgv-23rd`
+- `APP_PORT`
+  - 기본값: `8080`
+- `JPA_DDL_AUTO`
+  - 기본값: `update`
+- `JPA_SHOW_SQL`
+  - 기본값: `false`
+- `JWT_ACCESS_TOKEN_VALIDITY_IN_SECONDS`
+  - 기본값: `3600`
+- `JWT_REFRESH_TOKEN_VALIDITY_IN_SECONDS`
+  - 기본값: `1209600`
+
+### 헬스체크
+
+배포 후 검증을 위해 Spring Boot Actuator를 추가했고, 아래 endpoint를 공개했습니다.
+
+- `GET /actuator/health`
+- `GET /actuator/info`
