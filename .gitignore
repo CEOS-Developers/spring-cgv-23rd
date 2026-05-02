@@ -18,7 +18,7 @@
 .settings
 .springBeans
 .vscode
-.pem
+*.pem
 /code
 MANIFEST.MF
 _site/
