@@ -326,19 +326,21 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 ec2 접속
 <img src="/images/8-3_ec2.png" alt="ec2 접속">
 
+배포 완료
+<img src="/images/8-4_deploy.png" alt="배포 완료">
+
 도커 컴포즈 방식으로 변경
-<img src="/images/8-4_docker_compose.png" alt="도커 컴포즈 방식으로 변경">
+<img src="/images/8-5_docker_compose.png" alt="도커 컴포즈 방식으로 변경">
 
 ### 3. CI/CD
 
-
-
-
+github actions으로 자동 배포 적용
+<img src="/images/8-6_CICD.png" alt="깃허브 액션">
 
 ### 느낀 점
 * 팸키들을 폴더 내 ssh에 저장해두는 게 마음이 편해서 좋은 방법 같았다
 * EC2안에서 컨테이너가 생성이 잘 안 됐는데 arm이랑 x86 아키텍처가 맞지 않았던 문제였다
   * -> 이미지 다시 만들면 해결 됨
-* 펨키 안 보이면 명령어로 `cat ~/.ssh/ceos-cgv-key.pem`
+* 펨키 안 보이면 명령어로 `cat ~/.ssh/ceos-cgv-key.pem`하고 `-----BEGIN ... PRIVATE KEY-----` 줄도 다 포함해서 전체 다 복사해야함
 
 </details>
