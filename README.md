@@ -912,35 +912,34 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 `4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했습니다. workflow 파일은 `.github/workflows/cicd.yml`에 있으며, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있습니다.
 
+이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있도록, `EC2 내부에서 Spring Boot 컨테이너와 MySQL 컨테이너를 함께 실행`하는 구조로 정리했습니다. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했습니다.
+
 ### 동작 흐름
 
 1. `actions/checkout`으로 코드를 가져옵니다.
 2. JDK 21과 Gradle cache를 설정합니다.
 3. `./gradlew clean test bootJar`로 테스트와 jar 빌드를 수행합니다.
-4. Docker Hub에 로그인한 뒤 이미지를 build/push 합니다.
-5. EC2로 `docker-compose.yml`을 복사합니다.
-6. EC2에서 `.env`를 생성하고 `docker compose pull && docker compose up -d`를 실행합니다.
+4. 배포에 필요한 `jar`, `Dockerfile`, `docker-compose.cicd.yml`을 artifact로 묶습니다.
+5. EC2로 배포 파일을 복사합니다.
+6. EC2에서 `.env`를 생성하고 `docker compose -f docker-compose.cicd.yml up --build -d`를 실행합니다.
 7. 마지막으로 `http://localhost:<APP_PORT>/actuator/health`를 호출해 헬스체크를 확인합니다.
 
 ### GitHub Actions Secrets
 
-- `DOCKER_USERNAME`
-- `DOCKER_PASSWORD`
 - `EC2_HOST`
 - `EC2_SSH_KEY`
-- `DB_URL`
 - `DB_USERNAME`
 - `DB_PASSWORD`
 - `JWT_SECRET`
 
 ### GitHub Actions Variables
 
-- `DOCKER_IMAGE_NAME`
-  - 예시: `ohjssorry/spring-cgv-23rd`
 - `APP_DIR`
   - 기본값: `/home/ubuntu/spring-cgv-23rd`
 - `APP_PORT`
   - 기본값: `8080`
+- `MYSQL_DATABASE`
+  - 기본값: `cgv_db`
 - `JPA_DDL_AUTO`
   - 기본값: `update`
 - `JPA_SHOW_SQL`
@@ -956,3 +955,10 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 - `GET /actuator/health`
 - `GET /actuator/info`
+
+### EC2에서 실행되는 구성
+
+- `app`: Spring Boot 애플리케이션 컨테이너
+- `mysql`: 애플리케이션 전용 MySQL 컨테이너
+
+CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, MySQL이 준비된 뒤 앱이 올라오도록 `depends_on + healthcheck`를 설정했습니다.

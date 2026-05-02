@@ -11,12 +11,13 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-  IMAGE_TAG: sha-${{ github.sha }}
+  APP_DIR: ${{ vars.APP_DIR || '/home/ubuntu/spring-cgv-23rd' }}
+  APP_PORT: ${{ vars.APP_PORT || '8080' }}
+  MYSQL_DATABASE: ${{ vars.MYSQL_DATABASE || 'cgv_db' }}
 
 jobs:
-  build-and-push:
-    name: Build and Push Docker Image
+  build:
+    name: Test and Build Jar
     runs-on: ubuntu-latest
 
     steps:
@@ -36,35 +37,45 @@ jobs:
       - name: Run tests and build jar
         run: ./gradlew clean test bootJar --no-daemon
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push application image
-        run: |
-          docker build -t "$IMAGE_NAME:$IMAGE_TAG" -t "$IMAGE_NAME:latest" .
-          docker push "$IMAGE_NAME:$IMAGE_TAG"
-          docker push "$IMAGE_NAME:latest"
+          name: deploy-artifacts
+          path: |
+            .dockerignore
+            Dockerfile
+            docker-compose.cicd.yml
+            build/libs/*.jar
 
   deploy:
     name: Deploy to EC2
-    needs: build-and-push
+    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
+      - name: Create deployment directory on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: mkdir -p "${{ env.APP_DIR }}"
 
-      - name: Copy docker-compose file to EC2
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deploy-artifacts
+          path: deploy-artifacts
+
+      - name: Copy deployment files to EC2
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: docker-compose.yml
-          target: ${{ vars.APP_DIR || '/home/ubuntu/spring-cgv-23rd' }}
+          source: "deploy-artifacts/.dockerignore,deploy-artifacts/Dockerfile,deploy-artifacts/docker-compose.cicd.yml,deploy-artifacts/build/libs/*.jar"
+          target: ${{ env.APP_DIR }}
+          strip_components: 1
 
       - name: Deploy application to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -73,16 +84,17 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            APP_DIR="${{ vars.APP_DIR || '/home/ubuntu/spring-cgv-23rd' }}"
-            APP_PORT="${{ vars.APP_PORT || '8080' }}"
+            APP_DIR="${{ env.APP_DIR }}"
+            APP_PORT="${{ env.APP_PORT }}"
+            MYSQL_DATABASE="${{ env.MYSQL_DATABASE }}"
 
-            mkdir -p "$APP_DIR"
             cd "$APP_DIR"
 
             cat > .env <<EOF
-            APP_IMAGE=${{ env.IMAGE_NAME }}:latest
             APP_PORT=$APP_PORT
-            DB_URL=${{ secrets.DB_URL }}
+            MYSQL_DATABASE=$MYSQL_DATABASE
+            MYSQL_ROOT_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_URL=jdbc:mysql://mysql:3306/$MYSQL_DATABASE?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             JWT_SECRET=${{ secrets.JWT_SECRET }}
@@ -92,10 +104,9 @@ jobs:
             JWT_REFRESH_TOKEN_VALIDITY_IN_SECONDS=${{ vars.JWT_REFRESH_TOKEN_VALIDITY_IN_SECONDS || '1209600' }}
             EOF
 
-            echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-            sudo docker compose pull
-            sudo docker compose up -d
+            sudo docker compose -f docker-compose.cicd.yml down || true
+            sudo docker compose -f docker-compose.cicd.yml up --build -d
             sudo docker image prune -f
 
-            sleep 10
+            sleep 20
             curl -fsS "http://localhost:$APP_PORT/actuator/health"
