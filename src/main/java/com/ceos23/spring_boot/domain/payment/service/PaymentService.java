@@ -22,27 +22,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class PaymentService {
-    private final ReservationLockFacade reservationLockFacade;
     private final PaymentClient paymentClient;
-    private final ReservationService reservationService;
-    private final ReservationRepository reservationRepository;
 
     private static final String STOREID = "take21";
     private static final String CURRENCY = "KRW";
 
-    public PaymentDataInfo requestInstantPayment(ReservationCreateCommand command, FrontendPaymentRequest request) {
-        ReservationInfo info = reservationLockFacade.createReservationWithLock(command);
-        String paymentId = info.paymentId();
-
-        if (!info.totalPrice().equals(request.totalPayAmount())) {
-            reservationService.cancelReservation(paymentId);
-            throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
-        }
-
+    public PaymentDataInfo requestInstantPayment(String paymentId, String orderName, Integer totalPrice) {
         PaymentRequest paymentRequest = new PaymentRequest(
                 STOREID,
-                info.orderName(),
-                info.totalPrice(),
+                orderName,
+                totalPrice,
                 CURRENCY,
                 ""
         );
@@ -52,40 +41,21 @@ public class PaymentService {
         try {
             response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
         } catch (Exception e) {
-            reservationService.cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         if (!"PAID".equals(response.paymentStatus())) {
-            reservationService.cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
 
-        try {
-            reservationService.confirmPayment(paymentId);
-            return PaymentDataInfo.from(response);
-        } catch (Exception e) {
-            cancelPayment(paymentId, command.email());
-            throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
-        }
+        return PaymentDataInfo.from(response);
     }
 
-    public void cancelPayment(String paymentId, String email) {
-        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
-
-        if (!reservation.getUser().getEmail().equals(email)) {
-            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
-        }
-
-        reservationService.verifyCancelable(paymentId);
-
+    public void cancelPayment(String paymentId) {
         PaymentData response = paymentClient.cancelPayment(paymentId);
 
         if (!"CANCELLED".equals(response.paymentStatus()))
             throw new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED);
-
-        reservationService.cancelReservation(paymentId);
     }
 
     public PaymentDataInfo getPaymentDetails(String paymentId) {

@@ -23,39 +23,6 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @Operation(
-            summary = "결제 및 예매",
-            description = "선택한 좌석에 분산 락을 걸어 선점하고, 결제를 진행한 뒤 예매를 최종 확정합니다."
-    )
-    @PostMapping("/api/payments/instant")
-    public ResponseEntity<PaymentResponse> requestInstantPayment(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @Valid @RequestBody PaymentCreateRequest request
-    ) {
-        PaymentDataInfo info = paymentService.requestInstantPayment(
-                request.toCommand(userDetails.getEmail()),
-                request.toFrontendRequest()
-        );
-
-        return ResponseEntity.ok(PaymentResponse.from(info));
-    }
-
-    @Operation(
-            summary = "결제 및 예매 취소",
-            description = "완료된 결제를 취소하고, 좌석을 다시 예매 가능 상태로 반환합니다."
-    )
-    @PostMapping("/api/payments/{paymentId}/cancel")
-    public ResponseEntity<Void> cancelPayment(
-            @PathVariable
-            @Parameter(description = "결제 고유 ID (예매 번호)", required = true, example = "20240520_a1b2c3d4")
-            String paymentId,
-            @AuthenticationPrincipal CustomUserDetails userDetails
-    ) {
-        paymentService.cancelPayment(paymentId, userDetails.getEmail());
-
-        return ResponseEntity.ok().build();
-    }
-
-    @Operation(
             summary = "결제 내역 조회",
             description = "결제 ID를 통해 결제된 상세 내역을 조회합니다."
     )
