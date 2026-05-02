@@ -354,7 +354,7 @@ refreshTokenRepository.findByUserId(user.getId())
 <h3> 4. 리프레쉬 토큰 api 구현 </h3>
 
 ```java
-@PostMapping("/reissue")
+@PostMapping(/reissue)
 public ApiResponse<LoginResponse> reissue(@RequestBody ReissueRequest request) {
 return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, userService.reissue(request));
 }
@@ -485,7 +485,7 @@ return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, userService.reissue(request));
         - 이를 해결하기 위해선 결국엔 `@Transactional`하고 `Synchronized`를 분리하여 락의 범위를 넓혀야한다.
 
         ```java
-          @Service("orderServiceSynchronized")                                                                  
+          @Service(orderServiceSynchronized)                                                                  
           @RequiredArgsConstructor                                                                              
           public class OrderServiceSynchronized implements OrderService {                                       
                                                                                                                 
@@ -530,7 +530,7 @@ return ApiResponse.ok(SuccessCode.SELECT_SUCCESS, userService.reissue(request));
 
 #### 설명
 
-- "데이터 충돌이 무조건 발생할 것이다"라고 비관적으로 가정하고, 데이터베이스가 제공하는 실제 물리적 자물쇠를 걸어버리는 방식이다.
+- 데이터 충돌이 무조건 발생할 것이다라고 비관적으로 가정하고, 데이터베이스가 제공하는 실제 물리적 자물쇠를 걸어버리는 방식이다.
 - SQL 쿼리에 `SELECT ... FOR UPDATE` 구문을 사용하여, 한 트랜잭션이 데이터를 읽는 순간부터 수정하고 커밋할 때까지 다른 모든 트랜잭션의 접근을 차단하고 대기열에 세운다.
 
 - `@Lock(LockModeType.PESSIMISTIC_WRITE)` 어노테이션으로 구현할 수 있다.
@@ -552,8 +552,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     List<Inventory> findAllByStore_Id(Long storeId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT i FROM Inventory i WHERE i.id = :id")
-    Optional<Inventory> findByIdWithPessimisticLock(@Param("id") Long id);
+    @Query(SELECT i FROM Inventory i WHERE i.id = :id)
+    Optional<Inventory> findByIdWithPessimisticLock(@Param(id) Long id);
 }
 ```
 
@@ -595,7 +595,7 @@ private List<Inventory> validateAndDecreaseStock(...) {
 
 #### 설명
 
-- "데이터 충돌이 거의 발생하지 않을 것이다"라고 낙관적으로 가정하고, DB의 물리적 락을 사용하지 않는 애플리케이션 레벨의 논리적 제어 방식이다.
+- 데이터 충돌이 거의 발생하지 않을 것이다라고 낙관적으로 가정하고, DB의 물리적 락을 사용하지 않는 애플리케이션 레벨의 논리적 제어 방식이다.
 - 테이블에 `version` (또는 `timestamp`) 컬럼을 추가하여 동시성을 제어한다.
 - 데이터를 수정할 때 자신이 처음 읽었던 버전과 현재 DB의 버전을 비교(`WHERE version = ?`)하여, 버전이 일치할 때만 수정을 진행하고 버전을 +1 올린다. 만약 버전이 다르면 누군가 먼저 수정한 것이므로 업데이트가 실패한다.
 
@@ -619,8 +619,8 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
     ...
 
     @Lock(LockModeType.OPTIMISTIC)
-    @Query("SELECT i FROM Inventory i WHERE i.id = :id")
-    Optional<Inventory> findByIdWithOptimisticLock(@Param("id") Long id);
+    @Query(SELECT i FROM Inventory i WHERE i.id = :id)
+    Optional<Inventory> findByIdWithOptimisticLock(@Param(id) Long id);
 }
 ```
 
@@ -631,7 +631,7 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long> {
 
 
 ```java
-@Service("orderServiceOptimistic")
+@Service(orderServiceOptimistic)
 @RequiredArgsConstructor
 public class OrderServiceOptimistic implements OrderService {
 
@@ -742,24 +742,24 @@ public class OrderServiceOptimisticInner implements OrderService {
 @Configuration
 public class DataSourceConfig {
 
-    @Value("${spring.datasource.url}")
+    @Value(${spring.datasource.url})
     private String url;
 
-    @Value("${spring.datasource.username}")
+    @Value(${spring.datasource.username})
     private String username;
 
-    @Value("${spring.datasource.password}")
+    @Value(${spring.datasource.password})
     private String password;
 
     @Bean
     @Primary
-    @ConfigurationProperties(prefix = "spring.datasource.main.hikari")
+    @ConfigurationProperties(prefix = spring.datasource.main.hikari)
     public HikariConfig mainHikariConfig() {
         return new HikariConfig();
     }
 
     @Bean
-    @ConfigurationProperties(prefix = "spring.datasource.lock.hikari")
+    @ConfigurationProperties(prefix = spring.datasource.lock.hikari)
     public HikariConfig lockHikariConfig() {
         return new HikariConfig();
     }
@@ -771,7 +771,7 @@ public class DataSourceConfig {
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
-        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setDriverClassName(com.mysql.cj.jdbc.Driver);
         return new HikariDataSource(config);
     }
 
@@ -781,7 +781,7 @@ public class DataSourceConfig {
         config.setJdbcUrl(url);
         config.setUsername(username);
         config.setPassword(password);
-        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setDriverClassName(com.mysql.cj.jdbc.Driver);
         return new HikariDataSource(config);
     }
 }
@@ -797,7 +797,7 @@ public class DataSourceConfig {
 - `releaseLock`의 경우에도 `result` 반환이 가능하나, 굳이?
 
 ```java
-@Service("orderServiceNamed")
+@Service(orderServiceNamed)
 @RequiredArgsConstructor
 public class OrderServiceNamed implements OrderService {
 
@@ -808,7 +808,7 @@ public class OrderServiceNamed implements OrderService {
 
     @Override
     public OrderResponse createOrder(Long userId, Long storeId, OrderRequest request) {
-        String key = "store:" + storeId;
+        String key = store: + storeId;
 
         boolean locked = lockRepository.getLock(key, LOCK_TIMEOUT_SECONDS);
         if (!locked) {
@@ -931,5 +931,356 @@ public class OrderServiceNamedInner implements OrderService {
 ## 5. 좌석 결제 취소
 
 ![img_15.png](image/img_15.png)
+
+</details>
+
+
+<details>
+<summary> <h2> 리팩토링 정리 </h2> </summary>
+
+## 리팩토링 목적
+
+- 서비스 계층에 몰려 있던 생성 규칙과 상태 변경 규칙을 도메인 엔티티로 이동
+- 외부 결제 API 호출 흐름에서 실패 원인을 추적하기 쉽도록 로그 추가
+- 반복되거나 불필요하게 복잡한 흐름을 간결하게 정리
+- 동시성 제어와 결제 보정 로직은 유지하면서, 변경 범위를 과하게 넓히지 않기
+
+---
+
+## 1. User 
+
+### 문제
+
+`UserService`가 로그인, 회원가입, 토큰 재발급 흐름뿐 아니라 Refresh Token 생성, 저장, 갱신, 삭제까지 직접 처리하고 있었다.
+
+또한 회원가입 시 `User` 생성 규칙이 서비스에 직접 드러나 있었다.
+
+```java
+User user = User.builder()
+        .email(request.getEmail())
+        .nickname(request.getEmail())
+        .password(passwordEncoder.encode(request.getPassword()))
+        .role(Role.ROLE_USER)
+        .build();
+```
+
+서비스가 회원가입 흐름뿐 아니라 User를 어떤 기본값으로 생성할지까지 알고 있는 구조였다.
+
+### 개선
+
+Refresh Token 관련 책임을 `RefreshTokenService`로 분리했다.
+
+- `issue(userId)` : Refresh Token 생성 및 저장/회전
+- `getValidToken(token)` : Refresh Token 조회 및 만료 검증
+- `deleteByUserId(userId)` : 로그아웃 시 Refresh Token 삭제
+
+또한 `User.create()` 정적 팩토리 메서드를 추가하여 회원 생성 규칙을 `User` 엔티티 안으로 이동했다.
+
+```java
+public static User create(String email, String encodedPassword) {
+    return User.builder()
+            .email(email)
+            .nickname(email)
+            .password(encodedPassword)
+            .role(Role.ROLE_USER)
+            .build();
+}
+```
+
+---
+
+## 2. Favorite 토글 로직 정리
+
+### 문제
+
+찜 토글 로직에서 `existsBy...`로 존재 여부를 확인한 뒤, 다시 `deleteBy...`를 호출하는 구조였다.
+
+```java
+if (movieFavoriteRepository.existsByUserAndMovie(user, movie)) {
+    movieFavoriteRepository.deleteByUserAndMovie(user, movie);
+    return FavoriteResponse.of(false);
+}
+```
+
+또한 `else` 블록으로 인해 정상 흐름의 들여쓰기가 깊어졌다.
+
+### 개선
+
+`findByUserAndMovie`, `findByUserAndTheater`로 찜 엔티티를 직접 조회한 뒤, 존재하면 해당 엔티티를 삭제하도록 변경했다.
+
+```java
+Optional<MovieFavorite> favorite = movieFavoriteRepository.findByUserAndMovie(user, movie);
+
+if (favorite.isPresent()) {
+    movieFavoriteRepository.delete(favorite.get());
+    return FavoriteResponse.of(false);
+}
+
+movieFavoriteRepository.save(MovieFavorite.create(user, movie));
+return FavoriteResponse.of(true);
+```
+
+또한 `MovieFavorite.create()`, `TheaterFavorite.create()` 정적 팩토리 메서드를 추가해 생성 책임을 엔티티로 이동했다.
+
+---
+
+## 3. Schedule 조회 N+1 방지
+
+### 문제
+
+스케줄 목록 조회 후 `ScheduleResponse.from()`에서 Lazy 연관관계에 접근하고 있었다.
+
+```java
+.theaterName(schedule.getScreen().getTheater().getName())
+.screenName(schedule.getScreen().getName())
+.movieName(schedule.getMovie().getName())
+```
+
+`Schedule` 목록을 조회한 뒤 각 row마다 `movie`, `screen`, `theater`를 Lazy Loading하면 N+1 문제가 발생할 수 있다.
+
+### 개선
+
+스케줄 목록 조회용 Fetch Join 쿼리를 추가했다.
+
+```java
+@Query(
+        SELECT s
+        FROM Schedule s
+        JOIN FETCH s.movie
+        JOIN FETCH s.screen sc
+        JOIN FETCH sc.theater
+        WHERE s.movie.id = :movieId
+          AND sc.theater.id = :theaterId
+        )
+List<Schedule> findAllByMovieIdAndScreenTheaterId(Long movieId, Long theaterId);
+```
+
+또한 영화/영화관 존재 검증은 실제 엔티티를 사용하지 않으므로 `findById()` 대신 `existsById()`로 가볍게 처리했다.
+---
+
+## 4. Reservation 생성 및 상태 전이 책임 이동
+
+### 문제
+
+예약 생성 시 `ReservationServiceNamedInner`가 예약의 기본 상태, 예약 시간, 결제 ID 등 생성 규칙을 직접 알고 있었다.
+
+```java
+Reservation reservation = Reservation.builder()
+        .reservedAt(LocalDateTime.now())
+        .totalPrice(totalPrice)
+        .status(ReservationStatus.PENDING)
+        .paymentId(paymentId)
+        .user(user)
+        .schedule(schedule)
+        .build();
+```
+
+또한 예약 확정/취소 상태 변경이 단순 setter처럼 동작할 수 있어, 상태 전이 규칙이 서비스와 엔티티에 흩어질 가능성이 있었다.
+
+### 개선
+
+예약 생성 책임을 `Reservation.createPending()`으로 이동했다.
+
+```java
+public static Reservation createPending(User user, Schedule schedule, int totalPrice, String paymentId) {
+    return Reservation.builder()
+            .reservedAt(LocalDateTime.now())
+            .totalPrice(totalPrice)
+            .status(ReservationStatus.PENDING)
+            .paymentId(paymentId)
+            .user(user)
+            .schedule(schedule)
+            .build();
+}
+```
+
+좌석 생성 책임도 `ReservationSeat.create()`로 이동했다.
+
+```java
+public static ReservationSeat create(Reservation reservation, Schedule schedule, String seatName) {
+    return ReservationSeat.builder()
+            .reservation(reservation)
+            .schedule(schedule)
+            .seatRow(seatName.charAt(0))
+            .seatCol(Integer.parseInt(seatName.substring(1)))
+            .build();
+}
+```
+
+예약 상태 전이는 `Reservation` 엔티티가 직접 검증하고 변경하도록 정리했다.
+
+```java
+public void confirm() {
+    if (status != ReservationStatus.PENDING) {
+        throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+    }
+
+    this.status = ReservationStatus.RESERVED;
+}
+
+public void cancelPending() {
+    if (status != ReservationStatus.PENDING) {
+        throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+    }
+
+    this.status = ReservationStatus.CANCELED;
+}
+
+public void cancelReserved() {
+    if (status == ReservationStatus.CANCELED) {
+        throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+    }
+
+    if (status != ReservationStatus.RESERVED) {
+        throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+    }
+
+    this.status = ReservationStatus.CANCELED;
+}
+```
+
+직접 취소 API에서는 PG 취소를 호출하기 전에 `validateCancelable()`로 취소 가능한 예약인지 먼저 검증하도록 했다.
+
+---
+
+## 5. 결제 실패 보정 및 Payment 로그 추가
+
+### 문제
+
+외부 PG 결제 요청은 실제로 성공했지만, 네트워크 이슈나 timeout으로 서버가 응답을 받지 못할 수 있다.
+
+이때 단순히 예외만 보고 예약을 취소하면 다음과 같은 문제가 생길 수 있다.
+
+- 사용자의 돈은 빠져나감
+- 서버 DB는 예약 취소 상태가 됨
+- 사용자는 결제 실패 응답을 받음
+
+또한 외부 API 호출 실패 원인을 추적할 로그가 부족했다.
+
+### 개선
+
+`confirmReservation()`에서 결제 API 호출 실패 시 바로 실패 처리하지 않고, `paymentId`로 결제 상태를 다시 조회하도록 했다.
+
+```java
+try {
+    paymentService.pay(pending.paymentId(), pending.orderName(), pending.totalPrice());
+} catch (Exception e) {
+    PaymentResponse paymentResponse = paymentService.find(pending.paymentId());
+
+    if (paymentResponse.getPaymentStatus() == PaymentStatus.PAID) {
+        return inner.confirmReservation(pending.reservationId());
+    }
+
+    inner.cancelPendingReservation(userId, pending.reservationId());
+    throw new CustomException(ErrorCode.PAYMENT_FAILED);
+}
+```
+
+`PaymentService`에는 결제 요청, 취소 요청, 결제 조회에 대해 로그를 추가했다.
+
+로그에는 `paymentId`, `status`, `elapsedMs`, 금액 정도만 추가했다.
+
+---
+
+## 6. Store 주문 생성 및 취소 책임 정리
+
+### 문제
+
+`OrderServicePessimistic`에서 주문과 주문 상품 생성 규칙을 직접 알고 있었다.
+
+```java
+Order order = Order.builder()
+        .paymentId(paymentId)
+        .orderStatus(OrderStatus.PAID)
+        .totalPrice(totalPrice)
+        .user(user)
+        .store(store)
+        .build();
+```
+
+또한 재고 차감 시 데드락 방지를 위해 요청 item을 정렬하면서, `request.getItems()` 원본 리스트를 직접 변경하고 있었다.
+
+```java
+items.sort(Comparator.comparing(OrderItemRequest::getInventoryId));
+```
+
+### 개선
+
+주문 생성 규칙을 `Order.createPaid()`로 이동했다.
+
+```java
+public static Order createPaid(User user, Store store, String paymentId, int totalPrice) {
+    return Order.builder()
+            .paymentId(paymentId)
+            .orderStatus(OrderStatus.PAID)
+            .totalPrice(totalPrice)
+            .user(user)
+            .store(store)
+            .build();
+}
+```
+
+주문 상품 생성 규칙도 `OrderItem.create()`로 이동했다.
+
+```java
+public static OrderItem create(Order order, Inventory inventory, int quantity) {
+    return OrderItem.builder()
+            .quantity(quantity)
+            .unitPrice(inventory.getMenu().getPrice())
+            .order(order)
+            .inventory(inventory)
+            .build();
+}
+```
+
+요청 item 정렬은 원본 리스트를 변경하지 않고 새 리스트를 만들어 사용하도록 변경했다.
+
+```java
+private List<OrderRequest.OrderItemRequest> sortItems(List<OrderRequest.OrderItemRequest> items) {
+    return items.stream()
+            .sorted(Comparator.comparing(OrderRequest.OrderItemRequest::getInventoryId))
+            .toList();
+}
+```
+
+주문 취소 상태 전이는 `Order.cancel()`로 이동했다.
+
+```java
+public void cancel() {
+    if (orderStatus != OrderStatus.PAID) {
+        throw new CustomException(ErrorCode.ALREADY_CANCELED_ORDER);
+    }
+
+    this.orderStatus = OrderStatus.CANCELED;
+}
+```
+
+---
+
+</details>
+
+<details>
+<summary> <h2> Docker & CI/CD </h2> </summary>
+
+![img_16.png](image/img_16.png)
+
+![img_17.png](image/img_17.png)
+
+![img_18.png](image/img_18.png)
+
+## 배포 과정
+
+1. **CI/CD**: GitHub Actions를 활용해 테스트, 빌드, DockerHub 이미지 푸시, EC2 배포까지 자동화했다.
+2. **환경변수**: DB 정보, JWT Secret, 결제 Secret Key는 코드에 직접 작성하지 않고 `.env` 파일로 분리했다.
+3. **테스트 환경**: CI에서는 `test` profile과 H2 DB를 사용해 실제 운영 DB에 의존하지 않고 테스트가 실행되도록 했다.
+4. **배포 환경**: EC2에서는 DockerHub의 최신 이미지를 pull 받은 뒤, 기존 컨테이너를 교체하는 방식으로 배포했다.
+
+## 문제 상황
+
+처음에는 로컬 Mac 환경에서 Docker 이미지를 빌드한 뒤 EC2에서 실행하려고 했는데, Mac과 EC2의 CPU 아키텍처 차이로 이미지 호환 문제가 발생했다.
+
+Mac은 Apple Silicon 환경이라 기본적으로 `arm64` 이미지가 빌드될 수 있고, EC2는 일반적으로 `linux/amd64` 환경에서 실행되기 때문에 컨테이너가 정상 실행되지 않았다.
+
+이를 해결하기 위해 Docker 이미지를 빌드할 때 EC2 환경에 맞춰 `linux/amd64` 플랫폼을 명시했다.
 
 </details>
