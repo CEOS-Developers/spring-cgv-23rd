@@ -2,6 +2,7 @@ package com.ceos23.spring_boot.controller.reservation.controller;
 
 import com.ceos23.spring_boot.controller.payment.dto.PaymentCreateRequest;
 import com.ceos23.spring_boot.controller.payment.dto.PaymentResponse;
+import com.ceos23.spring_boot.controller.payment.dto.SeatReserveRequest;
 import com.ceos23.spring_boot.controller.reservation.dto.ReservationCancelRequest;
 import com.ceos23.spring_boot.controller.reservation.dto.ReservationCreateRequest;
 import com.ceos23.spring_boot.controller.reservation.dto.ReservationResponse;
@@ -25,7 +26,19 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ReservationController {
     private final ReservationService reservationService;
+    private final ReservationLockFacade reservationLockFacade;
 
+    @Operation(summary = "좌석 선점 (5분 유지)", description = "결제 전 좌석을 5분간 PENDING 상태로 점유합니다.")
+    @PostMapping("/api/reservations/seats")
+    public ResponseEntity<ReservationInfo> reserveSeats(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody SeatReserveRequest request
+    ) {
+        ReservationInfo info = reservationLockFacade.createReservationWithLock(
+                request.toCommand(userDetails.getEmail())
+        );
+        return ResponseEntity.ok(info);
+    }
 
     @Operation(
             summary = "결제 및 예매",
@@ -34,10 +47,14 @@ public class ReservationController {
     @PostMapping("/api/reservations/instant")
     public ResponseEntity<PaymentResponse> requestInstantPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable
+            @Parameter(description = "결제 고유 ID (예매 번호)", required = true, example = "20240520_a1b2c3d4")
+            String paymentId,
             @Valid @RequestBody PaymentCreateRequest request
     ) {
         PaymentDataInfo info = reservationService.requestInstantPayment(
-                request.toCommand(userDetails.getEmail()),
+                paymentId,
+                userDetails.getEmail(),
                 request.toFrontendRequest()
         );
 

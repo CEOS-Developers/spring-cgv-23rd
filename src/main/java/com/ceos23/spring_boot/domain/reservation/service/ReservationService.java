@@ -47,11 +47,15 @@ public class ReservationService {
     private final PaymentService paymentService;
 
 
-    public PaymentDataInfo requestInstantPayment(ReservationCreateCommand command, FrontendPaymentRequest request) {
-        ReservationInfo info = reservationLockFacade.createReservationWithLock(command);
-        String paymentId = info.paymentId();
+    public PaymentDataInfo requestInstantPayment(String paymentId, String email, FrontendPaymentRequest request) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        if (!info.totalPrice().equals(request.totalPayAmount())) {
+        verifyReservationOwner(reservation, email);
+
+        reservation.validatePendingStatus();
+
+        if (!reservation.getTotalPrice().equals(request.totalPayAmount())) {
             cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
         }
@@ -59,7 +63,7 @@ public class ReservationService {
         PaymentDataInfo paymentDataInfo;
 
         try {
-            paymentDataInfo = paymentService.requestInstantPayment(paymentId, info.orderName(), info.totalPrice());
+            paymentDataInfo = paymentService.requestInstantPayment(paymentId, reservation.getOrderName(), reservation.getTotalPrice());
         } catch (Exception e) {
             cancelReservation(paymentId);
             throw e;
@@ -74,6 +78,7 @@ public class ReservationService {
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
         }
     }
+
 
     public void cancelPayment(String paymentId, String email) {
         Reservation reservation = reservationRepository.findByPaymentId(paymentId)
@@ -104,11 +109,11 @@ public class ReservationService {
 
         validateSeatNotReserved(schedule.getId(), command.seatIds());
 
-        Reservation reservation = Reservation.create(user, schedule, seats);
+        String orderName = getOrderName(schedule, seats);
+
+        Reservation reservation = Reservation.create(user, schedule, seats, orderName);
 
         reservationRepository.save(reservation);
-
-        String orderName = getOrderName(schedule, seats);
 
         return ReservationInfo.from(reservation, reservation.getReservedSeats(), orderName);
     }
