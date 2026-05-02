@@ -336,3 +336,23 @@
 - 함수형 인터페이스 (Fluent API): 빌더 패턴과 유사한 체이닝 방식을 통해 가독성이 좋음
 - 동기식 처리 (Synchronous): 결제와 같이 순차적 실행과 결과 확인이 중요한 비즈니스 로직에 적합
 - 선언적 에러 핸들링: `.onStatus()` 메서드를 통해 HTTP 상태 코드별 예외 처리를 직관적으로 구현 가능
+
+# Deploy
+### 1. 수동 배포
+<img width="2386" height="138" alt="Image" src="https://github.com/user-attachments/assets/a7304395-7032-489d-9d4f-8509ce39e3b1" />
+
+### 2. 자동 배포(CI/CD -> Github Actions)
+<img width="2124" height="918" alt="Image" src="https://github.com/user-attachments/assets/0b083ead-2c6c-437a-aac3-9b456cac0699" />
+
+### 3. Swagger 확인 
+<img width="994" height="828" alt="Image" src="https://github.com/user-attachments/assets/5695f4cc-6e80-4b0c-a749-08a0c781ea97" />
+
+### 배포 과정
+1. CI/CD: GitHub Actions 도입 -> 코드 push 시 빌드, Docker Hub 이미지 업로드, EC2 자동 배포 파이프라인 구축
+
+2. 컨테이너 기반 배포: Docker를 통해 애플리케이션 컨테이너화, 외부 80 포트를 내부 8080 포트로 매핑
+
+3. 인프라 구성: AWS EC2(애플리케이션 & Redis), AWS RDS(MySQL) 구조로 환경을 분리 -> 시스템 안정성 확보
+
+### 문제 상황
+1. 빌드 파일 누락: .gitignore 설정으로 인해 gradle-wrapper.jar 파일이 저장소에 업로드되지 않아 빌드에 실패 -> git add -f 명령어로 필수 파일을 강제 포함시켜 해결

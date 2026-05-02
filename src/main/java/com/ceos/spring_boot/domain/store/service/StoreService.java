@@ -23,11 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class StoreService {
 
     private final OrderRepository orderRepository;
@@ -40,7 +41,7 @@ public class StoreService {
     private final RedissonClient redissonClient;
     private final TransactionTemplate transactionTemplate;
 
-    public OrderResponse createOrder(Long userId, OrderRequest request) { // N+1 문제 해결해야한다..
+    public OrderResponse createOrder(Long userId, OrderRequest request) {
 
         List<String> lockKeys = request.orderItems().stream()
                 .map(item -> "lock:stock:" + request.cinemaId() + ":" + item.productId())
@@ -55,27 +56,44 @@ public class StoreService {
 
         try {
             // 락 획득 시도 (최대 5초 대기, 3초 유지)
-            boolean isLocked = multiLock.tryLock(5, 3, TimeUnit.SECONDS);
+            boolean isLocked = multiLock.tryLock(5, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException(ErrorCode.CONFLICT_ERROR); // 또는 적절한 에러코드
             }
 
             // 트랜잭션 내에서 비즈니스 로직 수행
             return transactionTemplate.execute(status -> {
-                // 데이터 조회가 필요 없는 객체는 프록시로 가져옴
-                User user = userRepository.getReferenceById(userId);
-                Cinema cinema = cinemaRepository.getReferenceById(request.cinemaId());
 
-                Order order = Order.create(user, cinema);
+                // 상품 ID 리스트 추출
+                List<Long> productIds = request.orderItems().stream()
+                        .map(OrderItemRequest::productId)
+                        .toList();
+
+                // 배치 조회
+                Map<Long, Product> productMap = productRepository.findAllById(productIds).stream()
+                        .collect(Collectors.toMap(Product::getId, p -> p));
+
+                Map<Long, Stock> stockMap = stockRepository.findAllByCinemaIdAndProductIdIn(request.cinemaId(), productIds).stream()
+                        .collect(Collectors.toMap(s -> s.getProduct().getId(), s -> s));
+
+                // 주문 엔티티 생성
+                Order order = Order.create(
+                        userRepository.getReferenceById(userId),
+                        cinemaRepository.getReferenceById(request.cinemaId())
+                );
 
                 int totalPrice = 0;
                 for (OrderItemRequest itemRequest : request.orderItems()) {
 
-                    Product product = productRepository.findById(itemRequest.productId())
-                            .orElseThrow(() -> new BusinessException(ErrorCode.PRODUCT_NOT_FOUND_ERROR));
+                    Product product = productMap.get(itemRequest.productId());
+                    Stock stock = stockMap.get(itemRequest.productId());
 
-                    Stock stock = stockRepository.findByCinemaIdAndProductId(cinema.getId(), product.getId())
-                            .orElseThrow(() -> new BusinessException(ErrorCode.STOCK_NOT_FOUND_ERROR));
+                    if (product == null) {
+                        throw new BusinessException(ErrorCode.PRODUCT_NOT_FOUND_ERROR);
+                    }
+                    if (stock == null) {
+                        throw new BusinessException(ErrorCode.STOCK_NOT_FOUND_ERROR);
+                    }
 
                     if (stock.getQuantity() < itemRequest.count()) {
                         throw new BusinessException(ErrorCode.OUT_OF_STOCK_ERROR);
@@ -100,6 +118,14 @@ public class StoreService {
                 multiLock.unlock();
             }
         }
+    }
+
+    @Transactional
+    public void completeOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND_ERROR));
+
+        order.complete();
     }
 
     @Transactional(readOnly = true)
@@ -136,6 +162,7 @@ public class StoreService {
             stock.increaseQuantity(item.getCount()); // Stock 엔티티에 increaseQuantity 구현 필요
         }
 
-        order.cancel(); // Order 엔티티에 상태를 CANCELLED로 바꾸는 메서드 추가 필요
+        // 주문 상태를 취소로 변경
+        order.cancel();
     }
 }

@@ -1,5 +1,6 @@
 package com.ceos.spring_boot.domain.reservation.entity;
 
+import com.ceos.spring_boot.domain.payment.entity.PaymentStatus;
 import com.ceos.spring_boot.domain.schedule.entity.Schedule;
 import com.ceos.spring_boot.domain.user.entity.User;
 import com.ceos.spring_boot.global.codes.ErrorCode;
@@ -43,6 +44,7 @@ public class Reservation extends BaseEntity {
     // 한 번의 예매로 여러 좌석을 선택할 수 있으므로 OneToMany 관계
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL)
     private List<ReservationSeat> reservationSeats = new ArrayList<>();
+
 
     public static Reservation create(User user, Schedule schedule) {
         return Reservation.builder()

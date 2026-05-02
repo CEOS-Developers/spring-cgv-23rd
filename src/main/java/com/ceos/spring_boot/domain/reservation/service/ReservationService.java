@@ -37,7 +37,6 @@ public class ReservationService {
     private final ReservationSeatRepository reservationSeatRepository;
     private final ScheduleRepository scheduleRepository;
     private final UserRepository userRepository;
-    private final SeatRepository seatRepository;
     private final RedissonClient redissonClient;
     private final TransactionTemplate transactionTemplate;
 
@@ -55,7 +54,7 @@ public class ReservationService {
 
         try {
             // 분산 락 획득 시도
-            boolean isLocked = multiLock.tryLock(5, 2, TimeUnit.SECONDS);
+            boolean isLocked = multiLock.tryLock(5, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
             }
@@ -65,23 +64,27 @@ public class ReservationService {
                 try {
                     // 사용자(Proxy) 및 일정 조회
                     User user = userRepository.getReferenceById(userId);
-                    Schedule schedule = scheduleRepository.findById(request.scheduleId())
+                    Schedule schedule = scheduleRepository.findByIdWithDetails(request.scheduleId())
                             .orElseThrow(() -> new BusinessException(ErrorCode.SCHEDULE_NOT_FOUND_ERROR));
 
                     ScreenType screenType = schedule.getScreen().getScreenType();
 
                     // 좌석 조회 및 검증
-                    List<Seat> seats = request.seats().stream()
-                            .map(req -> {
-                                Seat seat = seatRepository.findByScreenTypeAndSeatRowAndSeatCol(
-                                                screenType, req.row().toUpperCase(), req.column())
-                                        .orElseThrow(() -> new BusinessException(ErrorCode.SEAT_NOT_FOUND_ERROR));
+                    List<String> seatIdentifiers = request.seats().stream()
+                            .map(req -> req.row().toUpperCase() + "-" + req.column())
+                            .toList();
 
-                                if (reservationSeatRepository.existsByScheduleIdAndSeatId(schedule.getId(), seat.getId())) {
-                                    throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
-                                }
-                                return seat;
-                            }).toList();
+                    List<Seat> seats = reservationSeatRepository.findByScreenTypeAndSeatIdentifiers(screenType, seatIdentifiers);
+
+                    if (seats.size() != request.seats().size()) {
+                        throw new BusinessException(ErrorCode.SEAT_NOT_FOUND_ERROR);
+                    }
+
+                    List<Long> seatIds = seats.stream().map(Seat::getId).toList();
+
+                    if (reservationSeatRepository.existsByScheduleIdAndSeatIdIn(schedule.getId(), seatIds)) {
+                        throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
+                    }
 
                     // 예매 생성 및 저장
                     Reservation reservation = Reservation.create(user, schedule);
@@ -113,6 +116,16 @@ public class ReservationService {
     }
 
     @Transactional
+    public void confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND_ERROR));
+
+        reservation.confirm();
+
+        log.info("[Reservation Confirmed] 영화 예매 확정 완료 - 예약 ID: {}", reservationId);
+    }
+
+    @Transactional
     public void cancelReservation(Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND_ERROR));
@@ -123,5 +136,15 @@ public class ReservationService {
 
         reservation.cancel();
         reservationSeatRepository.deleteByReservationId(reservationId);
+    }
+
+    @Transactional
+    public void rollbackPreOccupiedReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND_ERROR));
+
+        reservation.cancel();
+        reservationSeatRepository.deleteByReservationId(reservationId);
+        log.info("[Rollback] 결제 실패로 인한 좌석 선점 해제 완료 - 예약 ID: {}", reservationId);
     }
 }

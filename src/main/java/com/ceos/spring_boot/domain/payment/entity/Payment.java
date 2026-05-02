@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(name = "uk_payment_payment_id", columnNames = {"payment_id"})
         }
 )
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseEntity {
 
     @Id
@@ -47,6 +47,16 @@ public class Payment extends BaseEntity {
 
     @Column(name = "paid_at", nullable = true, updatable = false)
     protected LocalDateTime paidAt;
+
+    public static Payment createPayment(String paymentId, Integer amount, Long targetId, PaymentCategory category) {
+        return Payment.builder()
+                .paymentId(paymentId)
+                .amount(amount)
+                .status(PaymentStatus.READY)
+                .targetId(targetId)
+                .category(category)
+                .build();
+    }
 
 
     public void markAsPaid() {
