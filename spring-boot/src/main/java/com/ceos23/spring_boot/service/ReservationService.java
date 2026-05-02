@@ -57,7 +57,7 @@ public class ReservationService {
 
         if (reservation.isExpired(LocalDateTime.now())) {
             reservationTransactionService.deleteReservation(reservationId);
-            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
+            throw new CustomException(ErrorCode.RESERVATION_EXPIRED);
         }
 
         if (reservation.isPaid()) {

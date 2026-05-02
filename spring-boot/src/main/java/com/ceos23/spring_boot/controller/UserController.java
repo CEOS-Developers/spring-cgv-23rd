@@ -3,10 +3,10 @@ package com.ceos23.spring_boot.controller;
 import com.ceos23.spring_boot.dto.MyInfoResponse;
 import com.ceos23.spring_boot.global.response.SuccessResponse;
 import com.ceos23.spring_boot.service.UserService;
+import com.ceos23.spring_boot.jwt.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,9 +20,9 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<SuccessResponse<MyInfoResponse>> getMyInfo(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long userId = Long.parseLong(userDetails.getUsername());
+        Long userId = userDetails.getUserId();
         MyInfoResponse response = userService.getMyInfo(userId);
         return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));
     }
