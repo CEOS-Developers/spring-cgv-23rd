@@ -19,7 +19,11 @@ public record PaymentCreateRequest(
 
         @Schema(description = "사용자가 확인한 예상 결제 금액 (위변조 검증용)", example = "30000")
         @NotNull(message = "예상 결제 금액은 필수입니다.")
-        Integer expectedAmount
+        Integer expectedAmount,
+
+        @Schema(description = "결제 고유 ID (예매 번호)", example = "20240520_a1b2c3d4")
+        @NotEmpty(message = "결제 ID는 필수입니다.")
+        String paymentId
 ) {
     public ReservationCreateCommand toCommand(String email) {
         return new ReservationCreateCommand(email, scheduleId, seatIds);

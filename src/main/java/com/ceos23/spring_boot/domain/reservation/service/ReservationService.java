@@ -43,7 +43,6 @@ public class ReservationService {
     private final SeatRepository seatRepository;
     private final ReservationRepository reservationRepository;
     private final ReservedSeatRepository reservedSeatRepository;
-    private final ReservationLockFacade reservationLockFacade;
     private final PaymentService paymentService;
 
 

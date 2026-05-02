@@ -47,13 +47,10 @@ public class ReservationController {
     @PostMapping("/api/reservations/instant")
     public ResponseEntity<PaymentResponse> requestInstantPayment(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable
-            @Parameter(description = "결제 고유 ID (예매 번호)", required = true, example = "20240520_a1b2c3d4")
-            String paymentId,
             @Valid @RequestBody PaymentCreateRequest request
     ) {
         PaymentDataInfo info = reservationService.requestInstantPayment(
-                paymentId,
+                request.paymentId(),
                 userDetails.getEmail(),
                 request.toFrontendRequest()
         );
