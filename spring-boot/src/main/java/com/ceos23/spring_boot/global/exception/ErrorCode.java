@@ -30,7 +30,13 @@ public enum ErrorCode {
 
     // 비즈니스 로직
     SEAT_ALREADY_RESERVED(400, "SEAT_ALREADY_RESERVED", "이미 예약된 좌석입니다"),
-    FAVORITE_THEATER_ALREADY_EXISTS(400, "FAVORITE_THEATER_ALREADY_EXISTS", "이미 찜한 영화관입니다");
+    FAVORITE_THEATER_ALREADY_EXISTS(400, "FAVORITE_THEATER_ALREADY_EXISTS", "이미 찜한 영화관입니다"),
+
+    // 외부 결제 API
+    PAYMENT_API_ERROR(500, "PAYMENT_API_ERROR", "결제 API 호출 중 오류가 발생했습니다"),
+    PAYMENT_BAD_REQUEST(400, "PAYMENT_BAD_REQUEST", "결제 요청이 올바르지 않습니다"),
+    PAYMENT_NOT_FOUND(404, "PAYMENT_NOT_FOUND", "결제 정보를 찾을 수 없습니다"),
+    PAYMENT_SERVER_ERROR(502, "PAYMENT_SERVER_ERROR", "외부 결제 서버 오류가 발생했습니다");
 
     private final int status;
     private final String code;

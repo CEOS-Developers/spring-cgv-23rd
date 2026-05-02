@@ -1,6 +1,6 @@
 package com.ceos23.spring_boot.infra.payment;
 
-import com.ceos23.spring_boot.infra.payment.client.PaymentFeignClient;
+import com.ceos23.spring_boot.infra.payment.client.PaymentRestClient;
 import com.ceos23.spring_boot.infra.payment.dto.PaymentAuthData;
 import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
 import com.ceos23.spring_boot.infra.payment.dto.PaymentInstantRequest;
@@ -14,10 +14,10 @@ public class PaymentGatewayImpl implements PaymentGateway {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String CURRENCY_KRW = "KRW";
 
-    private final PaymentFeignClient paymentFeignClient;
+    private final PaymentRestClient paymentRestClient;
     private final PaymentProperties paymentProperties;
 
-    private String cachedApiSecretKey;
+    private volatile String cachedApiSecretKey;
 
     @Override
     public PaymentData pay(String paymentId, String orderName, Integer totalPayAmount, String customData) {
@@ -29,27 +29,27 @@ public class PaymentGatewayImpl implements PaymentGateway {
                 customData
         );
 
-        return paymentFeignClient.instantPayment(
+        return paymentRestClient.instantPayment(
                 authorization(),
                 paymentId,
                 request
-        ).getData();
+        ).data();
     }
 
     @Override
     public PaymentData cancel(String paymentId) {
-        return paymentFeignClient.cancelPayment(
+        return paymentRestClient.cancelPayment(
                 authorization(),
                 paymentId
-        ).getData();
+        ).data();
     }
 
     @Override
     public PaymentData getPayment(String paymentId) {
-        return paymentFeignClient.getPayment(
+        return paymentRestClient.getPayment(
                 authorization(),
                 paymentId
-        ).getData();
+        ).data();
     }
 
     private String authorization() {
@@ -58,11 +58,15 @@ public class PaymentGatewayImpl implements PaymentGateway {
 
     private String getApiSecretKey() {
         if (cachedApiSecretKey == null) {
-            PaymentAuthData authData = paymentFeignClient
-                    .getApiSecret(paymentProperties.getGithubId())
-                    .getData();
+            synchronized (this) {
+                if (cachedApiSecretKey == null) {
+                    PaymentAuthData authData = paymentRestClient
+                            .getApiSecret(paymentProperties.getGithubId())
+                            .data();
 
-            cachedApiSecretKey = authData.getApiSecretKey();
+                    cachedApiSecretKey = authData.apiSecretKey();
+                }
+            }
         }
 
         return cachedApiSecretKey;
