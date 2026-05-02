@@ -13,6 +13,63 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
 편하게 시작할 수 있도록 루트에 `.env.example` 파일을 추가했습니다.
 
+## 수동 배포 정리
+
+PDF 실습 흐름에 맞춰 수동 배포는 `bootJar -> docker build -> docker push -> EC2에서 docker compose up` 순서로 진행합니다.
+
+### 1. 로컬에서 jar 빌드
+
+```bash
+./gradlew clean bootJar
+```
+
+### 2. Docker 이미지 빌드
+
+```bash
+docker build -t <dockerhub-id>/spring-cgv-23rd:latest .
+```
+
+### 3. Docker Hub에 push
+
+```bash
+docker login
+docker push <dockerhub-id>/spring-cgv-23rd:latest
+```
+
+### 4. EC2에 배포 파일 준비
+
+EC2에는 아래 파일을 올립니다.
+
+- `docker-compose.yml`
+- `.env`
+
+`.env`는 `.env.example`을 복사해서 만들고, 특히 `APP_IMAGE`와 `DB_URL`을 EC2/RDS 환경에 맞게 수정합니다.
+
+```env
+APP_IMAGE=<dockerhub-id>/spring-cgv-23rd:latest
+APP_PORT=8080
+DB_URL=jdbc:mysql://<rds-endpoint>:3306/cgv_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+DB_USERNAME=<db-username>
+DB_PASSWORD=<db-password>
+JWT_SECRET=<base64-secret>
+```
+
+### 5. EC2에서 컨테이너 실행
+
+```bash
+docker login
+docker compose pull
+docker compose up -d
+docker ps
+```
+
+### 6. 실행 확인
+
+- `http://<ec2-public-ip>:8080/swagger-ui.html`
+- 또는 `curl http://<ec2-public-ip>:8080/swagger-ui.html`
+
+현재 프로젝트는 `docker-compose.yml` 기준으로 애플리케이션 컨테이너만 실행하고, 데이터베이스는 RDS 같은 외부 MySQL을 연결하는 방식을 기본으로 잡았습니다.
+
 ## 코드 리팩토링 정리
 
 리팩토링은 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 진행했습니다.

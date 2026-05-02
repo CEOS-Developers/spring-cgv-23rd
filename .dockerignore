@@ -1,0 +1,11 @@
+.git
+.gradle
+.idea
+.reference
+.vscode
+bin
+images
+src
+*.iml
+*.log
+.env
