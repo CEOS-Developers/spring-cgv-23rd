@@ -27,9 +27,11 @@ jobs:
           cache: 'gradle'
 
       - name: Grant execute permission for gradlew
+        working-directory: ./spring-boot
         run: chmod +x ./gradlew
 
       - name: Build Spring Boot jar
+        working-directory: ./spring-boot
         run: ./gradlew clean bootJar --no-daemon
 
       - name: Login to Docker Hub
@@ -39,6 +41,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
+        working-directory: ./spring-boot
         run: |
           docker build --platform linux/amd64 -t $IMAGE_NAME:$IMAGE_TAG .
           docker push $IMAGE_NAME:$IMAGE_TAG
