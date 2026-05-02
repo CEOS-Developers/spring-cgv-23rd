@@ -1,0 +1,18 @@
+services:
+  app:
+    image: ${DOCKER_USERNAME}/ceos-app:latest
+    container_name: ceos-app
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+    healthcheck:
+      test: [ "CMD", "curl", "-fs", "http://localhost:8080/actuator/health" ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
