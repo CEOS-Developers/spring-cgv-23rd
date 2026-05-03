@@ -57,17 +57,77 @@ jobs:
             shinae1023/ceos-app:${{ github.event.workflow_run.head_sha }}
 
       - name: Deploy to EC2
+        env:
+          IMAGE_TAG: shinae1023/ceos-app:${{ github.event.workflow_run.head_sha }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull shinae1023/ceos-app:latest
-            docker rm -f ceos-app || true
+            set -eu
+
+            IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            PREVIOUS_IMAGE="$(docker inspect ceos-app --format '{{.Config.Image}}' 2>/dev/null || true)"
+
+            docker pull "$IMAGE_TAG"
+            docker rm -f ceos-app-candidate || true
+
             docker run -d \
+              --name ceos-app-candidate \
+              -p 8081:8080 \
+              --env-file ~/.env \
+              --restart unless-stopped \
+              "$IMAGE_TAG"
+
+            for i in $(seq 1 15); do
+              if curl -fsS http://127.0.0.1:8081/health-check >/dev/null; then
+                break
+              fi
+              if [ "$i" -eq 15 ]; then
+                docker logs ceos-app-candidate || true
+                docker rm -f ceos-app-candidate || true
+                exit 1
+              fi
+              sleep 5
+            done
+
+            docker stop ceos-app || true
+            docker rm ceos-app || true
+
+            if docker run -d \
               --name ceos-app \
               -p 8080:8080 \
               --env-file ~/.env \
               --restart unless-stopped \
-              shinae1023/ceos-app:latest
+              "$IMAGE_TAG"; then
+              for i in $(seq 1 15); do
+                if curl -fsS http://127.0.0.1:8080/health-check >/dev/null; then
+                  docker rm -f ceos-app-candidate || true
+                  exit 0
+                fi
+                sleep 5
+              done
+            fi
+
+            docker logs ceos-app || true
+            docker rm -f ceos-app || true
+
+            if [ -n "$PREVIOUS_IMAGE" ]; then
+              docker run -d \
+                --name ceos-app \
+                -p 8080:8080 \
+                --env-file ~/.env \
+                --restart unless-stopped \
+                "$PREVIOUS_IMAGE"
+
+              for i in $(seq 1 15); do
+                if curl -fsS http://127.0.0.1:8080/health-check >/dev/null; then
+                  break
+                fi
+                sleep 5
+              done
+            fi
+
+            docker rm -f ceos-app-candidate || true
+            exit 1

@@ -2005,9 +2005,12 @@ sudo certbot renew --dry-run
 
 CI의 목적은 PR 또는 `main` 브랜치 변경 시 코드가 깨지지 않았는지 검증하는 것이다.
 
-- GitHub Actions에서 `./gradlew build` 실행
-- 테스트 포함 전체 빌드 통과 여부 확인
+- GitHub Actions에서 `./gradlew test` 실행
+- 유닛 테스트가 통과하면 `./gradlew build -x test` 실행
+- 테스트와 빌드가 모두 성공해야만 이후 단계 진행
 - 이 단계에서는 배포하지 않음
+
+추가로 GitHub Branch Protection에서 `CI` 워크플로를 required status check로 설정하면, `CI` 성공 전에는 `main` 브랜치로 merge할 수 없게 만들 수 있다.
 
 현재 워크플로 파일:
 
@@ -2022,8 +2025,10 @@ CD의 목적은 `main` 브랜치에 머지된 검증 완료 코드를 실제 서
 - Docker 이미지 생성
 - Docker Hub로 push
 - EC2에 SSH 접속
-- 최신 이미지 pull
-- 기존 컨테이너 종료 후 새 컨테이너 실행
+- 새 이미지를 후보 컨테이너로 먼저 실행
+- `/health-check` 응답이 정상인지 확인
+- 검증 성공 시에만 실제 서비스 컨테이너 교체
+- 교체 실패 시 직전 정상 이미지로 롤백
 
 현재 워크플로 파일:
 
@@ -2052,8 +2057,10 @@ CD의 목적은 `main` 브랜치에 머지된 검증 완료 코드를 실제 서
 
 - 개발 브랜치에서 `main`으로 PR 생성
 - `CI` 실행
-- `./gradlew build` 통과 여부 확인
+- `./gradlew test` 통과 여부 확인
+- `./gradlew build -x test` 통과 여부 확인
 - 실패 시 머지 전 수정
+- Branch Protection에 의해 `CI` 성공 전에는 merge 불가
 
 #### 2) PR 머지
 
@@ -2067,9 +2074,12 @@ CD의 목적은 `main` 브랜치에 머지된 검증 완료 코드를 실제 서
 - `linux/amd64`, `linux/arm64` 멀티 아키텍처 이미지 생성
 - Docker Hub에 `latest`, `commit SHA` 태그로 push
 - GitHub Actions가 EC2에 SSH 접속
-- EC2에서 최신 이미지 pull
-- 기존 `ceos-app` 컨테이너 제거
-- `~/.env`를 사용해 새 컨테이너 실행
+- EC2에서 새 `commit SHA` 이미지 pull
+- `ceos-app-candidate`를 `8081` 포트로 먼저 실행
+- `curl http://127.0.0.1:8081/health-check`로 배포 후보 검증
+- 검증 성공 후에만 기존 `ceos-app`을 내리고 새 컨테이너를 `8080` 포트에 실행
+- 새 컨테이너가 최종 기동에 실패하면 직전 정상 이미지로 다시 실행
+- 따라서 CD 실패 시 서버가 빈 상태로 멈추지 않고, 이전 성공 배포본을 유지하도록 구성
 
 ### 13. GitHub Actions Secrets
 
