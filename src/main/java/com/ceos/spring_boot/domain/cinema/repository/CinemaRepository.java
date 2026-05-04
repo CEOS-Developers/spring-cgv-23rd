@@ -7,6 +7,4 @@ import java.util.List;
 
 public interface CinemaRepository extends JpaRepository<Cinema, Long> {
 
-    List<Cinema> findByRegion(String region); // 지역별 영화관 조회
-
 }

@@ -30,11 +30,12 @@ public class PaymentClient {
     public PaymentResponse requestPayment(String paymentId, PaymentRequest request) {
         log.info("[PaymentClient] 즉시 결제 요청 - ID: {}", paymentId);
 
-        String customDataStr = "";
+        String customDataStr;
         try {
             customDataStr = objectMapper.writeValueAsString(request.customData());
         } catch (Exception e) {
-            log.error("JSON 변환 실패");
+            log.error("[PaymentClient] customData JSON 변환 실패 - storeId: {}", request.storeId(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         Map<String, Object> externalBody = new HashMap<>();

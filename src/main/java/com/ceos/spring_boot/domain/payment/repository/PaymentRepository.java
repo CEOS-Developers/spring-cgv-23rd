@@ -9,5 +9,4 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findByPaymentId(String paymentId);
 
-    long countByPaymentIdStartingWith(String prefix);
 }

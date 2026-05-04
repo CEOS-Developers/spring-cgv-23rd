@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
@@ -19,5 +20,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
             @Param("startAt") LocalDateTime startAt,
             @Param("endAt") LocalDateTime endAt
     );
+
+    @Query("SELECT s FROM Schedule s " +
+            "JOIN FETCH s.movie " +
+            "JOIN FETCH s.screen sc " +
+            "JOIN FETCH sc.cinema " +
+            "WHERE s.id = :id")
+    Optional<Schedule> findByIdWithDetails(@Param("id") Long id);
 
 }

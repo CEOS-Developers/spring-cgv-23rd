@@ -88,6 +88,7 @@ public enum ErrorCode {
     ALREADY_CANCELLED_PAYMENT(409, "이미 취소된 결제 내역입니다."),
     PAYMENT_FAILED(500, "외부 결제 서버 에러로 결제에 실패하였습니다."),
     INVALID_PAYMENT_STATUS(400, "잘못된 결제 상태 변경 시도입니다."),
+    PAYMENT_ROLLBACK_FAILED(500,"결제 취소 API는 성공했으나, 내부 데이터 복구에 실패했습니다. (수동 확인 필요)"),
 
     // 서버가 처리 할 방법을 모르는 경우 발생
     INTERNAL_SERVER_ERROR(500, "Internal Server Error Exception"),
