@@ -1,10 +1,13 @@
 package com.ceos23.spring_boot.cgv.controller.movie;
 
+import com.ceos23.spring_boot.cgv.dto.movie.MovieLikeResponse;
 import com.ceos23.spring_boot.cgv.global.security.CustomUserDetails;
 import com.ceos23.spring_boot.cgv.service.movie.MovieLikeService;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,5 +39,17 @@ public class MovieLikeController {
     ) {
         movieLikeService.unlikeMovie(userDetails.getUserId(), movieId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/likes")
+    public ResponseEntity<List<MovieLikeResponse>> getLikedMovies(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        List<MovieLikeResponse> responses = movieLikeService.getLikedMovies(userDetails.getUserId())
+                .stream()
+                .map(MovieLikeResponse::from)
+                .toList();
+
+        return ResponseEntity.ok(responses);
     }
 }

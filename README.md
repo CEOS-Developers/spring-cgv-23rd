@@ -2,6 +2,74 @@
 
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+## 로컬 실행 설정
+
+프로젝트 실행 전 아래 환경변수가 필요합니다.
+
+- `DB_URL`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+
+편하게 시작할 수 있도록 루트에 `.env.example` 파일을 추가했습니다.
+
+## 수동 배포 정리
+
+PDF 실습 흐름에 맞춰 수동 배포는 `bootJar -> docker build -> docker push -> EC2에서 docker compose up` 순서로 진행합니다.
+
+### 1. 로컬에서 jar 빌드
+
+```bash
+./gradlew clean bootJar
+```
+
+### 2. Docker 이미지 빌드
+
+```bash
+docker build -t <dockerhub-id>/spring-cgv-23rd:latest .
+```
+
+### 3. Docker Hub에 push
+
+```bash
+docker login
+docker push <dockerhub-id>/spring-cgv-23rd:latest
+```
+
+### 4. EC2에 배포 파일 준비
+
+EC2에는 아래 파일을 올립니다.
+
+- `docker-compose.yml`
+- `.env`
+
+`.env`는 `.env.example`을 복사해서 만들고, 특히 `APP_IMAGE`와 `DB_URL`을 EC2/RDS 환경에 맞게 수정합니다.
+
+```env
+APP_IMAGE=<dockerhub-id>/spring-cgv-23rd:latest
+APP_PORT=8080
+DB_URL=jdbc:mysql://<rds-endpoint>:3306/cgv_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+DB_USERNAME=<db-username>
+DB_PASSWORD=<db-password>
+JWT_SECRET=<base64-secret>
+```
+
+### 5. EC2에서 컨테이너 실행
+
+```bash
+docker login
+docker compose pull
+docker compose up -d
+docker ps
+```
+
+### 6. 실행 확인
+
+- `http://<ec2-public-ip>:8080/swagger-ui.html`
+- 또는 `curl http://<ec2-public-ip>:8080/swagger-ui.html`
+
+현재 프로젝트는 `docker-compose.yml` 기준으로 애플리케이션 컨테이너만 실행하고, 데이터베이스는 RDS 같은 외부 MySQL을 연결하는 방식을 기본으로 잡았습니다.
+
 ## 코드 리팩토링 정리
 
 리팩토링은 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 진행했습니다.
@@ -18,11 +86,29 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 - `CinemaMenuStock.decreaseStock()`이 수량 검증과 재고 부족 검증을 함께 책임지도록 바꿔, 재고 관련 규칙이 한곳에 모이도록 개선했습니다.
 - 매점 구매 실패 상황을 더 잘 드러내기 위해 `STORE_MENU_STOCK_NOT_FOUND`, `INSUFFICIENT_MENU_STOCK` 에러 코드를 추가했습니다.
 
-### 3. 테스트 가능성 개선
+### 3. 조회 기능 보강과 Query Service 분리
+
+- 예매 생성 전에 실제로 필요한 조회 기능을 채우기 위해 `GET /api/screenings`, `GET /api/screenings/{screeningId}/seats` API를 추가했습니다.
+- 매점 화면과 마이페이지에서 바로 사용할 수 있도록 `GET /api/store/menus`, `GET /api/store/purchases` API를 추가했습니다.
+- 찜 기능도 생성/취소에서 끝나지 않도록 `GET /api/cinemas/likes`, `GET /api/movies/likes` API를 추가했습니다.
+- 읽기 전용 흐름은 `ScreeningQueryService`, `StoreQueryService`로 분리해, 쓰기 서비스가 조회 책임까지 과하게 들고 있지 않도록 정리했습니다.
+
+### 4. 테스트 가능성 개선
 
 - 변경된 예매 로직에 맞춰 `ReservationServiceTest`를 정리했습니다.
 - `StorePurchaseServiceTest`를 추가해 재고 차감과 예외 흐름을 검증할 수 있게 했습니다.
+- `ScreeningQueryServiceTest`, `StoreQueryServiceTest`, `LikeQueryServiceTest`를 추가해 새 조회 API의 핵심 조회 흐름도 검증했습니다.
 - 테스트 전용 H2 설정을 추가해 로컬 MySQL 환경 없이도 `./gradlew test`가 실행되도록 개선했습니다.
+
+## 마무리 단계에서 추가한 API
+
+- `GET /api/screenings`
+- `GET /api/screenings/{screeningId}/seats`
+- `GET /api/store/menus?cinemaId={cinemaId}`
+- `GET /api/store/purchases`
+- `GET /api/cinemas/likes`
+- `GET /api/movies/likes`
+- `GET /api/payments/{paymentId}`
 
 ## 동시성 제어 정리
 
@@ -183,21 +269,20 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 ## 2. 매점 구매 기능
 
 ### 핵심 구현
-- `StoreMenu` + `StoreOrder` 구조로 설계
+- `StoreMenu` + `StorePurchase` 구조로 설계
 - 구매 시 재고 차감 + 주문 생성
+- 영화관별 메뉴/재고 조회와 사용자 구매 내역 조회 API까지 확장
 
 ### 구현 흐름
-1. 메뉴 조회
+1. 영화관별 메뉴 조회
 2. 재고 확인
 3. 재고 차감
 4. 주문 생성
 
 ```java
-if (menu.getStock() < quantity) {
-    throw new IllegalArgumentException("재고 부족");
-}
-menu.decreaseStock(quantity);
-storeOrderRepository.save(order);
+CinemaMenuStock stock = findCinemaMenuStock(request);
+stock.decreaseStock(request.quantity());
+storePurchaseRepository.save(new StorePurchase(request.quantity(), user, stock));
 ```
 
 </details>
@@ -672,6 +757,7 @@ if (token != null && tokenProvider.validateAccessToken(token)) {
 - `@AuthenticationPrincipal`을 사용해 로그인한 사용자 정보를 컨트롤러에서 바로 받아오도록 구현
 - 이를 활용해 토큰이 필요한 API로 영화관 찜, 영화 찜, 매점 구매 기능을 구현
 - 각 API에서는 `CustomUserDetails`에서 사용자 id를 꺼내 서비스 레이어로 전달하도록 구성
+- 마무리 단계에서 찜 목록 조회 API인 `/api/cinemas/likes`, `/api/movies/likes`도 함께 보호하도록 확장
 - `SecurityConfig`에서 `/api/cinemas/*/likes`, `/api/movies/*/likes`, `/api/store/purchases` 경로를 인증이 필요한 요청으로 설정
 - 토큰이 없는 요청은 보호된 API에 접근할 수 없도록 처리
 
@@ -821,3 +907,53 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 ![만료](images/W3/5_wrong_refresh.png)
 
 </details>
+
+## CI/CD 정리
+
+`4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했습니다. workflow 파일은 `.github/workflows/cicd.yml`에 있으며, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있습니다.
+
+이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있도록, `EC2 내부에서 Spring Boot 컨테이너를 직접 빌드/실행`하는 구조로 정리했습니다. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했습니다.
+
+### 동작 흐름
+
+1. `actions/checkout`으로 코드를 가져옵니다.
+2. JDK 21과 Gradle cache를 설정합니다.
+3. `./gradlew clean test bootJar`로 테스트와 jar 빌드를 수행합니다.
+4. 배포에 필요한 `jar`, `Dockerfile`, `docker-compose.cicd.yml`을 artifact로 묶습니다.
+5. EC2로 배포 파일을 복사합니다.
+6. EC2에서 `.env`를 생성하고 `docker compose -f docker-compose.cicd.yml up --build -d`를 실행합니다.
+7. 마지막으로 `http://localhost:<APP_PORT>/actuator/health`를 호출해 헬스체크를 확인합니다.
+
+### GitHub Actions Secrets
+
+- `EC2_HOST`
+- `EC2_SSH_KEY`
+- `JWT_SECRET`
+
+### GitHub Actions Variables
+
+- `APP_DIR`
+  - 기본값: `/home/ubuntu/spring-cgv-23rd`
+- `APP_PORT`
+  - 기본값: `8080`
+- `JPA_DDL_AUTO`
+  - 기본값: `update`
+- `JPA_SHOW_SQL`
+  - 기본값: `false`
+- `JWT_ACCESS_TOKEN_VALIDITY_IN_SECONDS`
+  - 기본값: `3600`
+- `JWT_REFRESH_TOKEN_VALIDITY_IN_SECONDS`
+  - 기본값: `1209600`
+
+### 헬스체크
+
+배포 후 검증을 위해 Spring Boot Actuator를 추가했고, 아래 endpoint를 공개했습니다.
+
+- `GET /actuator/health`
+- `GET /actuator/info`
+
+### EC2에서 실행되는 구성
+
+- `app`: Spring Boot 애플리케이션 컨테이너
+
+CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, 자동 배포 환경에서는 가벼운 H2 데이터베이스 설정으로 앱을 띄우도록 구성했습니다.
