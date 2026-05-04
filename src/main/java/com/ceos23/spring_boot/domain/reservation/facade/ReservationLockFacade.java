@@ -31,7 +31,7 @@ public class ReservationLockFacade {
         return redisLockManager.executeWithLock(
                 lockKeys,
                 0,
-                -1,
+                2,
                 TimeUnit.SECONDS,
                 () -> reservationService.createReservation(command)
         );

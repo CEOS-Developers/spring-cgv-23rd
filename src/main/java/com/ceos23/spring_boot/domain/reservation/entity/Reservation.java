@@ -49,19 +49,23 @@ public class Reservation extends BaseTimeEntity {
     @Column(name = "total_price")
     private Integer totalPrice;
 
+    @Column(name = "order_name")
+    private String orderName;
+
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservedSeat> reservedSeats = new ArrayList<>();
 
     @Builder
-    public Reservation(String paymentId, User user, Schedule schedule, ReservationStatus status, Integer totalPrice) {
+    public Reservation(String paymentId, User user, Schedule schedule, ReservationStatus status, Integer totalPrice, String orderName) {
         this.paymentId = paymentId;
         this.user = user;
         this.schedule = schedule;
         this.status = status;
         this.totalPrice = totalPrice;
+        this.orderName = orderName;
     }
 
-    public static Reservation create(User user, Schedule schedule, List<Seat> seats) {
+    public static Reservation create(User user, Schedule schedule, List<Seat> seats, String orderName) {
         String paymentId = generatePaymentId();
 
         Reservation reservation = Reservation.builder()
@@ -69,6 +73,7 @@ public class Reservation extends BaseTimeEntity {
                 .user(user)
                 .schedule(schedule)
                 .status(ReservationStatus.PENDING)
+                .orderName(orderName)
                 .build();
 
         int totalPrice = 0;
@@ -122,5 +127,11 @@ public class Reservation extends BaseTimeEntity {
 
     public boolean isCanceled() {
         return this.status == ReservationStatus.CANCELED;
+    }
+
+    public void validatePendingStatus() {
+        if (this.status != ReservationStatus.PENDING) {
+            throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
     }
 }

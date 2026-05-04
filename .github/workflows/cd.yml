@@ -1,0 +1,100 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "taeik21" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push application image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/cgv-app-new:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cgv-app-new:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/cgv-app-new:buildcache,mode=max
+
+  deploy:
+    name: Deploy to EC2
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy application to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p /home/ubuntu/app
+            cd /home/ubuntu/app
+
+            echo "${{ secrets.ENV_VARS }}" > .env
+
+            cat <<EOF > docker-compose.yml
+            version: '3.8'
+            services:
+              redis-server:
+                image: redis:latest
+                container_name: redis-server
+                ports:
+                  - "6379:6379"
+                restart: always
+                healthcheck:
+                  test: ["CMD", "redis-cli", "ping"]
+                  interval: 10s
+                  timeout: 5s
+                  retries: 5
+
+              app:
+                image: ${{ secrets.DOCKER_USERNAME }}/cgv-app-new:${{ github.sha }}
+                container_name: test
+                ports:
+                  - "80:8080"
+                env_file:
+                  - .env
+                depends_on:
+                  redis-server:
+                    condition: service_healthy
+                restart: always
+            EOF
+
+            sudo docker compose pull app
+            sudo docker compose up -d
+
+            for i in {1..36}; do
+              curl -s -f http://localhost/actuator/health > /dev/null && break
+              [ $i -eq 12 ] && exit 1
+              sleep 5
+            done
+
+            sudo docker image prune -f

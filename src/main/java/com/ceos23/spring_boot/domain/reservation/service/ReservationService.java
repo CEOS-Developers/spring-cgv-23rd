@@ -1,11 +1,17 @@
 package com.ceos23.spring_boot.domain.reservation.service;
 
+import com.ceos23.spring_boot.domain.payment.client.dto.PaymentData;
+import com.ceos23.spring_boot.domain.payment.client.dto.PaymentRequest;
+import com.ceos23.spring_boot.domain.payment.dto.FrontendPaymentRequest;
+import com.ceos23.spring_boot.domain.payment.dto.PaymentDataInfo;
+import com.ceos23.spring_boot.domain.payment.service.PaymentService;
 import com.ceos23.spring_boot.domain.reservation.dto.ReservationCreateCommand;
 import com.ceos23.spring_boot.domain.reservation.dto.ReservationInfo;
 import com.ceos23.spring_boot.domain.reservation.entity.Reservation;
 import com.ceos23.spring_boot.domain.reservation.entity.ReservationStatus;
 import com.ceos23.spring_boot.domain.reservation.entity.ReservedSeat;
 import com.ceos23.spring_boot.domain.reservation.entity.Schedule;
+import com.ceos23.spring_boot.domain.reservation.facade.ReservationLockFacade;
 import com.ceos23.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.ceos23.spring_boot.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.spring_boot.domain.reservation.repository.ScheduleRepository;
@@ -37,6 +43,54 @@ public class ReservationService {
     private final SeatRepository seatRepository;
     private final ReservationRepository reservationRepository;
     private final ReservedSeatRepository reservedSeatRepository;
+    private final PaymentService paymentService;
+
+
+    public PaymentDataInfo requestInstantPayment(String paymentId, String email, FrontendPaymentRequest request) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyReservationOwner(reservation, email);
+
+        reservation.validatePendingStatus();
+
+        if (!reservation.getTotalPrice().equals(request.totalPayAmount())) {
+            cancelReservation(paymentId);
+            throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+        }
+
+        PaymentDataInfo paymentDataInfo;
+
+        try {
+            paymentDataInfo = paymentService.requestInstantPayment(paymentId, reservation.getOrderName(), reservation.getTotalPrice());
+        } catch (Exception e) {
+            cancelReservation(paymentId);
+            throw e;
+        }
+
+        try {
+            confirmPayment(paymentId);
+            return paymentDataInfo;
+        } catch (Exception e) {
+            paymentService.cancelPayment(paymentId);
+            cancelReservation(paymentId);
+            throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+        }
+    }
+
+
+    public void cancelPayment(String paymentId, String email) {
+        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyReservationOwner(reservation, email);
+
+        verifyCancelable(reservation, paymentId);
+
+        paymentService.cancelPayment(paymentId);
+
+        cancelReservation(paymentId);
+    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public ReservationInfo createReservation(ReservationCreateCommand command) {
@@ -54,11 +108,11 @@ public class ReservationService {
 
         validateSeatNotReserved(schedule.getId(), command.seatIds());
 
-        Reservation reservation = Reservation.create(user, schedule, seats);
+        String orderName = getOrderName(schedule, seats);
+
+        Reservation reservation = Reservation.create(user, schedule, seats, orderName);
 
         reservationRepository.save(reservation);
-
-        String orderName = getOrderName(schedule, seats);
 
         return ReservationInfo.from(reservation, reservation.getReservedSeats(), orderName);
     }
@@ -104,9 +158,13 @@ public class ReservationService {
         reservation.cancel();
     }
 
-    public void verifyCancelable(String paymentId) {
-        Reservation reservation = reservationRepository.findByPaymentId(paymentId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
+    private void verifyReservationOwner(Reservation reservation, String email) {
+        if (!reservation.getUser().getEmail().equals(email)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED_USER);
+        }
+    }
+
+    public void verifyCancelable(Reservation reservation, String paymentId) {
         reservation.validateCancelable();
     }
 }
