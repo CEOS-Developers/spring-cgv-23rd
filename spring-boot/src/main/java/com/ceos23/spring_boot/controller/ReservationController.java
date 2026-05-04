@@ -5,12 +5,12 @@ import com.ceos23.spring_boot.dto.ReservationRequest;
 import com.ceos23.spring_boot.dto.ReservationResponse;
 import com.ceos23.spring_boot.global.response.SuccessResponse;
 import com.ceos23.spring_boot.service.ReservationService;
+import com.ceos23.spring_boot.jwt.CustomUserDetails;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,10 +29,10 @@ public class ReservationController {
 
     @PostMapping
     public ResponseEntity<SuccessResponse<ReservationResponse>> reserve(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ReservationRequest request
     ) {
-        Long userId = Long.parseLong(userDetails.getUsername());
+        Long userId = userDetails.getUserId();
 
         Reservation reservation = reservationService.reserve(
                 userId,

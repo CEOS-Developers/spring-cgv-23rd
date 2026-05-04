@@ -3,10 +3,10 @@ package com.ceos23.spring_boot.controller;
 import com.ceos23.spring_boot.dto.FavoriteMovieResponse;
 import com.ceos23.spring_boot.global.response.SuccessResponse;
 import com.ceos23.spring_boot.service.FavoriteMovieService;
+import com.ceos23.spring_boot.jwt.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,10 +20,10 @@ public class FavoriteMovieController {
 
     @PostMapping("/{movieId}")
     public ResponseEntity<SuccessResponse<FavoriteMovieResponse>> createFavoriteMovie(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long movieId
     ) {
-        Long userId = Long.parseLong(userDetails.getUsername());
+        Long userId = userDetails.getUserId();
 
         FavoriteMovieResponse response = favoriteMovieService.createFavoriteMovie(userId, movieId);
         return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));
@@ -31,10 +31,10 @@ public class FavoriteMovieController {
 
     @DeleteMapping("/{movieId}")
     public ResponseEntity<SuccessResponse<Void>> deleteFavoriteMovie(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long movieId
     ) {
-        Long userId = Long.parseLong(userDetails.getUsername());
+        Long userId = userDetails.getUserId();
 
         favoriteMovieService.deleteFavoriteMovie(userId, movieId);
         return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", null));
@@ -42,9 +42,9 @@ public class FavoriteMovieController {
 
     @GetMapping
     public ResponseEntity<SuccessResponse<List<FavoriteMovieResponse>>> getFavoriteMovies(
-            @AuthenticationPrincipal UserDetails userDetails
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Long userId = Long.parseLong(userDetails.getUsername());
+        Long userId = userDetails.getUserId();
 
         List<FavoriteMovieResponse> response = favoriteMovieService.getFavoriteMovies(userId);
         return ResponseEntity.ok(new SuccessResponse<>(200, "SUCCESS", response));

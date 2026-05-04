@@ -65,7 +65,7 @@ public class TheaterItemStock {
 
     private void validateQuantity(Integer quantity) {
         if (quantity == null || quantity <= 0) {
-            throw new IllegalArgumentException("수량은 1 이상이어야 합니다.");
+            throw new CustomException(ErrorCode.INVALID_STOCK_QUANTITY);
         }
     }
 }

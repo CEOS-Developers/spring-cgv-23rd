@@ -33,6 +33,7 @@ public class ReservationService {
     private final ScreeningRepository screeningRepository;
     private final SeatRepository seatRepository;
     private final PaymentGateway paymentGateway;
+    private final ReservationTransactionService reservationTransactionService;
 
     @Transactional
     public Reservation reserve(Long userId, Long screeningId, Long seatId) {
@@ -51,13 +52,12 @@ public class ReservationService {
         }
     }
 
-    @Transactional
     public Reservation payReservation(Long reservationId) {
         Reservation reservation = loadReservation(reservationId);
 
         if (reservation.isExpired(LocalDateTime.now())) {
-            reservationRepository.delete(reservation);
-            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
+            reservationTransactionService.deleteReservation(reservationId);
+            throw new CustomException(ErrorCode.RESERVATION_EXPIRED);
         }
 
         if (reservation.isPaid()) {
@@ -74,12 +74,14 @@ public class ReservationService {
                     createCustomData(reservation)
             );
 
-            reservation.markPaid(paymentId, resolvePaidAt(payment));
-            return reservation;
+            return reservationTransactionService.markPaid(
+                    reservationId,
+                    paymentId,
+                    resolvePaidAt(payment)
+            );
 
-        } catch (Exception e) {
-            reservationRepository.delete(reservation);
-            throw new CustomException(ErrorCode.BAD_REQUEST);
+        } catch (CustomException e) {
+            return handlePaymentException(e, reservationId, reservation, paymentId);
         }
     }
 
@@ -92,6 +94,51 @@ public class ReservationService {
         }
 
         reservationRepository.delete(reservation);
+    }
+
+    private Reservation handlePaymentException(
+            CustomException e,
+            Long reservationId,
+            Reservation reservation,
+            String paymentId
+    ) {
+        if (e.getErrorCode() == ErrorCode.PAYMENT_SERVER_ERROR) {
+            return retryPayment(reservationId, reservation, paymentId);
+        }
+
+        if (e.getErrorCode() == ErrorCode.PAYMENT_CONFLICT) {
+            PaymentData payment = paymentGateway.getPayment(paymentId);
+
+            return reservationTransactionService.markPaid(
+                    reservationId,
+                    paymentId,
+                    resolvePaidAt(payment)
+            );
+        }
+
+        reservationTransactionService.deleteReservation(reservationId);
+        throw e;
+    }
+
+    private Reservation retryPayment(Long reservationId, Reservation reservation, String paymentId) {
+        try {
+            PaymentData payment = paymentGateway.pay(
+                    paymentId,
+                    createOrderName(reservation),
+                    TICKET_PRICE,
+                    createCustomData(reservation)
+            );
+
+            return reservationTransactionService.markPaid(
+                    reservationId,
+                    paymentId,
+                    resolvePaidAt(payment)
+            );
+
+        } catch (CustomException retryException) {
+            reservationTransactionService.deleteReservation(reservationId);
+            throw new CustomException(ErrorCode.PAYMENT_RETRY_FAILED);
+        }
     }
 
     private void ensureSeatNotReserved(Long screeningId, Long seatId) {
@@ -118,7 +165,7 @@ public class ReservationService {
     }
 
     private Seat loadSeat(Long seatId) {
-        return seatRepository.findById(seatId)
+        return seatRepository.findWithLockById(seatId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SEAT_NOT_FOUND));
     }
 
@@ -135,8 +182,8 @@ public class ReservationService {
     }
 
     private LocalDateTime resolvePaidAt(PaymentData payment) {
-        if (payment.getPaidAt() != null) {
-            return payment.getPaidAt();
+        if (payment.paidAt() != null) {
+            return payment.paidAt();
         }
 
         return LocalDateTime.now();
