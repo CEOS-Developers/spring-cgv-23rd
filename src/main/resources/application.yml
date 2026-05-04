@@ -2,24 +2,11 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
-  profiles:
-    active: ${SPRING_ACTIVE_PROFILE}
-
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        dialect: org.hibernate.dialect.MySQLDialect
-        default_batch_fetch_size: 100
 
   data:
     redis:
@@ -36,7 +23,3 @@ jwt:
   access-token-expiration: ${JWT_ACCESSTOKEN_EXPIRATION}
   refresh-token-expiration: ${JWT_REFRESHTOKEN_EXPIRATION}
   cookie-secure: ${JWT_COOKIE_SECURE}
-
-swagger:
-  server-url: http://localhost:8080
-  server-description: Local Server

@@ -22,13 +22,14 @@ public class ProductOrder {
     private Long userId;
     private Long theaterId;
     private String orderNumber;
+    private String paymentId;
     private Integer totalPrice;
     private OrderStatus status;
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
     private LocalDateTime createdAt;
 
-    public static ProductOrder createOrder(Long userId, Long theaterId, List<OrderItem> orderItems) {
+    public static ProductOrder createOrder(Long userId, Long theaterId, String paymentId, List<OrderItem> orderItems) {
 
         int totalPrice = orderItems.stream()
                 .mapToInt(item -> item.getQuantity() * item.getPrice())
@@ -38,6 +39,7 @@ public class ProductOrder {
                 .userId(userId)
                 .theaterId(theaterId)
                 .orderNumber(generateOrderNumber())
+                .paymentId(paymentId)
                 .totalPrice(totalPrice)
                 .status(OrderStatus.COMPLETED)
                 .build();
@@ -51,6 +53,14 @@ public class ProductOrder {
         String datePart = LocalDate.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
         String randomPart = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return datePart + "-" + randomPart;
+    }
+
+    public static String generateOrderName(String firstProductName, int totalItemCount) {
+        if (totalItemCount <= 1) {
+            return firstProductName;
+        }
+
+        return firstProductName + " 외" + (totalItemCount - 1) + "건";
     }
 
     public void cancel() {

@@ -1,0 +1,10 @@
+.env
+.git
+.gitignore
+.idea
+*.md
+src/
+gradle/
+gradlew
+gradlew.bat
+.gradle

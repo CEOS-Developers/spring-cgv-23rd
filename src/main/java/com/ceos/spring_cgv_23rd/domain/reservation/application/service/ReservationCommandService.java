@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.ceos.spring_cgv_23rd.domain.reservation.domain.ReservationPolicy.HOLD_TTL_SECONDS;
 
@@ -49,18 +48,17 @@ public class ReservationCommandService implements CreateReservationUseCase, Conf
         // 좌석 유효성 검증
         validateSeats(command.screeningId(), command.seatIds());
 
-        // 예매 임시 토큰 발급 및 좌석 선점
-        String holdToken = UUID.randomUUID().toString();
-        String holderKey = "user:" + userId + ":" + holdToken;
+        // 좌석 선점
+        String holderKey = "user:" + userId;
         holdOrThrow(command.screeningId(), command.seatIds(), holderKey);
 
-        return new ReservationResult(holdToken, command.screeningId(), command.seatIds(), LocalDateTime.now().plusSeconds(HOLD_TTL_SECONDS));
+        return new ReservationResult(command.screeningId(), command.seatIds(), LocalDateTime.now().plusSeconds(HOLD_TTL_SECONDS));
     }
 
     @Override
     public ReservationDetailResult confirmReservation(ConfirmReservationCommand command) {
         // 좌석 선점 유효성 검증
-        verifyHold(command.screeningId(), command.seatIds(), "user:" + command.userId() + ":" + command.reservationToken());
+        verifyHold(command.screeningId(), command.seatIds(), "user:" + command.userId());
 
         // 상영 정보 조회
         ScreeningInfoResult screeningInfo = findScreeningInfoOrThrow(command.screeningId());
@@ -74,22 +72,22 @@ public class ReservationCommandService implements CreateReservationUseCase, Conf
 
         // 외부 PG 결제 승인 요청
         PaymentResult payment = paymentUseCase.pay(
-                new PayCommand(command.reservationToken(), orderName, amount));
+                new PayCommand(command.paymentId(), orderName, amount));
 
         // 좌석 차감 및 예매 상태 확정
         Reservation savedReservation;
         try {
             savedReservation = reservationTxService.persistConfirmed(
                     command.userId(), command.screeningId(), screeningInfo.price(),
-                    command.reservationToken(), command.seatIds());
+                    command.paymentId(), command.seatIds());
         } catch (Exception e) {
-            log.warn("예매 실패. 보상 결제 취소 시도. paymentId={}", command.reservationToken(), e);
+            log.warn("예매 실패. 보상 결제 취소 시도. paymentId={}", command.paymentId(), e);
 
             // 저장 실패시 이미 승인된 PG 결제 롤백
             try {
-                cancelPaymentUseCase.cancel(command.reservationToken());
+                cancelPaymentUseCase.cancel(command.paymentId());
             } catch (Exception ex) {
-                log.error("보상 결제 취소 실패. paymentId={}", command.reservationToken(), ex);
+                log.error("보상 결제 취소 실패. paymentId={}", command.paymentId(), ex);
             }
             throw new GeneralException(ReservationErrorCode.CONFIRM_FAILED_ROLLED_BACK);
         }

@@ -63,6 +63,10 @@ public class Payment {
         return status == PaymentStatus.PAID;
     }
 
+    public boolean isCancelled() {
+        return status == PaymentStatus.CANCELLED;
+    }
+
     public boolean isInProgress() {
         return status == PaymentStatus.READY;
     }

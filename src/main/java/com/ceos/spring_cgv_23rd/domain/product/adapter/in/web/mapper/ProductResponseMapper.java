@@ -1,5 +1,6 @@
 package com.ceos.spring_cgv_23rd.domain.product.adapter.in.web.mapper;
 
+import com.ceos.spring_cgv_23rd.domain.payment.application.dto.result.PaymentResult;
 import com.ceos.spring_cgv_23rd.domain.product.adapter.in.web.dto.response.ProductResponse;
 import com.ceos.spring_cgv_23rd.domain.product.application.dto.result.OrderDetailResult;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,19 @@ public class ProductResponseMapper {
                         .toList())
                 .totalPrice(result.totalPrice())
                 .createdAt(result.createdAt())
+                .payment(toPaymentInfo(result.payment()))
+                .build();
+    }
+
+    private ProductResponse.PaymentInfo toPaymentInfo(PaymentResult payment) {
+        if (payment == null) return null;
+        return ProductResponse.PaymentInfo.builder()
+                .paymentId(payment.paymentId())
+                .status(payment.status().name())
+                .amount(payment.amount())
+                .orderName(payment.orderName())
+                .pgProvider(payment.pgProvider())
+                .paidAt(payment.paidAt())
                 .build();
     }
 }

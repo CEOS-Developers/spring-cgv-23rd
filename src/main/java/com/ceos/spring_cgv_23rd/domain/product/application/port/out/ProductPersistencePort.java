@@ -17,7 +17,9 @@ public interface ProductPersistencePort {
     // Inventory
     List<Inventory> findInventoriesByTheaterIdAndProductIds(Long theaterId, List<Long> productIds);
 
-    void updateAllInventoryQuantities(List<Inventory> inventories);
+    boolean tryDecreaseInventory(Long theaterId, Long productId, int count);
+
+    boolean tryIncreaseInventory(Long theaterId, Long productId, int count);
 
 
     // Order

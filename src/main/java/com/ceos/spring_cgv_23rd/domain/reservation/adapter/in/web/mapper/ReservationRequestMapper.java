@@ -15,9 +15,9 @@ public class ReservationRequestMapper {
         );
     }
 
-    public ConfirmReservationCommand toCommand(Long userId, ReservationRequest.ConfirmReservationRequest request) {
+    public ConfirmReservationCommand toCommand(Long userId, String idempotencyKey, ReservationRequest.ConfirmReservationRequest request) {
         return new ConfirmReservationCommand(
-                request.reservationToken(),
+                idempotencyKey,
                 userId,
                 request.screeningId(),
                 request.seatIds()

@@ -30,7 +30,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
 
-    @Value("${spring.profiles.active}")
+    @Value("${spring.profiles.active:default}")
     private String activeProfile;
 
     @Override
@@ -59,7 +59,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                     Long userId = jwtTokenProvider.getUserIdFromClaims(claims);
                     userDetails = new AuthUserDetails(userId, role);
                 }
-                
+
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(

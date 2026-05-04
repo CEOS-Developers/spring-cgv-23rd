@@ -30,6 +30,9 @@ public class ProductOrderEntity extends BaseEntity {
     @Column(name = "order_number", nullable = false, unique = true)
     private String orderNumber;
 
+    @Column(name = "payment_id", unique = true)
+    private String paymentId;
+
     @Column(name = "total_price", nullable = false)
     private Integer totalPrice;
 

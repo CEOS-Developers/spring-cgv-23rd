@@ -35,7 +35,6 @@ public class ReservationResponseMapper {
 
     public ReservationResponse.CreateReservationResponse toResponse(ReservationResult result) {
         return ReservationResponse.CreateReservationResponse.builder()
-                .reservationToken(result.reservationToken())
                 .screeningId(result.screeningId())
                 .seatIds(result.seatIds())
                 .expiresAt(result.expiresAt())
