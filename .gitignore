@@ -42,3 +42,10 @@ out/
 *.env.test.local
 *.env.production.local
 *.env.local
+
+application-test.yaml
+
+logs/**
+*.pem
+.pem
+src/main/resources/application-test.yaml

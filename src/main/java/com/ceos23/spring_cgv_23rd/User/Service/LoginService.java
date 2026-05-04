@@ -3,7 +3,6 @@ package com.ceos23.spring_cgv_23rd.User.Service;
 import com.ceos23.spring_cgv_23rd.Token.Domain.RefreshToken;
 import com.ceos23.spring_cgv_23rd.Token.Repository.TokenRepository;
 import com.ceos23.spring_cgv_23rd.User.DTO.LoginRequestDTO;
-import com.ceos23.spring_cgv_23rd.User.DTO.LoginResponseDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.UserWrapperDTO;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
@@ -15,17 +14,16 @@ import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import com.ceos23.spring_cgv_23rd.global.JWTType;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LoginService {
@@ -65,6 +63,7 @@ public class LoginService {
         RefreshToken refreshToken = RefreshToken.create(user, jwtRefreshToken);
         tokenRepository.save(refreshToken);
 
+        log.info("사용자가 로그인함: userId={}", user.getLoginId());
         return UserWrapperDTO.create(user);
     }
 }

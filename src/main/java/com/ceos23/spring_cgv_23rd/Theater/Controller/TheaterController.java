@@ -10,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.web.bind.annotation.*;
 
-
 @RestController
 @RequestMapping("/api/theater")
 public class TheaterController {
@@ -24,7 +23,7 @@ public class TheaterController {
      * 검색어로 극장 조회
      *
      * @param query 검색어
-     * @return 옳게 반환된경우 극장 ID과 이름이, DB 조회결과 검색되는 극장이 없다면 EntityNotFoundException 발생
+     * @return 옳게 반환된경우 극장 ID과 이름이, DB 조회결과 검색되는 극장이 없다면 CustomException 발생
      */
     @GetMapping(params= {"query", "!region"})
     public ResponseEntity<TheaterSearchResponseDTO> searchWithName(
@@ -49,7 +48,7 @@ public class TheaterController {
     /**
      * 극장 전체조회
      *
-     * @return 극장id와 이름
+     * @return 전체조회결과
      */
     @GetMapping
     public ResponseEntity<TheaterSearchResponseDTO> searchAll() {
@@ -57,11 +56,14 @@ public class TheaterController {
     }
 
     /**
-     * 좋아요 버튼 누르기
+     * 영화관 찜하기 관련 기능입니다.
+     * 사용자가 이미 찜한 영화관의 경우 취소, 찜하지 않은 경우 찜을 추가합니다.
      *
-     * @return 극장id와 이름
+     * @param user 사용자입니다. 쿠키를 통해 자동으로 받는 값입니다.
+     * @param theaterId 찜하거나 찜을 취소할 영화의 id입니다.
+     * @return 찜/취소 여부, 극장이름, 극장ID를 반환합니다.
      */
-    @GetMapping(value = "/likes", params = "theaterId")
+    @PostMapping(value = "/likes", params = "theaterId")
     public ResponseEntity<LikedTheaterResponseDTO> likey(
             @RequestParam long theaterId,
             @AuthenticationPrincipal User user

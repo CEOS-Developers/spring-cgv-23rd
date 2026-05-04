@@ -1,17 +1,15 @@
 package com.ceos23.spring_cgv_23rd.FoodOrder.DTO;
 
 import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Cart;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Order;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public record CartResponseDTO(
         long theaterId,
         String theaterName,
 
-        long orderId,
+        long cartId,
         long userId,
         List<CartItemWrapperDTO> items,
         long price
@@ -27,5 +25,16 @@ public record CartResponseDTO(
                 cart.getUser().getId(),
                 CartItemWrapperDTO.create(cart.getCartItems()),
                 cart.getPrice());
+    }
+
+    public static CartResponseDTO empty(){
+        return new CartResponseDTO(
+                0L,
+                "",
+                0L,
+                0L,
+                List.of(),
+                0
+        );
     }
 }

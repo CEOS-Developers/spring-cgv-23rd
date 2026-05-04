@@ -1,6 +1,5 @@
 package com.ceos23.spring_cgv_23rd.FoodOrder.DTO;
 
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Cart;
 import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Order;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 

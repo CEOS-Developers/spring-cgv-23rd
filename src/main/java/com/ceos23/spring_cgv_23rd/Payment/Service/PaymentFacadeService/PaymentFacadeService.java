@@ -12,7 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Service
 public interface PaymentFacadeService {
-    Payment buy(PaymentRequestDTO req, long targetId);
+    Payment buy(PaymentRequestDTO req, long targetId, String userLoginId);
 }
 
 

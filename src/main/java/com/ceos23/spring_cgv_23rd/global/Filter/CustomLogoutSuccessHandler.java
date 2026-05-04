@@ -1,7 +1,5 @@
 package com.ceos23.spring_cgv_23rd.global.Filter;
 
-import com.ceos23.spring_cgv_23rd.global.DTO.ErrDTO;
-import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +13,9 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * 로그아웃 요청에 성공한 경우 응답값을 반환합니다.
+ */
 @Component
 public class CustomLogoutSuccessHandler implements LogoutSuccessHandler {
     @Override

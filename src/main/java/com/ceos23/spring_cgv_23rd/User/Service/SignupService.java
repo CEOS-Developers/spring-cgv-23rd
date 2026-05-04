@@ -1,9 +1,7 @@
 package com.ceos23.spring_cgv_23rd.User.Service;
 
 import com.ceos23.spring_cgv_23rd.Token.Service.TokenProvider;
-import com.ceos23.spring_cgv_23rd.User.DTO.ROLE;
 import com.ceos23.spring_cgv_23rd.User.DTO.SignupRequestDTO;
-import com.ceos23.spring_cgv_23rd.User.DTO.SignupResponseDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.UserWrapperDTO;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
@@ -13,7 +11,7 @@ import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import com.ceos23.spring_cgv_23rd.global.JWTType;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,8 +19,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @Service
 public class SignupService {
     private final PasswordEncoder encoder;
@@ -59,6 +57,13 @@ public class SignupService {
                 req.loginId(), req.username(), encryptedPassword, req.men(), req.age()
         );
 
+        log.info("사용자 회원가입함. userLoginId: {}, 사용자이름: {}", req.loginId(), req.username());
+        userRepository.save(user);
+        return createJwtToken(res, user);
+    }
+
+    private UserWrapperDTO createJwtToken(HttpServletResponse res,
+            User user){
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getLoginId());
 
         Authentication authentication = new UsernamePasswordAuthenticationToken(
@@ -67,7 +72,7 @@ public class SignupService {
                 userDetails.getAuthorities()
         );
 
-        UserWrapperDTO userWrapperDTO = UserWrapperDTO.create(userRepository.save(user));
+        UserWrapperDTO userWrapperDTO = UserWrapperDTO.create(user);
 
         String jwtAccessToken = tokenProvider.createToken(user.getLoginId(), authentication, JWTType.ACCESS);
         String jwtRefreshToken = tokenProvider.createToken(user.getLoginId(), authentication, JWTType.REFRESH);

@@ -6,6 +6,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * DiscountPolicy를 반환합니다.
+ */
 @Component
 public class DefaultDiscountPolicyFactory implements DiscountPolicyFactory {
 
@@ -15,6 +18,12 @@ public class DefaultDiscountPolicyFactory implements DiscountPolicyFactory {
         this.policies = policies;
     }
 
+    /**
+     * CompositeDiscountPolicy를 반환합니다.
+     * @param screening 예매할 영화의 상영정보
+     * @param seatInfos 예매할 영화의 좌석정보
+     * @return 생성된 DiscountPolicy (기본값: CompositeDiscountPolicy)
+     */
     @Override
     public DiscountPolicy create(Screening screening, List<SeatInfo> seatInfos) {
         return new CompositeDiscountPolicy(

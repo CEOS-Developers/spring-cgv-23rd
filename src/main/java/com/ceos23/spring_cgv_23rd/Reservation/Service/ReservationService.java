@@ -20,6 +20,7 @@ import com.ceos23.spring_cgv_23rd.global.DiscountPolicy.DiscountPolicyFactory;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,7 +31,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ReservationService {
     private final UserRepository userRepository;
@@ -61,10 +64,13 @@ public class ReservationService {
     }
 
     /**
-     * 예매정보 저장하기, 아직 미결제
+     * 좌석 선택
+     * 예매는 좌석 선택 -> Reservation 객체 형성 -> ReservationId 기반 결제로 이어집니다.
+     * 이 메서드는 "좌석 선택" 기능입니다.
      *
-     * @param req 요청사항
-     * @return 완료된 예매정보
+     * @param loginId 사용자 정보. 쿠키에서 자동으로 정보를 가져옵니다.
+     * @param req 요청정보. ScreeningId와 SeatInfo를 List 형태로 전해줍니다.
+     * @return 좌석선택 후 생성된 Reservation 객체의 정보가 반환됩니다.
      */
     @Transactional
     public ReservationResponseDTO reserve(String loginId, ReservationRequestDTO req){
@@ -78,42 +84,62 @@ public class ReservationService {
                 user, req, discountPolicy
         );
 
+
         try{
             reservationRepository.save(reservation);
+            reservationRepository.flush();
+
+            String seatInfo = req.seatInfos().stream()
+                    .map(r -> "좌석명: " + r.seatName() + ", 좌석정보: " + r.info().getInfo())
+                    .collect(Collectors.joining(", "));
+            log.info("좌석 예약됨: reservationId={}, screeningId={}, screeningInfo={}",
+                    reservation.getId(), screening.getId(), seatInfo);
 
             return ReservationResponseDTO.createForReserve(user, reservation);
         } catch (DataIntegrityViolationException de){
-            //잘못된 요청 이외의 동시성 처리
-            //UK를 통해서 동시에 같은 좌석 예매요청에 대해서 처리한다.
-            de.printStackTrace();
+            log.warn("이미 선택된 좌석 발생: reservationId={}, screeningId={}",
+                    reservation.getId(), screening.getId());
             reservation.cancel();
             throw new CustomException(ErrorCode.ALREADY_OCCUPIED);
         }
     }
 
     /**
-     * 최종예매
+     * 좌석 선택
+     * 예매는 좌석 선택 -> Reservation 객체 형성 -> ReservationId 기반 결제로 이어집니다.
+     * 이 메서드는 "ReservationId 기반 결제" 기능입니다.
      *
-     * @param reservationId 예약ID
-     * @return 최종결제정보
+     * @param reservationId 결제할 예약의 ID값입니다.
+     * @param userLoginId 사용자 정보. 쿠키에서 자동으로 정보를 가져옵니다.
+     * @return 좌석선택 후 생성된 Reservation 객체의 정보가 반환됩니다.
      */
-    public ReservationResponseDTO reserve(long reservationId){
+    public ReservationResponseDTO pay(String userLoginId, long reservationId){
         Reservation reservation = reservationRepository.findById(reservationId).orElseThrow(
-                () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "예매정보가 존재하지 않습니다.")
+                () -> new CustomException(ErrorCode.NOT_FOUND_RESERVATION)
         );
+
+        User user = userRepository.findByLoginId(userLoginId).orElseThrow(
+                () -> new CustomException(ErrorCode.NOT_FOUND_USER)
+        );
+
+        if (!reservation.matchUserId(user.getLoginId())){
+            throw new CustomException(ErrorCode.USER_NOT_MATCH);
+        }
 
         paymentService.buy(
                 PaymentRequestDTO.create(reservation, storeId, "영화예매"),
-                reservation.getId()
+                reservation.getId(),
+                user.getLoginId()
         );
 
         return ReservationResponseDTO.createForPayment(reservation.getUser(), reservation);
     }
 
     /**
-     * TODO: Authentication과 USER 정보 가져오는 것 연결하기
-     * screening 객체를 전해주면 예약된 좌석 정보 전달
+     * 좌석의 남은 정보를 가져옵니다.
      *
+     * @param screeningId 가져올 상영정보의 id
+     * @return 남은 좌석정보
      */
     public ResponseEntity<RemainingSeatsDTO> getSeats(long screeningId){
         Screening screening = screeningRepository.findById(screeningId).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "해당 상영정보가 존재하지 않습니다."));
@@ -124,20 +150,26 @@ public class ReservationService {
                 .toList();
 
         return ResponseEntity.ok(
-                RemainingSeatsDTO.create(screeningId, reservedSeats)
+                RemainingSeatsDTO.create(screening, reservedSeats)
         );
     }
 
     public void cancel(String loginId, long reservationId){
-        Reservation reservation = reservationRepository.findById(reservationId).orElseThrow(
-                () -> new CustomException(ErrorCode.NOT_FOUND_RESERVATION)
-        );
+        try {
+            Reservation reservation = reservationRepository.findById(reservationId).orElseThrow(
+                    () -> new CustomException(ErrorCode.NOT_FOUND_RESERVATION)
+            );
 
-        if (!(reservation.getUser().getLoginId().equals(loginId))) {
-            throw new CustomException(ErrorCode.DIFFERENT_USER);
+            if (!(reservation.getUser().getLoginId().equals(loginId))) {
+                throw new CustomException(ErrorCode.DIFFERENT_USER);
+            }
+
+            paymentService.cancel(reservation.getId());
+            reservation.cancel();
+            log.info("결제가 취소됨. reservationId: {}", reservationId);
+        } catch (CustomException ce){
+            log.error("취소에 실패함. reservationId: {}", reservationId);
+            throw ce;
         }
-
-        paymentService.cancel(reservation.getId());
-        reservation.cancel();
     }
 }

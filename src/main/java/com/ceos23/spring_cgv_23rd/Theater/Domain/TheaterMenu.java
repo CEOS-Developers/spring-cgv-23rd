@@ -1,13 +1,10 @@
 package com.ceos23.spring_cgv_23rd.Theater.Domain;
 
 import com.ceos23.spring_cgv_23rd.Food.Domain.Food;
-import com.ceos23.spring_cgv_23rd.Food.Domain.MenuType;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

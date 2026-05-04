@@ -4,15 +4,16 @@ import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationStatus;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.TheaterMenu;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -20,7 +21,7 @@ import java.util.UUID;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "USER_UNIQUE",
-                        columnNames = {"user_id", "active_key"}
+                        columnNames = {"user_id", "theater_id", "status", "activate_key"}
                 )
         }
 )
@@ -30,7 +31,7 @@ public class Cart {
         this.user = user;
         this.theater = theater;
         this.status = ReservationStatus.RESERVED;
-        this.activeKey = "RESERVED";
+        this.activateKey = "RESERVED";
     }
 
     @Id
@@ -41,7 +42,7 @@ public class Cart {
     @Getter
     private ReservationStatus status;
 
-    private String activeKey;
+    private String activateKey;
 
     @Getter
     @ManyToOne
@@ -60,9 +61,19 @@ public class Cart {
     @Getter
     private int price = 0;
 
+    private void changeActivateKey() {
+        if(activateKey.equals("RESERVED")){
+            this.activateKey = UUID.randomUUID().toString();
+        }
+    }
+
     public void addItem(TheaterMenu menu, int quantity){
+        if (quantity < 0){
+            throw new CustomException(ErrorCode.INVALID_QUANTITY);
+        }
+
         if (menu.getSold() < quantity){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "재고가 없습니다.");
+            throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
         }
 
         CartItem ci = new CartItem(menu, quantity);
@@ -72,49 +83,24 @@ public class Cart {
         price += ci.getPrice();
     }
 
-    public void startBuying(){
-        this.status = ReservationStatus.PENDING;
-    }
-
     public void endPaying(){
         this.status = ReservationStatus.PAID;
-
-        if (activeKey.equals("RESERVED")){
-            this.activeKey = UUID.randomUUID().toString();
-        }
+        changeActivateKey();
     }
 
     public void cancel(){
         this.status = ReservationStatus.CANCELED;
-
-        if (activeKey.equals("RESERVED")){
-            this.activeKey = UUID.randomUUID().toString();
-        }
-
+        changeActivateKey();
     }
 
-    public Order buyCart(){
-        if (this.status != ReservationStatus.PENDING){
-            throw new IllegalStateException("결제 중 상태에서만 주문 가능");
+    public Optional<CartItem> checkingUnavailableCartItem(){
+        for (CartItem cartItem : cartItems){
+            if (cartItem.isQuantityExceedSold()){
+                return Optional.of(cartItem);
+            }
         }
 
-        if (!activeKey.equals("RESERVED")){
-            this.activeKey = UUID.randomUUID().toString();
-        }
-
-        Order order = Order.create(this);
-
-        for (CartItem ci : cartItems){
-            OrderItem oi = ci.buy();
-            order.addOrderItem(oi);
-        }
-
-        endPaying();
-        return order;
-    }
-
-    public boolean isAvailable(){
-        return this.status == ReservationStatus.RESERVED;
+        return Optional.empty();
     }
 
     public static Cart create(User user, Theater theater){

@@ -2,7 +2,6 @@ package com.ceos23.spring_cgv_23rd.Reservation.Service;
 
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.Reservation;
 import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationRepository;
-import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationSeatRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

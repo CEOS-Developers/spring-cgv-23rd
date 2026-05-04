@@ -19,8 +19,4 @@ public interface TokenRepository extends JpaRepository<RefreshToken, Long> {
         and rt.used = false
     """)
     List<RefreshToken> findUnexpiredTokenByUser(@Param("user") User user);
-
-    Iterable<RefreshToken> findAllByUser(User user);
-
-    boolean existsByToken(String token);
 }

@@ -1,9 +1,7 @@
 package com.ceos23.spring_cgv_23rd.Payment.DTO;
 
 import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Cart;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Order;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.Reservation;
-import lombok.Getter;
 
 public record PaymentRequestDTO(
         String storeId,

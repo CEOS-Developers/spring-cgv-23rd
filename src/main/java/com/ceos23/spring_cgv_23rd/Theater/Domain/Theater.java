@@ -1,6 +1,5 @@
 package com.ceos23.spring_cgv_23rd.Theater.Domain;
 
-import com.ceos23.spring_cgv_23rd.Movie.Domain.AudienceData;
 import jakarta.persistence.*;
 import lombok.*;
 import org.apache.coyote.BadRequestException;
@@ -39,7 +38,7 @@ public class Theater {
         thm.setTheater(this);
     }
 
-    public static Theater create(String name, String address) throws BadRequestException {
+    public static Theater create(String name, String address)  {
         return new Theater(name, Region.findRegion(address), address);
     }
 

@@ -43,7 +43,7 @@ public class TokenProvider implements InitializingBean {
     public void validateToken(String token){
         getTokenLoginId(token);
     }
-
+    
     public String getAccessToken(HttpServletRequest req) {
         Cookie[] cookies = req.getCookies();
 

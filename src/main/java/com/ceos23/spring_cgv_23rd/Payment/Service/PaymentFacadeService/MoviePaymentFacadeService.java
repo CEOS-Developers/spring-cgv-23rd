@@ -19,15 +19,14 @@
     public class MoviePaymentFacadeService implements CancelablePaymentFacadeService {
         private final ConcurrencyClient concurrencyClient;
         private final PaymentRepository paymentRepository;
-        private final ReservationRepository reservationRepository;
-        private final PaymentIdHandler paymentIdHandler;
         private final MoviePaymentDBService moviePaymentDBService;
         private final PaymentService moviePaymentService;
 
         public Payment buy(PaymentRequestDTO req,
-                           long targetId) {
+                           long targetId,
+                           String userLoginId) {
             int retry = 0;
-            Payment payment = moviePaymentDBService.setPayment(targetId, req);
+            Payment payment = moviePaymentDBService.setPayment(targetId, req, userLoginId);
 
             while (retry < 5) {
                 try {

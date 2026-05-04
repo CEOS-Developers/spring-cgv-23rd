@@ -4,7 +4,6 @@ import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import lombok.Builder;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 

@@ -1,5 +1,6 @@
 package com.ceos23.spring_cgv_23rd.FoodOrder.Domain;
 
+import com.ceos23.spring_cgv_23rd.Payment.Domain.Payment;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationStatus;
 import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
@@ -16,7 +17,8 @@ import java.util.List;
 @Table(name = "orders")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order {
-    private Order(User user, Theater theater, int price, ReservationStatus status){
+    private Order(Payment payment, User user, Theater theater, int price, ReservationStatus status){
+        this.payment = payment;
         this.user = user;
         this.theater = theater;
         this.status = status;
@@ -26,6 +28,10 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @OneToOne
+    @JoinColumn(name = "payment_id")
+    private Payment payment;
 
     private ReservationStatus status;
 
@@ -47,7 +53,7 @@ public class Order {
         oi.setOrder(this);
     }
 
-    public static Order create(Cart cart){
-        return new Order(cart.getUser(), cart.getTheater(), cart.getPrice(), cart.getStatus());
+    public static Order create(Payment payment, Cart cart){
+        return new Order(payment, cart.getUser(), cart.getTheater(), cart.getPrice(), cart.getStatus());
     }
 }

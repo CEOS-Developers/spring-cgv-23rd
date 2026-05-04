@@ -7,10 +7,8 @@ import com.ceos23.spring_cgv_23rd.Reservation.Repository.ReservationSeatReposito
 import com.ceos23.spring_cgv_23rd.Screen.Domain.Screening;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +23,13 @@ public class SeatValidator {
         this.reservationSeatRepository = reservationSeatRepository;
     }
 
+    /**
+     * 예매할 좌석의 유효성을 검사합니다.
+     * 예매한 사용자와 현재 사용자가 다르거나, 이미 선택된 좌석을 예매하는 경우 에러가 발생합니다.
+     *
+     * @param screening 상영정보
+     * @param infos 좌석정보
+     */
     @Transactional(readOnly = true)
     public void checkValidity(Screening screening, List<ReservationSeatInfo> infos){
         List<ReservationSeat> rs = reservationSeatRepository.findByScreeningAndStatus(screening, ReservationStatus.RESERVED);

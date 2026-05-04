@@ -1,21 +1,26 @@
 package com.ceos23.spring_cgv_23rd.Payment.Domain;
 
 import com.ceos23.spring_cgv_23rd.Payment.DTO.Currency;
-import com.ceos23.spring_cgv_23rd.Reservation.Domain.Reservation;
-import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "payment",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "USER_UNIQUE",
+                        columnNames = {"payment_id"}
+                )
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment {
-    private Payment(String paymentId, LocalDateTime time, String storeId, String orderName, int totalPayAmount, Currency currency, PayType payType, long targetId){
+    private Payment(String userLoginId, String paymentId, LocalDateTime time, String storeId, String orderName, int totalPayAmount, Currency currency, PayType payType, long targetId){
+        this.userLoginId = userLoginId;
         this.paymentId = paymentId;
         this.createdAt = time;
         this.storeId = storeId;
@@ -23,7 +28,6 @@ public class Payment {
         this.totalPayAmount = totalPayAmount;
         this.currency = currency;
         this.payType = payType;
-        this.status = ReservationStatus.RESERVED;
         this.targetId = targetId;
         this.paymentStatus = PaymentStatus.PENDING;
     }
@@ -34,33 +38,41 @@ public class Payment {
     private long id;
 
     @Getter
+    private String userLoginId;
+
+    @Getter
     private String paymentId;
 
     private PaymentStatus paymentStatus;
 
     private LocalDateTime createdAt;
 
+    @Getter
     @Enumerated(value = EnumType.STRING)
     private PayType payType;
 
     @Getter
     private long targetId;
 
+    @Getter
     private String storeId;
 
+    @Getter
     private String orderName;
 
+    @Getter
     private int totalPayAmount;
 
-    @Enumerated(EnumType.STRING)
-    private ReservationStatus status;
 
     @Enumerated(value = EnumType.STRING)
     private Currency currency;
 
-    public Payment setTarget(long targetId){
-        this.targetId = targetId;
-        return this;
+    public boolean isPending(){
+        return paymentStatus.equals(PaymentStatus.PENDING);
+    }
+
+    public boolean isFailed(){
+        return paymentStatus.equals(PaymentStatus.FAILED);
     }
 
     public void paymentFail(){
@@ -72,11 +84,11 @@ public class Payment {
     }
 
     public void cancel(){
-        this.status = ReservationStatus.CANCELED;
+        this.paymentStatus = PaymentStatus.FAILED;
     }
 
-    public static Payment create(String id, String storeId, String orderName, int totalPayAmount, Currency currency, PayType type, long targetId){
-        return new Payment(id, LocalDateTime.now(), storeId, orderName, totalPayAmount, currency, type, targetId);
+    public static Payment create(String userLoginId, String paymentId, String storeId, String orderName, int totalPayAmount, Currency currency, PayType type, long targetId){
+        return new Payment(userLoginId, paymentId, LocalDateTime.now(), storeId, orderName, totalPayAmount, currency, type, targetId);
     }
 
     public void updatePaymentId(String paymentId){

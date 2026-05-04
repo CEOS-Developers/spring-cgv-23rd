@@ -1,84 +1,68 @@
 package com.ceos23.spring_cgv_23rd.Payment.Service.PaymentFacadeService;
 
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Cart;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Order;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Repository.CartRepository;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Repository.FoodOrderRepository;
 import com.ceos23.spring_cgv_23rd.Payment.DTO.PaymentRequestDTO;
 import com.ceos23.spring_cgv_23rd.Payment.DTO.PaymentResponseDTO;
-import com.ceos23.spring_cgv_23rd.Payment.Domain.PayType;
 import com.ceos23.spring_cgv_23rd.Payment.Domain.Payment;
-import com.ceos23.spring_cgv_23rd.Payment.Repository.PaymentRepository;
 import com.ceos23.spring_cgv_23rd.Payment.Service.ConcurrencyClient;
 import com.ceos23.spring_cgv_23rd.Payment.Service.PaymentDBService.FoodPaymentDBService;
 import com.ceos23.spring_cgv_23rd.Payment.Service.PaymentService.PaymentService;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import feign.FeignException;
-import org.springframework.http.HttpStatus;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class FoodPaymentFacadeService implements PaymentFacadeService {
-    private final PaymentRepository paymentRepository;
-    private final CartRepository cartRepository;
-    private final PaymentIdHandler paymentIdHandler;
     private final ConcurrencyClient concurrencyClient;
-    private final FoodOrderRepository foodOrderRepository;
     private final FoodPaymentDBService foodPaymentDBService;
     private final PaymentService paymentService;
 
-    public FoodPaymentFacadeService(PaymentRepository paymentRepository,
-                                    CartRepository cartRepository,
-                                    PaymentIdHandler paymentIdHandler,
-                                    ConcurrencyClient concurrencyClient, FoodOrderRepository foodOrderRepository, FoodPaymentDBService foodPaymentDBService, PaymentService paymentService) {
-        this.paymentRepository = paymentRepository;
-        this.cartRepository = cartRepository;
-        this.paymentIdHandler = paymentIdHandler;
-        this.concurrencyClient = concurrencyClient;
-        this.foodOrderRepository = foodOrderRepository;
-        this.foodPaymentDBService = foodPaymentDBService;
-        this.paymentService = paymentService;
-    }
-
     @Override
-    @Transactional
     public Payment buy(PaymentRequestDTO req,
-                       long targetId) {
+                       long targetId,
+                       String userLoginId) {
         int retry = 0;
 
-        Payment payment = foodPaymentDBService.setPayment(targetId, req);
+        Payment payment = foodPaymentDBService.setPayment(targetId, req, userLoginId);
+        foodPaymentDBService.reflectBuying(payment.getPaymentId());
+
+        log.info("결제 시작: userId = {}, payType = {} paymentId = {}, userId = {}, targetId = {}, storeId = {}, orderName = {}, totalPayAmount = {}",
+                userLoginId, payment.getPayType(), payment.getPaymentId(), payment.getUserLoginId(), payment.getTargetId(), payment.getStoreId(), payment.getOrderName(), payment.getTotalPayAmount());
 
         while (retry < 5) {
             try {
                 retry++;
-                System.out.println("결제 시작!\n" + "retry >>> " + retry);
+                log.debug("결제 PG 요청 시작, paymentId = {}, retry >>> {}", payment.getPaymentId(), retry);
 
                 paymentService.pay(payment, req);
-                return foodPaymentDBService.successPayment(payment.getId());
+                return payment;
 
             } catch (CustomException ce) {
                 switch (ce.getCode()) {
                     case DUPLICATE_PAYMENT_ID:
                     case PAYMENT_FAILED_BY_OUTER_SERVER:
                         if (checkPaymentStatusPaid(payment.getPaymentId())) {
-                            //요청이 제대로 전달되었음
-                            //성공처리만 필요
-                            return foodPaymentDBService.successPayment(payment.getTargetId());
+                            log.warn("외부연동에서 장애 발생으로 응답에 실패했으나 결제는 성공. paymentId: {}", payment.getPaymentId());
+                            return payment;
                         } else {
-                            //요청이 전달되지 않음
+                            log.warn("결제 실패. 재시도. errorMessage = {}", ce.getMessage());
+                            foodPaymentDBService.changePaymentId(payment);
                             continue;
                         }
                     default:
-                        foodPaymentDBService.failPayment(payment.getId());
+                        log.error("결제에 실패하였음. paymentId={}, errorMessage={}", payment.getPaymentId(), ce.getMessage());
+                        foodPaymentDBService.failPayment(payment.getPaymentId());
                         throw ce;
                 }
             }
         }
 
-        foodPaymentDBService.failPayment(payment.getId());
+        foodPaymentDBService.failPayment(payment.getPaymentId());
+        log.error("결제에 실패하였음. paymentId={}", payment.getPaymentId());
         throw new CustomException(ErrorCode.PAYMENT_FAILED_BY_SERVER);
     }
 
@@ -86,15 +70,6 @@ public class FoodPaymentFacadeService implements PaymentFacadeService {
         try {
             PaymentResponseDTO paymentDTO = concurrencyClient.checkPayment(paymentId);
             return paymentDTO.findStatus("PAID");
-        } catch (FeignException fe){
-            return false;
-        }
-    }
-
-    private boolean checkPaymentStatusCancel(String paymentId){
-        try {
-            PaymentResponseDTO paymentDTO = concurrencyClient.checkPayment(paymentId);
-            return paymentDTO.findStatus("CANCELLED");
         } catch (FeignException fe){
             return false;
         }

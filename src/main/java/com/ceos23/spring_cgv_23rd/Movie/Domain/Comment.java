@@ -4,7 +4,6 @@ import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

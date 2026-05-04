@@ -11,21 +11,20 @@ import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TheaterService {
-    TheaterRepository theaterRepository;
-    BookmarkedTheaterRepository bookmarkedTheaterRepository;
-    UserRepository userRepository;
+    private final TheaterRepository theaterRepository;
+    private final BookmarkedTheaterRepository bookmarkedTheaterRepository;
+    private final UserRepository userRepository;
 
     /**
      * 검색어로 극장 조회
@@ -35,6 +34,7 @@ public class TheaterService {
      */
     @Transactional
     public TheaterSearchResponseDTO theaterSearchService(String query){
+        log.debug("영화관 조회, 검색어 = {}", query);
         List<Theater> searchedTheater = theaterRepository.findByNameContaining(query);
 
         TheaterSearchResponseDTO responseDTO = TheaterSearchResponseDTO.builder()
@@ -68,6 +68,7 @@ public class TheaterService {
      */
     @Transactional(readOnly = true)
     public TheaterSearchResponseDTO theaterSearchService(Region reg){
+        log.debug("영화관 조회, 지역 = {}", reg.getRegionName());
         List<Theater> searchedTheaters = theaterRepository.findByRegion(reg);
 
         return TheaterSearchResponseDTO.builder()
@@ -76,13 +77,14 @@ public class TheaterService {
     }
 
     /**
-     * 영화관 찜하기
-     * 이미 찜된 경우 취소
+     * 영화관 찜하기 관련 기능입니다.
+     * 사용자가 이미 찜한 영화관의 경우 취소, 찜하지 않은 경우 찜을 추가합니다.
      *
-     * @param theaterId 영화관 ID
-     * @return 영화관 검색결과. id값과 이름 필드
+     * @param loginId 사용자의 id입니다. 자동으로 받는 값입니다.
+     * @param theaterId 찜하거나 찜을 취소할 영화의 id입니다.
+     * @return 찜/취소 여부, 극장이름, 극장ID를 반환합니다.
      */
-    @Transactional()
+    @Transactional
     public LikedTheaterResponseDTO theaterBookMarkService(String loginId, long theaterId){
         Theater theater = theaterRepository.findById(theaterId).orElseThrow(
                 () -> new CustomException(ErrorCode.NOT_FOUND_THEATER)
@@ -95,12 +97,14 @@ public class TheaterService {
         Optional<BookmarkedTheater> theaterOptional = bookmarkedTheaterRepository.findByTheaterAndUser(theater, user);
 
         if (theaterOptional.isPresent()){ //이미 있음, 취소
+            log.info("사용자 {}가 영화관 {}에 대해 북마크를 취소함", user.getLoginId(), theater.getId());
             bookmarkedTheaterRepository.deleteBookmarkedTheaterById(theaterOptional.get().getId());
 
             return LikedTheaterResponseDTO.create(
                     RequestType.DELETE,theaterOptional.get().getTheater()
             );
-        } else { //없음, 새로이 예약
+        } else { //없음, 새로이 북마크
+            log.info("사용자 {}가 영화관 {}에 대해 북마크를 추가함", user.getLoginId(), theater.getId());
             BookmarkedTheater bmt = BookmarkedTheater.create(theater, user);
 
             bookmarkedTheaterRepository.save(bmt);

@@ -11,4 +11,8 @@ public interface FoodOrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByUser(User user);
 
     List<Order> findAllByUser(User user);
+
+    boolean existsByPaymentId(long paymentId);
+
+    boolean existsByPaymentPaymentId(String paymentPaymentId);
 }

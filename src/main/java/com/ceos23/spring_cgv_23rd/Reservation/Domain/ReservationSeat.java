@@ -78,6 +78,7 @@ public class ReservationSeat {
                                          Screening screening, DiscountPolicy discountPolicy) {
         ReservationSeat seat = new ReservationSeat(rs, seatName, seatInfo, screening);
         seat.calculatePrice(discountPolicy);
+        System.out.println("seat에서 >>> " + seat.price);
         return seat;
     }
 }

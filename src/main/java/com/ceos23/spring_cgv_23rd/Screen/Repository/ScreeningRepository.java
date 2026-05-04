@@ -21,20 +21,20 @@ import java.util.Optional;
 public interface ScreeningRepository extends JpaRepository<Screening, Long> {
 
     @Query("""
-        select s from Screening s
-        join fetch s.movie m
-        join fetch s.screen sc
-        join fetch sc.theater t
-        
-        where t = :theater
-        and s.startTime = :date
-    """)
-    List<Screening> findByTheater(
-            @Param("theater") Theater screenTheater,
-            @Param("now") LocalDate date
+    select s from Screening s
+    join fetch s.movie m
+    join fetch s.screen sc
+    join fetch sc.theater t
+    
+    where t = :theater
+    and s.startTime >= :start
+    and s.startTime < :end
+""")
+    List<Screening> findByTheaterAndDate(
+            @Param("theater") Theater theater,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
     );
-
-    List<Screening> findByScreen_TheaterAndMovie(Theater screenTheater, Movie movie);
 
     @Query("""
     select s from Screening s
@@ -47,7 +47,7 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
     List<Screening> findByTheaterAndMovieToEntity(
             @Param("theater") Theater screenTheater,
             @Param("movie") Movie movie,
-            @Param("now")LocalDateTime now);
+            @Param("now") LocalDateTime now);
 
     @Query("""
         select new com.ceos23.spring_cgv_23rd.Screen.DTO.ScreeningSearchQueryResultDTO(
@@ -58,12 +58,14 @@ public interface ScreeningRepository extends JpaRepository<Screening, Long> {
         join s.screen sc
         where sc.theater = :theater
         and m = :movie
-        and s.startTime < :now
+        and s.startTime >= :start
+        and s.startTime < :end
     """)
     List<ScreeningSearchQueryResultDTO> findByTheaterAndMovie(
             @Param("theater") Theater screenTheater,
             @Param("movie") Movie movie,
-            @Param("now")LocalDateTime now);
+            @Param("start") LocalDateTime now,
+            @Param("end") LocalDateTime end);
 
     @Query("""
         select new com.ceos23.spring_cgv_23rd.Screen.DTO.ScreeningSearchQueryResultDTO(

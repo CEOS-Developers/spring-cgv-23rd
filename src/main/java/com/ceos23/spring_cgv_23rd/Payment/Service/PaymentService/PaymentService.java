@@ -26,6 +26,7 @@ public class PaymentService {
             return concurrencyClient.pay(paymentId, req);
 
         } catch (FeignException fe) {
+            fe.printStackTrace();
             switch (fe.status()) {
                 case 403 -> throw new CustomException(ErrorCode.STORE_ID_MISMATCH);
                 case 404 -> throw new CustomException(ErrorCode.STORE_NOT_FOUND);

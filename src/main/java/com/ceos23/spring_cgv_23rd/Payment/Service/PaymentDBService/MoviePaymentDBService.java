@@ -36,17 +36,22 @@ public class MoviePaymentDBService {
 
     @Transactional
     public Payment setPayment(long targetId,
-                              PaymentRequestDTO req){
+                              PaymentRequestDTO req,
+                              String userLoginId){
         Reservation reservation = getActiveReservationById(targetId);
-        String paymentId = paymentIdHandler.getPaymentId();
+        String paymentId = paymentIdHandler.getPaymentId("MovieReservation");
 
         if(!reservation.canPay()){
             throw new CustomException(ErrorCode.RESERVATION_IS_UNAVAILABLE);
         }
         reservation.buyReservation();
 
-        Payment payment = Payment.create(paymentId, req.storeId(), req.orderName(), req.totalPayAmount(), req.currency(), PayType.RESERVATION, reservation.getId());
+        Payment payment = Payment.create(userLoginId, paymentId, req.storeId(), req.orderName(), req.totalPayAmount(), req.currency(), PayType.RESERVATION, reservation.getId());
         return paymentRepository.save(payment);
+        /*
+        String userLoginId, String paymentId, String storeId, String orderName, int totalPayAmount, Currency currency, PayType type, long targetId){
+        return new Payment(userLoginId, paymentId, LocalDateTime.now(), storeId, orderName, totalPayAmount, currency, type, targetId);
+         */
     }
 
     @Transactional

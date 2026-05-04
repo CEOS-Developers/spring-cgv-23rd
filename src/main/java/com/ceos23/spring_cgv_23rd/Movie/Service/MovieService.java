@@ -9,22 +9,19 @@ import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
 import com.ceos23.spring_cgv_23rd.Movie.Repository.BookmarkedMovieRepository;
 import com.ceos23.spring_cgv_23rd.Movie.Repository.MovieRepository;
 import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.*;
-import com.ceos23.spring_cgv_23rd.Theater.Domain.Theater;
 import com.ceos23.spring_cgv_23rd.User.Domain.BookmarkedMovie;
-import com.ceos23.spring_cgv_23rd.User.Domain.BookmarkedTheater;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 public class MovieService {
     private final UserRepository userRepository;
@@ -37,8 +34,15 @@ public class MovieService {
         this.bookmarkedMovieRepository = bookmarkedMovieRepository;
     }
 
+    /**
+     * 검색어에 맞는 영화를 반환합니다.
+     *
+     * @param query 검색어
+     * @return 영화
+     */
     @Transactional
     public MovieSearchResponseDTO theaterSearchService(String query){
+        log.debug("영화관 조회, 검색어 = {}", query);
         List<Movie> searchedMovie = movieRepository.findByMovieNameContaining(query);
 
         return MovieSearchResponseDTO.builder()
@@ -74,12 +78,14 @@ public class MovieService {
         Optional<BookmarkedMovie> movieOptional = bookmarkedMovieRepository.findByMovieAndUser(movie, user);
 
         if (movieOptional.isPresent()){ //이미 있음, 취소
+            log.info("사용자 {}가 영화 {}에 대해 북마크를 취소함", user.getLoginId(), movie.getId());
             bookmarkedMovieRepository.deleteBookmarkedMovieById(movieOptional.get().getId());
 
             return LikedMovieResponseDTO.create(
                     RequestType.DELETE, movieOptional.get().getMovie()
             );
         } else { //없음, 새로이 예약
+            log.info("사용자 {}가 영화 {}에 대해 북마크를 추가함", user.getLoginId(), movie.getId());
             BookmarkedMovie bmm = BookmarkedMovie.create(user, movie);
             bookmarkedMovieRepository.save(bmm);
 

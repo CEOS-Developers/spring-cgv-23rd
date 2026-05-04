@@ -1,6 +1,8 @@
 package com.ceos23.spring_cgv_23rd.Theater.Domain;
 
-import org.apache.coyote.BadRequestException;
+import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
+import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
+import lombok.Getter;
 
 public enum Region {
     SEOUL("서울"),
@@ -13,17 +15,14 @@ public enum Region {
     GYEONGSANG("경상"),
     HONAM_JEJU("광주/전라/제주");
 
+    @Getter
     private String regionName;
 
     Region(String name) {
         this.regionName = name;
     }
 
-    public String getName() {
-        return regionName;
-    }
-
-    public static Region findRegion(String address) throws BadRequestException {
+    public static Region findRegion(String address) {
         String addressRegion = address.split(" ")[0];
 
         if(addressRegion.startsWith("서울")){
@@ -43,7 +42,7 @@ public enum Region {
         } else if (addressRegion.startsWith("광주") || addressRegion.startsWith("전라") || addressRegion.startsWith("제주")){
             return Region.HONAM_JEJU;
         } else {
-            throw new BadRequestException("주소에 해당하는 지역이 존재하지 않습니다.");
+            throw new CustomException(ErrorCode.NOT_FOUND_REGION);
         }
     }
 }

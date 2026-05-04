@@ -75,11 +75,16 @@ public class Reservation {
 
     private void computeTotalPrice(){
         int totalSum = 0;
+
         for (ReservationSeat rs : reservationSeats){
             totalSum += rs.getPrice();
         }
 
         this.totalPrice = totalSum;
+    }
+
+    public boolean matchUserId(String userLoginId){
+        return user.getLoginId().equals(userLoginId);
     }
 
     public void cancel(){
@@ -103,6 +108,7 @@ public class Reservation {
             res.addReservationSeat(rss);
         }
         res.computeTotalPrice();
+        System.out.println("예약중..가격: >>> " + res.totalPrice);
 
         return res;
     }

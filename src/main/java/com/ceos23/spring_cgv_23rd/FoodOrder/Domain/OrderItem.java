@@ -11,7 +11,7 @@ import lombok.Setter;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItem {
-    protected OrderItem(CartItem ci){
+    public OrderItem(CartItem ci){
         this(ci.getMenu(), ci.getQuantity());
     }
 

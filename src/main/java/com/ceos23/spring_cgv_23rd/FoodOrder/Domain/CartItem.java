@@ -42,6 +42,10 @@ public class CartItem {
         cart.getCartItems().add(this);
     }
 
+    public boolean isQuantityExceedSold(){
+        return menu.getSold() < this.quantity;
+    }
+
     public OrderItem buy(){
         menu.buy(quantity);
         return new OrderItem(this);

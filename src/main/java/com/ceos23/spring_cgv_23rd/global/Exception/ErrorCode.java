@@ -17,6 +17,8 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G001", "서버에 장애가 발생했습니다."),
     DATA_ACCESS_EXCEPTION(HttpStatus.CONFLICT, "G002", "이미 등록된 유일키입니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "G003", "권한이 없습니다."),
+    UN_SATISFIED_PARAMETERS(HttpStatus.BAD_REQUEST, "G004", "파라미터가 부족합니다."),
+    CONFLICT(HttpStatus.CONFLICT, "G005", "동시성 충돌이 발생했습니다."),
 
     //Exception for DataBase
     NOT_FOUND_PAYMENT(HttpStatus.NOT_FOUND, "D001", "결제정보를 찾을 수 없습니다"),
@@ -27,6 +29,7 @@ public enum ErrorCode {
     NOT_FOUND_MENU(HttpStatus.NOT_FOUND, "D006", "해당 메뉴를 찾을 수 없습니다."),
     NOT_FOUND_MOVIE(HttpStatus.NOT_FOUND, "D007", "해당 영화를 찾을 수 없습니다."),
     NOT_FOUND_REFRESH_TOKEN(HttpStatus.NOT_FOUND, "D008", "토큰을 찾을 수 없습니다."),
+    NOT_FOUND_REGION(HttpStatus.NOT_FOUND, "D009", "주소에 해당하는 지역이 존재하지 않습니다."),
 
     //Exception for Authentication
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "A001", "잘못된 형식의 토큰입니다."),
@@ -45,15 +48,18 @@ public enum ErrorCode {
 
     CART_IS_UNAVAILABLE(HttpStatus.BAD_REQUEST, "P006", "이미 결제가 완료되거나 진행 중인 장바구니입니다."),
     RESERVATION_IS_UNAVAILABLE(HttpStatus.BAD_REQUEST, "P007", "이미 결제가 완료되거나 진행 중인 예약입니다."),
+    PAYMENT_ALREADY_PAID(HttpStatus.BAD_REQUEST, "P008", "이미 결제가 완료되었습니다."),
 
     //Exception while reservation
     ALREADY_OCCUPIED(HttpStatus.BAD_REQUEST, "R001", "이미 선택된 좌석입니다."),
     DIFFERENT_USER(HttpStatus.BAD_REQUEST, "R002", "사용자와 예약자가 다릅니다."),
     DUPLICATION_SEAT(HttpStatus.BAD_REQUEST, "R003", "좌석을 중복선택할 수 없습니다."),
+    USER_NOT_MATCH(HttpStatus.BAD_REQUEST, "R004", "예약의 사용자 정보와 현재의 사용자 정보가 다릅니다."),
 
     //Exception while ordering Food
     INVENTORY_SHORTAGE(HttpStatus.BAD_REQUEST, "O001", "재고가 부족합니다."),
     INVALID_QUANTITY(HttpStatus.BAD_REQUEST, "O002", "재고는 음수로 할 수 없습니다."),
+    EMPTY_CART(HttpStatus.NOT_FOUND, "O003", "장바구니에 물건이 없습니다."),
 
     //Exception for canceling
     PAYMENT_NOT_CANCELLABLE(HttpStatus.CONFLICT, "P006", "PAID 상태에서만 취소할 수 있습니다."),

@@ -1,28 +1,42 @@
+server:
+  address: 0.0.0.0
+
 spring:
-  config:
-    import: optional:file:.env[.properties]
 
   datasource:
-    url: jdbc:mysql://localhost:3306/${DB_NAME}?allowPublicKeyRetrieval=true&useSSL=false&characterEncoding=UTF-8
-    username: root
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update #테스트 이후 수정
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+        default_batch_fetch_size: 100
 
 logging:
+  file:
+    name: logs/app.log
   level:
+    root: info
+    com.ceos23: debug
     org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql: trace
+    org.springframework.boot.context.config: debug
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
+
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 concurrency:
   storeId: ${CONCURRENCY_ID}
-  secret-key: ${CONCURRENCY_SECRET_KEY}
+  secret-key: ${CONCURRENCY_SECRET_KEY}`

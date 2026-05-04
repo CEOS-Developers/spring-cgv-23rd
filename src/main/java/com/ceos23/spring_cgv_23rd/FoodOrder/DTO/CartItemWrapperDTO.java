@@ -1,8 +1,6 @@
 package com.ceos23.spring_cgv_23rd.FoodOrder.DTO;
 
 import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.CartItem;
-import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.OrderItem;
-import com.ceos23.spring_cgv_23rd.Theater.Domain.TheaterMenu;
 
 import java.util.List;
 

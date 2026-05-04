@@ -15,4 +15,5 @@ public interface TheaterRepository extends JpaRepository<Theater, Long> {
 
     List<Theater> findByNameContaining(String name);
 
+    List<Theater> findAllByRegion(Region region);
 }

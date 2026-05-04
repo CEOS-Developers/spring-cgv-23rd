@@ -15,6 +15,13 @@ public record MenuFindingResponseDTO(
                 theater.getName(),
                 menus
         );
+    }
 
+    public static MenuFindingResponseDTO createNull(Theater theater){
+        return new MenuFindingResponseDTO(
+                theater.getId(),
+                theater.getName(),
+                null
+        );
     }
 }

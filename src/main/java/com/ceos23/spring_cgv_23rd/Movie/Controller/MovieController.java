@@ -5,12 +5,10 @@ import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.LikedMovieResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.MovieSearchAllResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.MovieSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.Service.MovieService;
-import com.ceos23.spring_cgv_23rd.Screen.DTO.Response.ScreeningSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.CheckLikedMovieResponseDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +20,12 @@ public class MovieController {
         this.movieService = movieService;
     }
 
+    /**
+     * 검색어로 영화를 검색합니다.
+     *
+     * @param searchQuery 검색어
+     * @return 검색된 영화
+     */
     @GetMapping(params = "searchQuery")
     public ResponseEntity<MovieSearchResponseDTO> searchWithName(
             @RequestParam String searchQuery
@@ -29,6 +33,11 @@ public class MovieController {
         return ResponseEntity.ok(movieService.theaterSearchService(searchQuery));
     }
 
+    /**
+     * 영화 전체 검색
+     *
+     * @return 검색된 영화
+     */
     @GetMapping
     public ResponseEntity<MovieSearchAllResponseDTO> searchAll() {
         return ResponseEntity.ok(movieService.theaterSearchService());
@@ -36,15 +45,14 @@ public class MovieController {
 
     /**
      * 영화 좋아요
-     * TODO: DTO써서 body 반환하도록 바꾸기, 영화관 쪽 도메인에도 동일적용
      *
      * 이미 눌려져있는데 한 번 더 누르면 취소
      */
     @PostMapping("/likes")
-    public LikedMovieResponseDTO bookmarkMovie(
+    public ResponseEntity<LikedMovieResponseDTO> bookmarkMovie(
             @RequestBody BookmarkMovieRequestDTO bmrDTO
-            ) {
-        return movieService.movieLikService(bmrDTO);
+    ) {
+        return ResponseEntity.ok(movieService.movieLikService(bmrDTO));
     }
 
     /**

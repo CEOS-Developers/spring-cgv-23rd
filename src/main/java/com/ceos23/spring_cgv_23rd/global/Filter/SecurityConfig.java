@@ -36,6 +36,22 @@ public class SecurityConfig {
                                             CustomLogoutSuccessHandler successHandler) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/menus",
+                                "/api/theater",
+                                "/api/movie",
+                                "/api/screen"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.POST
+                        ).permitAll()
+                        .requestMatchers(
+                                "/",
+                                "/css/**", "/images/**", "/favicon.ico/**",
+                                "/api/login/**",
+                                "/api/signup"
+                        ).permitAll()
+                        .anyRequest().authenticated())
+/*
                         .requestMatchers(HttpMethod.POST, "/api/login", "/api/login/**", "/api/signup").permitAll()
                         .requestMatchers("/api/movie/likes", "/api/theater/likes").authenticated()
                         .requestMatchers(
@@ -45,10 +61,13 @@ public class SecurityConfig {
                                 "/api/movie/**",
                                 "/api/screen/**",
                                 "/api/theater/**",
+                                "/api/signup/**",
+                                "/api/menus",
                                 "/error"
                         ).permitAll()
-                        .anyRequest().permitAll()
-                )
+                        .anyRequest().authenticated()
+
+ */
                 .addFilterBefore(jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class)
 
