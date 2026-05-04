@@ -1388,17 +1388,14 @@ public RequestInterceptor paymentRequestInterceptor(PaymentProperties paymentPro
 public void cancelFoodOrder(Long orderId) {
     FoodOrder foodOrder = foodOrderRepository.findById(orderId)
             .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
+    foodOrder.markPaymentCancelled();
     foodOrder.cancel();
 }
 ```
 
-이렇게 함으로써
-
-- 외부 결제 실패
-- 재고 차감 실패
-- 주문자 검증 실패
-
-등이 발생해도 내부 상태를 일관되게 취소 상태로 남길 수 있게 되었다.
+이 구조의 핵심은 "메인 트랜잭션이 롤백되더라도, 결제 취소 이후 내부 상태 보정은 별도 트랜잭션에서 안전하게 커밋한다"는 점이다.
+다만 메인 트랜잭션 자체에는 `noRollbackFor`를 두지 않았다.
+재고 차감이나 좌석 확정처럼 여러 자원을 순차적으로 갱신하는 로직은 예외 발생 시 전체가 함께 롤백되어야 데이터 정합성을 보장할 수 있기 때문이다.
 
 **트랜잭션 전파 속성 (Propagation.REQUIRES_NEW)**
 * **REQUIRES_NEW** : 기존에 실행 중인 트랜잭션의 존재 여부와 상관없이, 항상 새로운 독립적인 트랜잭션을 생성하여 실행하는 설정
@@ -1411,9 +1408,10 @@ public void cancelFoodOrder(Long orderId) {
 * **REQUIRES_NEW 적용의 효과** : 메인 비즈니스 로직(부모 트랜잭션)이 예외로 인해 파기되더라도, 주문 취소 로직은 완전히 독립된 새로운 트랜잭션에서 실행됨. 따라서 부모 트랜잭션의 롤백 여부와 무관하게 "주문 상태를 CANCELED로 변경하는 작업"만큼은 데이터베이스에 안전하고 확실하게 커밋됨.
 
 **각 실패 상황별 동작 흐름**
-* **외부 결제 실패** : PG사 API 호출 타임아웃, 한도 초과 등으로 인해 에러가 반환된 상황. 예외가 발생해 메인 주문 트랜잭션은 롤백 수순을 밟지만, 분리된 보상 트랜잭션(`cancelFoodOrder`)이 즉각 실행되어 시스템상 생성되었던 주문 내역을 '결제 실패(취소)' 상태로 확정 지어 줌.
-* **재고 차감 실패** : 여러 사용자가 동시에 주문하여 남은 재고가 부족해진 상황. DB 업데이트 중 예외가 발생하여 전체 메인 주문 프로세스를 중단시키고, 독립된 보상 트랜잭션에서 해당 주문을 취소 처리하여 이후 재고 시스템과 주문 데이터 간의 정합성을 맞춤.
-* **주문자 검증 실패** : 토큰 불일치, 주문 권한 없음 등으로 판단된 상황. 즉시 프로세스를 멈추고 롤백 상태에 빠지지만, 새로 생성된 보상 트랜잭션을 통해 비정상적인 접근으로 발생한 해당 주문 기록을 '취소' 상태로 DB에 명확히 남겨 추후 로깅에 활용함.
+* **외부 결제 실패** : PG사 응답 자체가 실패로 확정된 경우에는 보상 트랜잭션으로 취소하지 않고 `paymentStatus=FAILED`로 남긴다.
+* **외부 서버 오류/타임아웃** : 결제 결과를 확정할 수 없는 경우에는 `paymentStatus=UNKNOWN`으로 남겨 후속 확인이 가능하도록 한다.
+* **재고 차감 실패 / 좌석 확정 실패** : 외부 결제는 성공했지만 내부 후속 처리에 실패한 경우에만 보상 트랜잭션을 실행해 `status=취소`, `paymentStatus=CANCELLED`로 정리한다.
+* **권한 실패 / 주문자 검증 실패** : 보상 취소 대상으로 보지 않고 예외만 반환한다. 아직 유효한 주문이나 예매를 임의로 `취소` 상태로 확정하면 도메인 의미가 흐려질 수 있기 때문이다.
 
 ### 3-5. 주문자 검증 추가
 
@@ -1580,5 +1578,556 @@ public ApiResponse<Void> cancelFoodOrder(
 - 주문 취소 후 재고 10개로 복원
 - 주문 상태 `완료 -> 취소`
 - 결제 상태 `PAID -> CANCELLED`
+
+### 3-13. 조회 구조 리팩토링
+
+#### 조회 정책 통합
+
+리팩토링을 진행하면서 여러 서비스에 흩어져 있던 `findById(...).orElseThrow(...)` 패턴도 정리했다.
+
+초기에는 `MovieService`, `ReviewService`, `TheaterService`, `ReservationService`, `FoodOrderService` 등이
+각자 `getUser`, `getMovie` 같은 helper 메서드를 따로 들고 있었다.
+이 방식은 빠르게 작성하기는 쉽지만,
+
+- 동일한 예외 정책이 여러 군데에 중복되고
+- 조회 책임이 분산되어 메서드 위치를 기억하기 어려우며
+- 조회 정책이 바뀔 때 수정 지점이 많아지는 문제가 있었다.
+
+그래서 공통 조회 책임을 다음처럼 모았다.
+
+- `UserService.getUser(userId)`
+- `MovieService.getMovie(movieId)`
+
+이후 다른 서비스들은 직접 Repository를 호출하지 않고,
+해당 서비스 메서드를 주입받아 재사용하도록 통일했다.
+
+이렇게 정리한 뒤에는 "유저 조회 정책은 `UserService`", "영화 조회 정책은 `MovieService`"처럼
+책임 위치가 더 명확해졌다.
+
+#### Mapper와 QueryService 분리
+
+조회 로직이 늘어나면서 서비스 계층 안에
+
+- Repository 조회
+- DTO 조립
+- 응답 포맷 매핑
+
+이 한 메서드 안에 섞여 읽는 흐름이 길어지는 문제가 있었다.
+
+이를 개선하기 위해 조회 전용 흐름을 다음처럼 분리했다.
+
+- `Controller -> QueryService -> Mapper`
+
+적용한 컴포넌트는 다음과 같다.
+
+- `MovieQueryService`, `TheaterQueryService`, `ReviewQueryService`
+- `ScheduleQueryService`, `FoodOrderQueryService`, `ReservationQueryService`
+- `MovieMapper`, `TheaterMapper`, `ReviewMapper`
+- `ScheduleMapper`, `FoodOrderMapper`, `ReservationMapper`
+
+이 구조로 바꾼 뒤에는
+
+- Command Service는 상태 변경에 집중하고
+- Query Service는 조회와 화면 응답 조립에 집중하며
+- Mapper는 DTO 변환만 담당하게 되었다.
+
+결과적으로 서비스 메서드 길이가 줄고,
+읽기/쓰기 책임이 이전보다 훨씬 명확해졌다.
+
+### 3-14. 객체지향 설계 리팩토링
+
+#### 도메인 객체 생성 책임을 엔티티로 이동
+
+초기 관리자 서비스에서는 `Theater.builder()`, `Food.builder()`, `TheaterFood.builder()`를 직접 호출해
+도메인 객체를 생성하고 있었다.
+
+이 구조에서는
+
+- 기본 상태값(`isAvailable=true`, `amount=0`)이 서비스에 노출되고
+- 생성 규칙이 서비스마다 흩어질 수 있으며
+- 엔티티가 자신의 생성 불변식을 스스로 설명하지 못하는 문제가 있었다.
+
+그래서 생성 책임을 엔티티 내부의 정적 팩토리 메서드로 이동했다.
+
+```java
+public static Theater create(...) { ... }
+public static Food create(...) { ... }
+public static TheaterFood create(Theater theater, Food food) { ... }
+```
+
+이후 서비스는 더 이상 builder의 세부 필드를 직접 알지 않고,
+"무엇을 만든다"는 의도만 표현하도록 단순화했다.
+
+즉, 도메인 객체의 **초기 상태와 생성 규칙은 도메인 안에서 관리**하도록 정리한 것이다.
+
+### 3-15. 입력 검증 및 예외 처리 보강
+
+#### 리뷰 별점 검증 보강
+
+리뷰 별점은 단순 `null` 여부만 확인하면
+음수나 범위 초과 값이 그대로 저장될 수 있고,
+이 값이 `MovieStatistics.averageRating` 계산에 반영되면 통계 데이터가 오염될 수 있다.
+
+그래서 리뷰 생성 시 별점이
+
+- `0.5 ~ 5.0` 범위 안에 있고
+- `0.5` 단위인지
+
+를 서비스 레벨에서 함께 검증하도록 보강했다.
+
+이 검증을 통해 비정상 입력이 도메인 통계값으로 흘러들어가는 것을 막을 수 있게 되었다.
+
+#### 중복 찜 처리 시 무결성 예외 숨김 방지
+
+영화 찜 / 영화관 찜은 중복 요청이 들어왔을 때
+동시성 상황에서는 `DataIntegrityViolationException`이 발생할 수 있다.
+
+초기 구현은 이 예외를 만나면 무조건 성공처럼 반환했는데,
+이 방식은 "진짜 중복"뿐 아니라
+
+- 다른 제약조건 위반
+- 잘못된 스키마 상태
+- 예상하지 못한 DB 무결성 오류
+
+까지 모두 조용히 숨겨버릴 위험이 있었다.
+
+이를 개선해,
+
+- 이미 해당 찜 레코드가 실제로 존재하는 경우에만 예외를 무시하고
+- 그 외 무결성 예외는 그대로 다시 던지도록
+
+처리 기준을 명확히 했다.
+
+즉, "동시성으로 인한 중복 찜"만 허용하고,
+실제 장애는 성공처럼 숨기지 않도록 변경했다.
+
+### 3-16. 성능 최적화
+
+#### 좌석 예매 N+1 문제 개선
+
+초기 `ReservationService.processSeatReservations()`는 좌석 수만큼 반복문을 돌면서
+
+- `seatRepository.findById(seatId)`
+- `reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(...)`
+
+를 매번 호출하고 있었다.
+
+이 구조는 요청 좌석 수만큼 쿼리가 늘어나는 전형적인 N+1 패턴이었고,
+예매처럼 락과 트랜잭션이 함께 걸리는 흐름에서는 DB 커넥션 점유 시간을 더 길게 만들 수 있었다.
+
+이를 개선하기 위해
+
+- 좌석 엔티티는 `findAllByIdInWithScreen(seatIds)`로 한 번에 조회하고
+- 이미 점유된 좌석은 `findReservedSeatIds(...)`로 한 번에 조회한 뒤
+- 서비스 메모리에서 최종 검증
+
+하는 방식으로 바꿨다.
+
+이후 예매 생성 시 좌석 수가 늘어나더라도
+좌석 조회와 중복 검증 쿼리 수가 선형적으로 증가하지 않도록 정리되었다.
+
+</details>
+
+<details><summary><h1>배포</h1></summary>
+
+- 도커 실행
+<img width="571" height="326" alt="image" src="https://github.com/user-attachments/assets/456e4a9f-ed4b-4701-bcff-7575ea965f6d" />
+
+- 도커 컨테이너 확인
+  `shinae@shinaeui-MacBookAir downloads % docker ps
+CONTAINER ID   IMAGE          COMMAND                   CREATED         STATUS         PORTS                                         NAMES
+a4936b9a9daf   mysql:8.0.46   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:3306->3306/tcp, [::]:3306->3306/tcp   some-mysql`
+
+- 로컬에서 도커 확인
+  <img width="1257" height="694" alt="image" src="https://github.com/user-attachments/assets/783cbb0b-1780-470e-944e-1488ca5e0b5e" />
+
+- ec2로 전송 및 받기
+```docker push shinae1023/ceos-app:latest
+The push refers to repository [docker.io/shinae1023/ceos-app]
+0d3dcfe2168e: Pushed 
+8127c8426a01: Pushed 
+5f83e74af606: Pushed 
+afbbab386f63: Pushed 
+5df7fb31528c: Pushed 
+3687f9de5568: Pushed 
+486a631f69c8: Pushed 
+818154cda96d: Pushed 
+latest: digest: sha256:314931c53a425ffa6625d90d68560f0b187cbcb4c4ab31fbd42276bcdea13fef size: 856
+shinae@shinaeui-MacBookAir shinae1023 % docker buildx create --use --name multiarch-builder
+docker buildx inspect --bootstrap
+docker buildx build \
+  --platform linux/amd64 \
+  -t shinae1023/ceos-app:latest \
+  --push \
+  .
+```
+
+```
+docker pull shinae1023/ceos-app:latest
+latest: Pulling from shinae1023/ceos-app
+b40150c1c271: Pull complete 
+8a89ec8f5419: Pull complete 
+ea035da72e5f: Pull complete 
+1b87cf85ada1: Pull complete 
+3c5d8083e928: Pull complete 
+166e3ac40fca: Pull complete 
+53feb4f7e8f6: Pull complete 
+76af49cb70c6: Download complete 
+Digest: sha256:38d971b756a9790aef213fd63ba43330d5155168d855a4cb6f1ebc22d0156df0
+Status: Downloaded newer image for shinae1023/ceos-app:latest
+docker.io/shinae1023/ceos-app:latest
+```
+
+
+
+- ec2에서 도커 실행
+  `docker run -d   --name ceos-app   -p 8080:8080   --env-file ~/.env   shinae1023/ceos-app:latest
+9c84da5dffb76145163c47e373d7c23ffd303c5b3209f28a0d341c7d5bf4ee18`
+
+- ec2에서 도커 확인
+  `docker ps
+CONTAINER ID   IMAGE                        COMMAND               CREATED         STATUS         PORTS                                         NAMES
+9c84da5dffb7   shinae1023/ceos-app:latest   "java -jar app.jar"   4 seconds ago   Up 4 seconds   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp   ceos-app`
+
+- 배포 성공
+<img width="1419" height="706" alt="image" src="https://github.com/user-attachments/assets/97a813bc-e5bd-4c9f-9380-3a3fd75a47c1" />
+
+---
+
+## Docker / EC2 배포 가이드
+
+### 1. 로컬에서 jar 빌드
+
+```bash
+./gradlew build
+```
+
+- 실행 jar: `build/libs/ceos-0.0.1-SNAPSHOT.jar`
+- `plain.jar`가 아니라 Spring Boot 실행 jar를 사용해야 한다.
+
+### 2. Docker 이미지 빌드
+
+프로젝트 루트의 `Dockerfile` 기준으로 빌드한다.
+
+```bash
+docker build -t ceos-app .
+```
+
+멀티 아키텍처 환경(Mac arm64에서 빌드 후 amd64 EC2에 배포)까지 고려하면 아래 방식이 안전하다.
+
+```bash
+docker buildx create --use --name multiarch-builder
+docker buildx inspect --bootstrap
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t shinae1023/ceos-app:latest \
+  --push \
+  .
+```
+
+### 3. Docker Compose로 로컬 실행
+
+`docker-compose.yml`은 앱 컨테이너만 띄우고, DB는 외부 MySQL/RDS를 사용하도록 구성되어 있다.
+
+```bash
+docker compose up -d --build
+docker compose logs -f app
+docker compose down
+```
+
+### 4. 환경변수 파일 준비
+
+로컬 Docker나 EC2 실행 시 `.env` 파일을 사용한다.
+
+예시:
+
+```env
+SPRING_PROFILES_ACTIVE=prod
+
+RDS_ENDPOINT=your-rds-endpoint.ap-northeast-2.rds.amazonaws.com
+DB_USERNAME=your-db-username
+DB_PASSWORD=your-db-password
+
+PAYMENT_SERVER_URL=https://ceos.diggindie.com
+PAYMENT_STORE_ID=shinae1023
+PAYMENT_API_SECRET=your-payment-api-secret
+
+JWT_SECRET_KEY=your-base64-jwt-secret
+```
+
+주의:
+
+- `SPRING_PROFILES_ACTIVE=prod`가 반드시 있어야 한다.
+- `application-prod.yml`은 `RDS_ENDPOINT`, `DB_USERNAME`, `DB_PASSWORD`를 사용한다.
+- `JWT_SECRET_KEY`는 Base64 문자열이어야 한다.
+
+### 5. Docker Hub에 이미지 올리기
+
+```bash
+docker login
+docker tag ceos-app shinae1023/ceos-app:latest
+docker push shinae1023/ceos-app:latest
+```
+
+Mac에서 만든 이미지를 EC2에서 받으려면 `linux/amd64` 또는 멀티아키 이미지로 push 해야 한다.
+
+### 6. EC2에서 이미지 pull 및 실행
+
+#### 6-1. Docker 권한 설정
+
+```bash
+sudo usermod -aG docker ubuntu
+newgrp docker
+```
+
+권한 반영 전에는 `sudo docker ...`로 실행할 수 있다.
+
+#### 6-2. 이미지 pull
+
+```bash
+docker pull shinae1023/ceos-app:latest
+```
+
+#### 6-3. 환경변수 파일 업로드 또는 생성
+
+로컬에서 복사:
+
+```bash
+scp -i <key.pem> .env ubuntu@<EC2_PUBLIC_IP>:~/.env
+```
+
+또는 EC2에서 직접 생성:
+
+```bash
+nano ~/.env
+```
+
+#### 6-4. 컨테이너 실행
+
+```bash
+docker rm -f ceos-app
+docker run -d \
+  --name ceos-app \
+  -p 8080:8080 \
+  --env-file ~/.env \
+  shinae1023/ceos-app:latest
+```
+
+#### 6-5. 실행 확인
+
+```bash
+docker ps
+docker logs -f ceos-app
+```
+
+정상 기동 기준:
+
+- `docker ps`에서 `ceos-app`이 `Up` 상태
+- 로그에 `Tomcat started on port 8080`
+- 로그에 `Started Application`
+
+### 7. AWS RDS 연결 시 체크 포인트
+
+- `RDS_ENDPOINT`가 실제 endpoint인지 확인
+- `DB_USERNAME`, `DB_PASSWORD`가 정확한지 확인
+- RDS Security Group에서 현재 서버의 3306 접근이 허용되어야 함
+- 로컬 Docker 테스트 시에는 내 공인 IP 허용이 필요할 수 있음
+
+### 8. Nginx + 80/443 + 도메인 연결 (여기서부턴 도메인 연결 후 사용)
+
+배포 구조:
+
+- Spring Boot 컨테이너: `8080`
+- Nginx: `80`, `443`
+- Nginx가 `127.0.0.1:8080`으로 reverse proxy
+
+#### 8-1. 보안그룹 설정
+
+- `80/tcp` 허용
+- `443/tcp` 허용
+- `8080/tcp`는 점검용으로만 잠시 열고, 운영 시 닫는 것을 권장
+
+#### 8-2. Nginx 설치
+
+```bash
+sudo apt update
+sudo apt install -y nginx
+sudo systemctl status nginx
+```
+
+#### 8-3. Nginx 설정
+
+```bash
+sudo nano /etc/nginx/sites-available/ceos-app
+```
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+활성화:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/ceos-app /etc/nginx/sites-enabled/ceos-app
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+#### 8-4. HTTPS 적용
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+sudo certbot renew --dry-run
+```
+
+### 9. 최종 접속 확인
+
+- EC2 직접 확인: `http://<EC2_PUBLIC_IP>:8080`
+- Swagger: `http://<EC2_PUBLIC_IP>:8080/swagger-ui/index.html`
+- 도메인/Nginx 적용 후: `https://your-domain.com/swagger-ui/index.html`
+
+### 10. CI와 CD에서 Docker가 쓰이는 위치
+
+#### CI
+
+CI의 목적은 PR 또는 `main` 브랜치 변경 시 코드가 깨지지 않았는지 검증하는 것이다.
+
+- GitHub Actions에서 `./gradlew test` 실행
+- 유닛 테스트가 통과하면 `./gradlew build -x test` 실행
+- 테스트와 빌드가 모두 성공해야만 이후 단계 진행
+- 이 단계에서는 배포하지 않음
+
+추가로 GitHub Branch Protection에서 `CI` 워크플로를 required status check로 설정하면, `CI` 성공 전에는 `main` 브랜치로 merge할 수 없게 만들 수 있다.
+
+현재 워크플로 파일:
+
+- `.github/workflows/ci.yml`
+
+#### CD
+
+CD의 목적은 `main` 브랜치에 머지된 검증 완료 코드를 실제 서버에 배포하는 것이다.
+
+- `CI`가 성공한 `main` push만 감지
+- jar를 다시 빌드
+- Docker 이미지 생성
+- Docker Hub로 push
+- EC2에 SSH 접속
+- 새 이미지를 후보 컨테이너로 먼저 실행
+- `/health-check` 응답이 정상인지 확인
+- 검증 성공 시에만 실제 서비스 컨테이너 교체
+- 교체 실패 시 직전 정상 이미지로 롤백
+
+현재 워크플로 파일:
+
+- `.github/workflows/cd.yml`
+
+### 11. 왜 jar 배포보다 Docker 배포가 편한가
+
+#### jar 배포
+
+- 서버에 Java 버전이 직접 설치되어 있어야 함
+- 서버마다 환경 차이로 실행 문제가 생길 수 있음
+- 배포 시 jar 업로드, 프로세스 종료, 재실행을 직접 관리해야 함
+
+#### Docker 배포
+
+- 앱 실행 환경(Java, 실행 명령, 설정 구조)을 이미지에 함께 묶을 수 있음
+- 로컬, EC2, 다른 서버에서 동일한 방식으로 실행 가능
+- 서버에는 Docker만 있으면 됨
+- 배포 시 새 이미지만 pull 받아 교체하면 되므로 운영 흐름이 단순해짐
+
+즉, 이 프로젝트에서는 `jar`를 직접 배포하는 것이 아니라, `jar를 포함한 Docker image`를 배포 단위로 사용한다.
+
+### 12. 현재 워크플로 기준 실제 배포 흐름도
+
+#### 1) Pull Request 생성
+
+- 개발 브랜치에서 `main`으로 PR 생성
+- `CI` 실행
+- `./gradlew test` 통과 여부 확인
+- `./gradlew build -x test` 통과 여부 확인
+- 실패 시 머지 전 수정
+- Branch Protection에 의해 `CI` 성공 전에는 merge 불가
+
+#### 2) PR 머지
+
+- `main` 브랜치에 push 발생
+- `CI` 다시 실행
+- `CI` 성공 시에만 `CD` 실행
+
+#### 3) CD 배포
+
+- GitHub Actions가 Docker 이미지를 빌드
+- `linux/amd64`, `linux/arm64` 멀티 아키텍처 이미지 생성
+- Docker Hub에 `latest`, `commit SHA` 태그로 push
+- GitHub Actions가 EC2에 SSH 접속
+- EC2에서 새 `commit SHA` 이미지 pull
+- `ceos-app-candidate`를 `8081` 포트로 먼저 실행
+- `curl http://127.0.0.1:8081/health-check`로 배포 후보 검증
+- 검증 성공 후에만 기존 `ceos-app`을 내리고 새 컨테이너를 `8080` 포트에 실행
+- 새 컨테이너가 최종 기동에 실패하면 직전 정상 이미지로 다시 실행
+- 따라서 CD 실패 시 서버가 빈 상태로 멈추지 않고, 이전 성공 배포본을 유지하도록 구성
+
+### 13. GitHub Actions Secrets
+
+현재 CD 워크플로에서 사용하는 GitHub Secrets는 아래와 같다.
+
+- `DOCKERHUB_USERNAME`: Docker Hub 계정명
+- `DOCKERHUB_TOKEN`: Docker Hub Personal Access Token
+- `EC2_HOST`: EC2 퍼블릭 IP 또는 도메인
+- `EC2_USERNAME`: 예) `ubuntu`
+- `EC2_SSH_KEY`: EC2 접속용 private key 전체 내용
+
+민감한 애플리케이션 설정값은 GitHub Secrets가 아니라 EC2의 `~/.env`에 둔다.
+
+<img width="1045" height="214" alt="image" src="https://github.com/user-attachments/assets/3ad6181b-fad6-4087-9a35-2e766bf32a83" />
+
+배포 환경을 구축할 때 핵심이 되는 네트워크 구조와 보안 구성 요소들에 대한 설명임.
+
+---
+
+## 1. Subnet (서브넷)
+
+VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 작은 네트워크로 쪼갠 단위를 의미함. 네트워크를 효율적으로 관리하고 보안 설계를 하기 위해 사용
+
+
+### **Public Subnet vs Private Subnet**
+
+네트워크의 **인터넷 연결 가능 여부**에 따라 구분됨.
+
+* **Public Subnet (퍼블릭 서브넷):** 외부 인터넷과 직접 통신할 수 있는 영역임. 인터넷 게이트웨이(Internet Gateway)와 연결된 라우팅 테이블을 가지고 있으며, 주로 웹 서버나 로드 밸런서처럼 사용자가 직접 접속해야 하는 자원을 배치함.
+* **Private Subnet (프라이빗 서브넷):** 외부 인터넷에서 직접 접근할 수 없는 폐쇄적인 영역임. 보안이 중요한 데이터베이스(DB)나 내부 로직을 처리하는 애플리케이션 서버를 배치함. 외부 인터넷으로 나가기 위해서는 **NAT Gateway**라는 별도의 장치가 필요함.
+
+* Private Subnet은 외부에서 들어오는 것은 막혀 있지만, 내부 서버가 업데이트 등을 위해 외부 인터넷에 있는 패키지를 받아와야 할 때가 있음. 이때 내부에서 외부로 나가는 통로 역할만 해주는 장치가 NAT Gateway
+
+## 2. Bastion Host (배스천 호스트)
+
+외부 인터넷에서 차단된 **Private Subnet 내의 인스턴스에 관리자가 접속하기 위해 사용하는 일종의 '통로' 역할을 하는 서버**임.
+
+* **역할:** 보안상의 이유로 DB 서버 등은 Private Subnet에 숨겨두는데, 관리자가 설정을 변경하거나 점검을 해야 할 때 Public Subnet에 있는 Bastion Host에 먼저 접속한 뒤, 거기서 다시 내부망을 통해 Private Subnet으로 들어감.
+* **보안성:** Bastion Host에 대해서는 엄격한 접근 제어(특정 IP만 접속 허용 등)를 적용하여 보안 침해 사고를 방지
+
+
+## 3. Subnet CIDR (서브넷 CIDR)
+
+서브넷을 만들 때 해당 네트워크에서 **사용할 IP 주소의 범위를 지정하는 방식**임. `10.0.1.0/24`와 같은 형태로 표기함.
+
+* **구조:** `[IP 주소]/[Prefix Length]` 형태임.
+* **계산 방식:** `/24`는 앞의 24비트가 네트워크 주소임을 의미하며, 나머지 8비트($32 - 24 = 8$)를 통해 $2^8 = 256$개의 IP 주소를 사용할 수 있다는 뜻
+* **주의사항:** 클라우드 환경(AWS 등)에서는 서브넷의 첫 번째 주소부터 마지막 주소 중 일부(보통 5개)를 네트워크 관리용으로 예약하여 사용자가 직접 쓸 수 없으므로 이를 계산에 넣어야 함
+
 
 </details>

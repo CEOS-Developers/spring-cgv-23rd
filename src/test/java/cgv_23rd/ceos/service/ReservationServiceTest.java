@@ -16,6 +16,7 @@ import cgv_23rd.ceos.repository.reservation.ReservationRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
 import cgv_23rd.ceos.repository.reservation.SeatRepository;
 import cgv_23rd.ceos.service.lock.ReservationNamedLockManager;
+import cgv_23rd.ceos.service.pay.PaymentService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +49,8 @@ class ReservationServiceTest {
     @Mock private MovieScreenRepository movieScreenRepository;
     @Mock private SeatRepository seatRepository;
     @Mock private ReservationNamedLockManager reservationNamedLockManager;
+    @Mock private PaymentService paymentService;
+    @Mock private UserService userService;
 
     @Test
     @DisplayName("영화 예매 성공 테스트")
@@ -68,12 +71,11 @@ class ReservationServiceTest {
         Seat seat1 = Seat.builder().id(1L).screen(screen).rowName("A").colNum(1).build();
         Seat seat2 = Seat.builder().id(2L).screen(screen).rowName("A").colNum(2).build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userService.getUser(userId)).willReturn(user);
         given(movieScreenRepository.findById(movieScreenId)).willReturn(Optional.of(movieScreen));
-        given(seatRepository.findById(1L)).willReturn(Optional.of(seat1));
-        given(seatRepository.findById(2L)).willReturn(Optional.of(seat2));
-        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))
-                .willReturn(false);
+        given(seatRepository.findAllByIdInWithScreen(seatIds)).willReturn(List.of(seat1, seat2));
+        given(reservationSeatRepository.findReservedSeatIds(any(), any(), any()))
+                .willReturn(List.of());
 
         // when
         reservationService.createReservation(userId, requestDto);
@@ -101,13 +103,11 @@ class ReservationServiceTest {
                 .startAt(LocalDateTime.now().plusHours(2))
                 .build();
 
-        given(userRepository.findById(userId)).willReturn(Optional.of(user));
+        given(userService.getUser(userId)).willReturn(user);
         given(movieScreenRepository.findById(1L)).willReturn(Optional.of(movieScreen));
-        given(seatRepository.findById(1L)).willReturn(Optional.of(seat));
-
-        // 이미 좌석이 예약된 상황으로 가정
-        given(reservationSeatRepository.existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(any(), any(), any()))
-                .willReturn(true);
+        given(seatRepository.findAllByIdInWithScreen(List.of(1L))).willReturn(List.of(seat));
+        given(reservationSeatRepository.findReservedSeatIds(any(), any(), any()))
+                .willReturn(List.of(1L));
 
         // when & then
         GeneralException exception = assertThrows(GeneralException.class, () ->

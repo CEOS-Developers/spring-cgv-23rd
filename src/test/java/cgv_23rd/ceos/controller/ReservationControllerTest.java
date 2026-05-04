@@ -79,7 +79,7 @@ class ReservationControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("예매 내역 조회 성공")
     void getReservationListSuccess() throws Exception {
-        given(reservationService.getReservationList(1L)).willReturn(List.of(
+        given(reservationQueryService.getReservationList(1L)).willReturn(List.of(
                 ReservationResponseDto.builder()
                         .reservationId(1L)
                         .movieTitle("인셉션")

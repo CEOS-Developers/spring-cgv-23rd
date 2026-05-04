@@ -19,7 +19,7 @@ class ScheduleControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("극장 상영 시간표 조회 성공")
     void getSchedulesSuccess() throws Exception {
-        given(scheduleService.getSchedules(1L, LocalDate.of(2026, 4, 24))).willReturn(List.of(
+        given(scheduleQueryService.getSchedules(1L, LocalDate.of(2026, 4, 24))).willReturn(List.of(
                 ScheduleResponseDto.builder()
                         .movieScreenId(1L)
                         .movieId(10L)

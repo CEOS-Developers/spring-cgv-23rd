@@ -31,6 +31,14 @@ public class TheaterFood {
 
     private Integer amount;
 
+    public static TheaterFood create(Theater theater, Food food) {
+        return TheaterFood.builder()
+                .theater(theater)
+                .food(food)
+                .amount(0)
+                .build();
+    }
+
     public void decreaseStock(int quantity) {
         if (this.amount < quantity) {
             throw new GeneralException(GeneralErrorCode.OUT_OF_STOCK, this.food.getName() + "의 재고가 부족합니다.");

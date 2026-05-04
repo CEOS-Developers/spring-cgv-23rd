@@ -20,7 +20,7 @@ class TheaterControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("지역별 영화관 목록 조회 성공")
     void getTheatersByRegionSuccess() throws Exception {
-        given(theaterService.getTheatersByRegion(Region.서울)).willReturn(List.of(
+        given(theaterQueryService.getTheatersByRegion(Region.서울)).willReturn(List.of(
                 TheaterResponseDto.builder()
                         .id(1L)
                         .name("CGV 강남")
@@ -39,7 +39,7 @@ class TheaterControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("영화관 상세 조회 성공")
     void getTheaterDetailSuccess() throws Exception {
-        given(theaterService.getTheaterDetail(1L)).willReturn(TheaterDetailResponseDto.builder()
+        given(theaterQueryService.getTheaterDetail(1L)).willReturn(TheaterDetailResponseDto.builder()
                 .id(1L)
                 .name("CGV 강남")
                 .address("서울 강남구")

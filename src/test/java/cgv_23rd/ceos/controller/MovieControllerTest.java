@@ -22,7 +22,7 @@ class MovieControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("상영 중인 영화 목록 조회 성공")
     void getMovieListSuccess() throws Exception {
-        given(movieService.getMovieList()).willReturn(List.of(
+        given(movieQueryService.getMovieList()).willReturn(List.of(
                 MovieResponseDto.builder()
                         .movieId(1L)
                         .title("인셉션")
@@ -39,7 +39,7 @@ class MovieControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("영화 상세 조회 성공")
     void getMovieDetailSuccess() throws Exception {
-        given(movieService.getMovieDetail(1L)).willReturn(MovieDetailResponseDto.builder()
+        given(movieQueryService.getMovieDetail(1L)).willReturn(MovieDetailResponseDto.builder()
                 .title("인셉션")
                 .openDate(LocalDate.of(2024, 1, 1))
                 .description("꿈속으로 들어가는 영화")
@@ -60,7 +60,7 @@ class MovieControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("영화 출연진 조회 성공")
     void getMovieActorsSuccess() throws Exception {
-        given(movieService.getMovieActors(1L)).willReturn(List.of(
+        given(movieQueryService.getMovieActors(1L)).willReturn(List.of(
                 ActorResponseDto.builder()
                         .name("크리스토퍼 놀란")
                         .role(Role.감독)

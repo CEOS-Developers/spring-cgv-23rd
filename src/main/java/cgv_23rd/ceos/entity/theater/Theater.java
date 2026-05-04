@@ -37,14 +37,35 @@ public class Theater {
     private String imageUrl;
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<Screen> screens = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<TheaterLike> theaterLikes = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<TheaterFood> theaterFoods = new ArrayList<>();
 
     @OneToMany(mappedBy = "theater")
+    @Builder.Default
     private List<FoodOrder> foodOrders = new ArrayList<>();
+
+    public static Theater create(
+            String name,
+            String address,
+            Region region,
+            String description,
+            String imageUrl
+    ) {
+        return Theater.builder()
+                .name(name)
+                .address(address)
+                .region(region)
+                .isAvailable(true)
+                .description(description)
+                .imageUrl(imageUrl)
+                .build();
+    }
 }

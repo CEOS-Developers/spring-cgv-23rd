@@ -2,8 +2,6 @@ package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.dto.food.request.FoodOrderItemRequestDto;
 import cgv_23rd.ceos.dto.food.request.FoodOrderRequestDto;
-import cgv_23rd.ceos.dto.food.response.FoodOrderItemResponseDto;
-import cgv_23rd.ceos.dto.food.response.FoodOrderResponseDto;
 import cgv_23rd.ceos.entity.food.Food;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import cgv_23rd.ceos.entity.food.FoodOrderItem;
@@ -12,7 +10,6 @@ import cgv_23rd.ceos.entity.theater.Theater;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
-import cgv_23rd.ceos.repository.*;
 import cgv_23rd.ceos.repository.food.FoodOrderRepository;
 import cgv_23rd.ceos.repository.food.FoodRepository;
 import cgv_23rd.ceos.repository.food.TheaterFoodRepository;
@@ -23,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,13 +27,13 @@ import java.util.stream.Collectors;
 public class FoodOrderService {
     private final FoodRepository foodRepository;
     private final FoodOrderRepository foodOrderRepository;
-    private final UserRepository userRepository;
     private final TheaterRepository theaterRepository;
     private final TheaterFoodRepository theaterFoodRepository;
+    private final UserService userService;
 
     // 1. 음식 주문
     public Long createFoodOrder(Long userId, FoodOrderRequestDto requestDto) {
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         Theater theater = getTheater(requestDto.theaterId());
 
         FoodOrder foodOrder = FoodOrder.create(user, theater);
@@ -75,7 +71,7 @@ public class FoodOrderService {
         return order;
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void preparePayment(Long userId, Long orderId, String paymentId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -89,7 +85,7 @@ public class FoodOrderService {
         foodOrder.assignPaymentId(paymentId);
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void confirmOrderAndDeductStock(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -119,7 +115,7 @@ public class FoodOrderService {
         foodOrder.confirm();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentFailed(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -133,7 +129,7 @@ public class FoodOrderService {
         foodOrder.markPaymentFailed();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentUnknown(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -147,7 +143,7 @@ public class FoodOrderService {
         foodOrder.markPaymentUnknown();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void cancelOrderAfterPaymentCancellation(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -173,7 +169,7 @@ public class FoodOrderService {
         foodOrder.cancelAfterPaymentCancellation();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void cancelPendingOrder(Long userId, Long orderId) {
         FoodOrder foodOrder = foodOrderRepository.findByIdWithLock(orderId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.FOOD_ORDER_NOT_FOUND));
@@ -187,25 +183,6 @@ public class FoodOrderService {
         foodOrder.cancel();
     }
 
-    // 2. 주문 내역 확인
-    @Transactional(readOnly = true)
-    public List<FoodOrderResponseDto> getFoodOrderList(Long userId) {
-        validateUserExists(userId);
-
-        List<FoodOrder> orders = foodOrderRepository.findAllByUserIdWithDetails(userId);
-
-        //foodOderItems 헬퍼 메서드를 반환하는 코드로 리팩토링
-        return orders.stream()
-                .map(this::toFoodOrderResponse)
-                .collect(Collectors.toList());
-    }
-
-    // Helper Method
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-    }
-
     private Theater getTheater(Long theaterId) {
         return theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
@@ -217,30 +194,6 @@ public class FoodOrderService {
     }
 
     private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new GeneralException(GeneralErrorCode.USER_NOT_FOUND);
-        }
-    }
-
-    private FoodOrderResponseDto toFoodOrderResponse(FoodOrder order) {
-        return FoodOrderResponseDto.builder()
-                .orderId(order.getId())
-                .theaterName(order.getTheater().getName())
-                .totalPrice(order.getTotalPrice())
-                .status(order.getStatus())
-                .paymentStatus(order.getPaymentStatus())
-                .createdAt(order.getCreatedAt())
-                .items(order.getFoodOrderItems().stream()
-                        .map(this::toFoodOrderItemResponse)
-                        .toList())
-                .build();
-    }
-
-    private FoodOrderItemResponseDto toFoodOrderItemResponse(FoodOrderItem item) {
-        return FoodOrderItemResponseDto.builder()
-                .foodName(item.getFood().getName())
-                .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .build();
+        userService.getUser(userId);
     }
 }

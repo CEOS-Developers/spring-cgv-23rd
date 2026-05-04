@@ -1,7 +1,8 @@
 package cgv_23rd.ceos.service;
 
 import cgv_23rd.ceos.dto.reservation.request.ReservationRequestDto;
-import cgv_23rd.ceos.dto.reservation.response.ReservationResponseDto;
+import cgv_23rd.ceos.dto.payment.response.PaymentResponse;
+import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.enums.ReservationStatus;
 import cgv_23rd.ceos.entity.movie.MovieScreen;
 import cgv_23rd.ceos.entity.reservation.Reservation;
@@ -9,37 +10,42 @@ import cgv_23rd.ceos.entity.theater.Seat;
 import cgv_23rd.ceos.entity.user.User;
 import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
-import cgv_23rd.ceos.repository.*;
 import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationRepository;
 import cgv_23rd.ceos.repository.reservation.ReservationSeatRepository;
 import cgv_23rd.ceos.repository.reservation.SeatRepository;
 import cgv_23rd.ceos.service.lock.ReservationNamedLockManager;
+import cgv_23rd.ceos.service.pay.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class ReservationService {
-    private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final MovieScreenRepository movieScreenRepository;
     private final SeatRepository seatRepository;
     private final ReservationNamedLockManager reservationNamedLockManager;
+    private final PaymentService paymentService;
+    private final UserService userService;
 
     // 1. 영화 예매
     public Long createReservation(Long userId, ReservationRequestDto requestDto) {
         validateSeatRequest(requestDto);
-        User user = getUser(userId);
+        User user = userService.getUser(userId);
         MovieScreen movieScreen = getMovieScreen(requestDto.movieScreenId());
         List<Long> sortedSeatIds = requestDto.seatIds().stream().sorted().toList();
 
@@ -58,7 +64,7 @@ public class ReservationService {
         return reservation.getId();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void confirmReservation(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
@@ -67,7 +73,7 @@ public class ReservationService {
         reservation.confirm();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void preparePayment(Long userId, Long reservationId, String paymentId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
@@ -75,7 +81,7 @@ public class ReservationService {
         reservation.assignPaymentId(paymentId);
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentFailed(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
@@ -83,7 +89,7 @@ public class ReservationService {
         reservation.markPaymentFailed();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentUnknown(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
@@ -91,7 +97,7 @@ public class ReservationService {
         reservation.markPaymentUnknown();
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public void markPaymentCancelled(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
@@ -107,13 +113,13 @@ public class ReservationService {
         return reservation;
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public Reservation getReservationWithLock(Long reservationId) {
         return reservationRepository.findByIdWithLock(reservationId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.RESERVATION_NOT_FOUND));
     }
 
-    @Transactional(noRollbackFor = GeneralException.class)
+    @Transactional
     public Reservation getOwnedReservationWithLock(Long userId, Long reservationId) {
         Reservation reservation = getReservationWithLock(reservationId);
         validateOwner(userId, reservation);
@@ -126,18 +132,29 @@ public class ReservationService {
         reservation.cancel(LocalDateTime.now());
     }
 
-    // 3. 예매 내역 조회
-    @Transactional(readOnly = true)
-    public List<ReservationResponseDto> getReservationList(Long userId) {
-        validateUserExists(userId);
-        return reservationRepository.findAllByUserIdWithDetails(userId).stream()
-                .map(this::toReservationResponse)
-                .toList();
+    public void cancelPaidReservation(Long userId, Long reservationId, String paymentId) {
+        PaymentResponse response;
+        try {
+            response = paymentService.cancelPayment(paymentId);
+        } catch (GeneralException e) {
+            markPaymentUnknown(userId, reservationId);
+            throw e;
+        }
+
+        if (response == null
+                || response.data() == null
+                || PaymentStatus.from(response.data().paymentStatus()) != PaymentStatus.CANCELLED) {
+            markPaymentUnknown(userId, reservationId);
+            throw new GeneralException(GeneralErrorCode.PAYMENT_NOT_CANCELLABLE);
+        }
+
+        Reservation reservation = getOwnedReservationWithLock(userId, reservationId);
+        reservation.markPaymentCancelled();
+        reservation.cancel(LocalDateTime.now());
     }
 
     private void validateOwner(Long userId, Reservation reservation) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
+        userService.getUser(userId);
 
         if (!reservation.isOwnedBy(userId)) {
             throw new GeneralException(GeneralErrorCode.FORBIDDEN);
@@ -145,11 +162,6 @@ public class ReservationService {
     }
 
     // --- Helper Methods ---
-    private User getUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(GeneralErrorCode.USER_NOT_FOUND));
-    }
-
     private void validateSeatRequest(ReservationRequestDto requestDto) {
         // 좌석 없는 예매 방지
         if (requestDto.seatIds() == null || requestDto.seatIds().isEmpty()) {
@@ -164,21 +176,26 @@ public class ReservationService {
     }
 
     private void processSeatReservations(Reservation reservation, Long movieScreenId, List<Long> seatIds) {
-        for (Long seatId : seatIds) {
-            Seat seat = seatRepository.findById(seatId)
-                    .orElseThrow(() -> new GeneralException(GeneralErrorCode.SEAT_NOT_FOUND));
+        List<Seat> seats = seatRepository.findAllByIdInWithScreen(seatIds);
+        validateAllSeatsFound(seatIds, seats);
 
-            boolean isAlreadyReserved = reservationSeatRepository
-                    .existsByMovieScreenIdAndSeatIdAndReservation_StatusIn(
-                            movieScreenId, seatId, List.of(ReservationStatus.완료, ReservationStatus.대기)
-                    );
+        Set<Long> reservedSeatIds = new HashSet<>(reservationSeatRepository.findReservedSeatIds(
+                movieScreenId,
+                seatIds,
+                List.of(ReservationStatus.완료, ReservationStatus.대기)
+        ));
 
-            if (isAlreadyReserved) {
-                throw new GeneralException(GeneralErrorCode.RESERVATION_SEAT_DUPLICATION);
-            }
-
-            reservation.addSeat(seat);
+        if (!reservedSeatIds.isEmpty()) {
+            throw new GeneralException(GeneralErrorCode.RESERVATION_SEAT_DUPLICATION);
         }
+
+        Map<Long, Seat> seatById = seats.stream()
+                .collect(Collectors.toMap(Seat::getId, Function.identity()));
+
+        seatIds.stream()
+                .map(seatById::get)
+                .sorted(Comparator.comparing(Seat::getId))
+                .forEach(reservation::addSeat);
     }
 
     private List<String> buildSeatLockKeys(Long movieScreenId, List<Long> seatIds) {
@@ -188,9 +205,7 @@ public class ReservationService {
     }
 
     private void validateUserExists(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new GeneralException(GeneralErrorCode.USER_NOT_FOUND);
-        }
+        userService.getUser(userId);
     }
 
     private MovieScreen getMovieScreen(Long id) {
@@ -198,18 +213,9 @@ public class ReservationService {
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIESCREEN_NOT_FOUND));
     }
 
-    private ReservationResponseDto toReservationResponse(Reservation res) {
-        return ReservationResponseDto.builder()
-                .reservationId(res.getId())
-                .movieTitle(res.getMovieTitle())
-                .theaterName(res.getTheaterName())
-                .screenName(res.getScreenName())
-                .startAt(res.getMovieScreen().getStartAt())
-                .seatInfo(res.getSeatLabels())
-                .totalPrice(res.getTotalPrice())
-                .status(res.getStatus())
-                .paymentStatus(res.getPaymentStatus())
-                .reservationAt(res.getCreatedAt())
-                .build();
+    private void validateAllSeatsFound(List<Long> seatIds, List<Seat> seats) {
+        if (seats.size() != seatIds.size()) {
+            throw new GeneralException(GeneralErrorCode.SEAT_NOT_FOUND);
+        }
     }
 }
