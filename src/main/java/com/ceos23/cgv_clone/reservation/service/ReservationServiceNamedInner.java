@@ -10,6 +10,7 @@ import com.ceos23.cgv_clone.reservation.entity.ReservationSeat;
 import com.ceos23.cgv_clone.reservation.entity.ReservationStatus;
 import com.ceos23.cgv_clone.reservation.repository.ReservationRepository;
 import com.ceos23.cgv_clone.reservation.repository.ReservationSeatRepository;
+import com.ceos23.cgv_clone.reservation.service.dto.PendingReservation;
 import com.ceos23.cgv_clone.theater.entity.Schedule;
 import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.user.entity.User;
@@ -43,7 +44,7 @@ public class ReservationServiceNamedInner{
     public PendingReservationResponse prepareReservation(Long userId, ReservationRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Schedule schedule = scheduleRepository.findById(request.getScheduleId())
+        Schedule schedule = scheduleRepository.findByIdWithMovieAndScreenType(request.getScheduleId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCHEDULE_NOT_FOUND));
         List<String> seats = request.getSeats();
 
@@ -53,22 +54,10 @@ public class ReservationServiceNamedInner{
         int totalPrice = schedule.getScreen().getScreenType().getPrice() * request.getSeats().size();
         String paymentId = generatePaymentId();
 
-        Reservation reservation = Reservation.builder()
-                .reservedAt(LocalDateTime.now())
-                .totalPrice(totalPrice)
-                .status(ReservationStatus.PENDING)
-                .paymentId(paymentId)
-                .user(user)
-                .schedule(schedule)
-                .build();
+        Reservation reservation = Reservation.createPending(user, schedule, totalPrice, paymentId);
 
         for (String seatStr : request.getSeats()) {
-            ReservationSeat seat = ReservationSeat.builder()
-                    .seatRow(seatStr.charAt(0))
-                    .seatCol(Integer.parseInt(seatStr.substring(1)))
-                    .reservation(reservation)
-                    .schedule(schedule)
-                    .build();
+            ReservationSeat seat = ReservationSeat.create(reservation, schedule, seatStr);
             reservation.addReservationSeat(seat);
         }
 
@@ -80,28 +69,49 @@ public class ReservationServiceNamedInner{
     }
 
     @Transactional(propagation = REQUIRES_NEW)
-    public ReservationResponse confirmReservation(Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
-
-        reservation.confirmReservation();
-        return ReservationResponse.from(reservation);
-    }
-
-    // 예매 취소
-    @Transactional(propagation = REQUIRES_NEW)
-    public String cancelReservation(Long userId, Long reservationId) {
-        User user = userRepository.findById(userId)
+    public void cancelPendingReservation(Long userId, Long reservationId) {
+        userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
-        verifyCancel(user, reservation);
+        verifyPendingReservation(userId, reservation);
 
+        reservation.cancelPending();
+    }
 
-        reservation.cancel();
+    @Transactional(propagation = REQUIRES_NEW)
+    public ReservationResponse confirmReservation(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        reservation.confirm();
+        return ReservationResponse.from(reservation);
+    }
+
+    @Transactional(readOnly = true, propagation = REQUIRES_NEW)
+    public String loadPaymentIdForCancel(Long userId, Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyOwner(userId, reservation);
+        reservation.validateCancelable();
+
         return reservation.getPaymentId();
+    }
+
+    @Transactional(propagation = REQUIRES_NEW)
+    public void cancelReservation(Long userId, Long reservationId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
+
+        verifyOwner(userId, reservation);
+
+        reservation.cancelReserved();
     }
 
     @Transactional(readOnly = true, propagation = REQUIRES_NEW)
@@ -116,26 +126,24 @@ public class ReservationServiceNamedInner{
         return new PendingReservation(reservation.getId(), reservation.getPaymentId(), orderName, reservation.getTotalPrice());
     }
 
-    private void verifyCancel(User user, Reservation reservation) {
-        if (!reservation.getUser().getId().equals(user.getId())) {
-            throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
-        }
-
-        if (reservation.getStatus().equals(ReservationStatus.CANCELED)) {
-            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
-        }
-    }
-
     private void verifyPendingReservation(Long userId, Reservation reservation) {
         if (!reservation.getUser().getId().equals(userId)) {
             throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
         }
+
         if (reservation.getStatus() != ReservationStatus.PENDING) {
             throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
+
         // 5분 경과 후 스케쥴러가 잡지 못했는데, 다른 유저가 들어와서 결제 시도하면 문제 생기므로 추가 검증.
         if (reservation.getReservedAt().plusMinutes(5).isBefore(LocalDateTime.now())) {
             throw new CustomException(ErrorCode.RESERVATION_EXPIRED);
+        }
+    }
+
+    private void verifyOwner(Long userId, Reservation reservation) {
+        if (!reservation.getUser().getId().equals(userId)) {
+            throw new CustomException(ErrorCode.FORBIDDEN_ERROR);
         }
     }
 
@@ -158,7 +166,6 @@ public class ReservationServiceNamedInner{
         }
 
         for (String seatStr : seats) {
-            // 2-2. 좌석 문자열 검사
             if (seatStr == null || !seatStr.matches("^[A-Z]\\d+$")) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
@@ -166,13 +173,10 @@ public class ReservationServiceNamedInner{
             char row = seatStr.charAt(0);
             int col = Integer.parseInt(seatStr.substring(1));
 
-            // 2-3. 좌석 범위 검사
             if (row > schedule.getScreen().getScreenType().getMaxRow() || col > schedule.getScreen().getScreenType().getMaxCol()) {
                 throw new CustomException(ErrorCode.INVALID_SEAT);
             }
 
-            // 2-4. 좌석 중복 검사
-            // ReservationStatus.Canceled가 아닌 것 조회 -> 즉 취소 된 거는 카운트 X
             if (reservationSeatRepository.existsByScheduleAndSeatRowAndSeatColAndReservation_StatusNot(schedule, row, col, ReservationStatus.CANCELED)) {
                 throw new CustomException(ErrorCode.ALREADY_RESERVED_SEAT);
             }

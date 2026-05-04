@@ -31,6 +31,6 @@ public class ReservationTimeoutService {
         }
 
         log.info("만료된 PENDING 예매 {}건 취소", expired.size());
-        expired.forEach(Reservation::cancel);
+        expired.forEach(Reservation::cancelPending);
     }
 }

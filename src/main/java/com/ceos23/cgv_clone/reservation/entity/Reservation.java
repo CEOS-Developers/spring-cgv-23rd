@@ -1,6 +1,8 @@
 package com.ceos23.cgv_clone.reservation.entity;
 
 import com.ceos23.cgv_clone.global.entity.BaseEntity;
+import com.ceos23.cgv_clone.global.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.theater.entity.Schedule;
 import com.ceos23.cgv_clone.user.entity.User;
 import jakarta.persistence.*;
@@ -59,15 +61,56 @@ public class Reservation extends BaseEntity {
         this.schedule = schedule;
     }
 
+    public static Reservation createPending(User user, Schedule schedule, int totalPrice, String paymentId) {
+        return Reservation.builder()
+                .reservedAt(LocalDateTime.now())
+                .totalPrice(totalPrice)
+                .status(ReservationStatus.PENDING)
+                .paymentId(paymentId)
+                .user(user)
+                .schedule(schedule)
+                .build();
+    }
+
     public void addReservationSeat(ReservationSeat seat) {
         this.reservationSeats.add(seat);
     }
 
-    public void confirmReservation() {
+    public void confirm() {
+        if (status != ReservationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+
         this.status = ReservationStatus.RESERVED;
     }
 
-    public void cancel() {
+    public void cancelPending() {
+        if (status != ReservationStatus.PENDING) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+
         this.status = ReservationStatus.CANCELED;
+    }
+
+    public void cancelReserved() {
+        if (status == ReservationStatus.CANCELED) {
+            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
+        if (status != ReservationStatus.RESERVED) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
+
+        this.status = ReservationStatus.CANCELED;
+    }
+
+    public void validateCancelable() {
+        if (status == ReservationStatus.CANCELED) {
+            throw new CustomException(ErrorCode.ALREADY_CANCELED_RESERVATION);
+        }
+
+        if (status != ReservationStatus.RESERVED) {
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
+        }
     }
 }

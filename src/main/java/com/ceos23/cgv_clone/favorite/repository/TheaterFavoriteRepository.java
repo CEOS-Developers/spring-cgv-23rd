@@ -5,10 +5,10 @@ import com.ceos23.cgv_clone.theater.entity.Theater;
 import com.ceos23.cgv_clone.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface TheaterFavoriteRepository extends JpaRepository<TheaterFavorite, Long> {
-    boolean existsByUserAndTheater(User user, Theater theater);
+import java.util.Optional;
 
-    void deleteByUserAndTheater(User user, Theater theater);
+public interface TheaterFavoriteRepository extends JpaRepository<TheaterFavorite, Long> {
+    Optional<TheaterFavorite> findByUserAndTheater(User user, Theater theater);
 
     int countByUser(User user);
 }

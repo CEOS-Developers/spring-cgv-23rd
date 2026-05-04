@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class FavoriteService {
@@ -27,7 +29,8 @@ public class FavoriteService {
     private final TheaterFavoriteRepository theaterFavoriteRepository;
     private final MovieFavoriteRepository movieFavoriteRepository;
 
-    // 영화관 찜
+    private static final int MAX_FAVORITE_THEATER_COUNT = 5;
+
     @Transactional
     public FavoriteResponse toggleFavoriteTheater(Long userId, Long theaterId) {
         User user = userRepository.findById(userId)
@@ -36,30 +39,24 @@ public class FavoriteService {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
 
-        // 1-1. 이미 자주 가는 곳으로 되어 있을 경우에는 찜 해제
-        if (theaterFavoriteRepository.existsByUserAndTheater(user, theater)) {
-            theaterFavoriteRepository.deleteByUserAndTheater(user, theater);
+        Optional<TheaterFavorite> favorite = theaterFavoriteRepository.findByUserAndTheater(user, theater);
+
+        if (favorite.isPresent()) {
+            theaterFavoriteRepository.delete(favorite.get());
             return FavoriteResponse.of(false);
         }
-        // 1-2. 아닐 경우
-        else {
-            // 1-2-1. 자주가는 영화관 5개 초과일 경우 에러 반환
-            if (theaterFavoriteRepository.countByUser(user) >= 5) {
-                throw new CustomException(ErrorCode.FAVORITE_THEATER_LIMIT_EXCEEDED);
-            }
 
-            // 1-2-2. 아닐 경우 저장
-            TheaterFavorite favorite = TheaterFavorite.builder()
-                    .user(user)
-                    .theater(theater)
-                    .build();
-
-            theaterFavoriteRepository.save(favorite);
-            return FavoriteResponse.of(true);
+        if (theaterFavoriteRepository.countByUser(user) >= MAX_FAVORITE_THEATER_COUNT) {
+            throw new CustomException(ErrorCode.FAVORITE_THEATER_LIMIT_EXCEEDED);
         }
+
+        TheaterFavorite theaterFavorite = TheaterFavorite.create(user, theater);
+
+        theaterFavoriteRepository.save(theaterFavorite);
+        return FavoriteResponse.of(true);
+
     }
 
-    // 영화 찜
     @Transactional
     public FavoriteResponse toggleFavoriteMovie(Long userId, Long movieId) {
         User user = userRepository.findById(userId)
@@ -68,20 +65,16 @@ public class FavoriteService {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
-        // 이미 영화 찜이 되어 있으면 해제
-        if (movieFavoriteRepository.existsByUserAndMovie(user, movie)) {
-            movieFavoriteRepository.deleteByUserAndMovie(user, movie);
+        Optional<MovieFavorite> favorite = movieFavoriteRepository.findByUserAndMovie(user, movie);
+
+        if (favorite.isPresent()) {
+            movieFavoriteRepository.delete(favorite.get());
             return FavoriteResponse.of(false);
-
-        } else {
-            // 아닐 경우 저장
-            MovieFavorite favorite = MovieFavorite.builder()
-                    .user(user)
-                    .movie(movie)
-                    .build();
-
-            movieFavoriteRepository.save(favorite);
-            return FavoriteResponse.of(true);
         }
+
+        MovieFavorite movieFavorite = MovieFavorite.create(user, movie);
+
+        movieFavoriteRepository.save(movieFavorite);
+        return FavoriteResponse.of(true);
     }
 }

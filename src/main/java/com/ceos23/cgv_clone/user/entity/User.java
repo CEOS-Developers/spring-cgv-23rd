@@ -46,4 +46,13 @@ public class User extends BaseEntity {
         this.password = password;
         this.birthdate = birthdate;
     }
+
+    public static User create(String email, String encodedPassword) {
+        return User.builder()
+                .email(email)
+                .nickname(email)
+                .password(encodedPassword)
+                .role(Role.ROLE_USER)
+                .build();
+    }
 }

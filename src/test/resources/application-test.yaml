@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    main:
+      hikari:
+        maximum-pool-size: 5
+        pool-name: TestMainHikariPool
+    lock:
+      hikari:
+        maximum-pool-size: 2
+        pool-name: TestLockHikariPool
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  sql:
+    init:
+      mode: never
+
+jwt:
+  secret: dGVzdC1qd3Qtc2VjcmV0LWZvci1jaS1lbnZpcm9ubWVudC1vbmx5LW5vdC1mb3ItcHJvZHVjdGlvbg==
+  expiration: 3600000
+  refresh-expiration: 86400000
+
+payment:
+  base-url: 'http://localhost:8080'
+  store-id: 'test'
+  secret-key: 'test-payment-secret'

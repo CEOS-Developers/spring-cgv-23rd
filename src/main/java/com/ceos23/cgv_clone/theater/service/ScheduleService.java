@@ -23,16 +23,22 @@ public class ScheduleService {
 
     @Transactional(readOnly = true)
     public List<ScheduleResponse> getSchedule(Long movieId, Long theaterId) {
-        theaterRepository.findById(theaterId)
-                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
+        validateMovieAndTheater(movieId, theaterId);
 
-        movieRepository.findById(movieId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
-
-        List<Schedule> response = scheduleRepository.findAllByMovie_IdAndScreen_Theater_Id(movieId, theaterId);
+        List<Schedule> response = scheduleRepository.findAllByMovieIdAndScreenTheaterId(movieId, theaterId);
 
         return response.stream()
                 .map(ScheduleResponse::from)
                 .toList();
+    }
+
+    private void validateMovieAndTheater(Long movieId, Long theaterId) {
+        if (!theaterRepository.existsById(theaterId)) {
+            throw new CustomException(ErrorCode.THEATER_NOT_FOUND);
+        }
+
+        if (!movieRepository.existsById(movieId)) {
+            throw new CustomException(ErrorCode.MOVIE_NOT_FOUND);
+        }
     }
 }

@@ -37,4 +37,11 @@ public class MovieFavorite extends BaseEntity {
         this.user = user;
         this.movie = movie;
     }
+
+    public static MovieFavorite create(User user, Movie movie) {
+        return MovieFavorite.builder()
+                .user(user)
+                .movie(movie)
+                .build();
+    }
 }

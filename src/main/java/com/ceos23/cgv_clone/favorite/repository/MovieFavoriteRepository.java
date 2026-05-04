@@ -5,8 +5,8 @@ import com.ceos23.cgv_clone.movie.entity.Movie;
 import com.ceos23.cgv_clone.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface MovieFavoriteRepository extends JpaRepository<MovieFavorite, Long> {
-    void deleteByUserAndMovie(User user, Movie movie);
+import java.util.Optional;
 
-    boolean existsByUserAndMovie(User user, Movie movie);
+public interface MovieFavoriteRepository extends JpaRepository<MovieFavorite, Long> {
+    Optional<MovieFavorite> findByUserAndMovie(User user, Movie movie);
 }

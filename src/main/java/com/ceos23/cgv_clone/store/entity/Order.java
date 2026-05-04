@@ -1,6 +1,8 @@
 package com.ceos23.cgv_clone.store.entity;
 
 import com.ceos23.cgv_clone.global.entity.BaseEntity;
+import com.ceos23.cgv_clone.global.exception.CustomException;
+import com.ceos23.cgv_clone.global.response.ErrorCode;
 import com.ceos23.cgv_clone.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -52,19 +54,25 @@ public class Order extends BaseEntity {
         this.store = store;
     }
 
-    public void addOrderItem(OrderItem item) {
-        this.orderItems.add(item);
+    public static Order createPaid(User user, Store store, String paymentId, int totalPrice) {
+        return Order.builder()
+                .paymentId(paymentId)
+                .orderStatus(OrderStatus.PAID)
+                .totalPrice(totalPrice)
+                .user(user)
+                .store(store)
+                .build();
     }
 
-    public void markPaid() {
-        this.orderStatus = OrderStatus.PAID;
-    }
+    public void cancel() {
+        if (orderStatus != OrderStatus.PAID) {
+            throw new CustomException(ErrorCode.ALREADY_CANCELED_ORDER);
+        }
 
-    public void markCanceled() {
         this.orderStatus = OrderStatus.CANCELED;
     }
 
-    public void markFailed() {
-        this.orderStatus = OrderStatus.FAILED;
+    public void addOrderItem(OrderItem item) {
+        this.orderItems.add(item);
     }
 }

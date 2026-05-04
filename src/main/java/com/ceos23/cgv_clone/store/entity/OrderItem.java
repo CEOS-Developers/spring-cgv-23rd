@@ -22,7 +22,7 @@ public class OrderItem extends BaseEntity {
     private int quantity;
 
     @Column(nullable = false)
-    private int unitPrice; // 구매 시점에서의 가격 (가격 변동이 있어도, 과거의 가격이 변경되면 안된다)
+    private int unitPrice;
 
     @JoinColumn(name = "order_id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -38,5 +38,14 @@ public class OrderItem extends BaseEntity {
         this.unitPrice = unitPrice;
         this.order = order;
         this.inventory = inventory;
+    }
+
+    public static OrderItem create(Order order, Inventory inventory, int quantity) {
+        return OrderItem.builder()
+                .quantity(quantity)
+                .unitPrice(inventory.getMenu().getPrice())
+                .order(order)
+                .inventory(inventory)
+                .build();
     }
 }

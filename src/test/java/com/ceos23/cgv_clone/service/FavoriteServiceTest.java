@@ -1,6 +1,8 @@
 package com.ceos23.cgv_clone.service;
 
 import com.ceos23.cgv_clone.favorite.dto.response.FavoriteResponse;
+import com.ceos23.cgv_clone.favorite.entity.MovieFavorite;
+import com.ceos23.cgv_clone.favorite.entity.TheaterFavorite;
 import com.ceos23.cgv_clone.favorite.repository.MovieFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.repository.TheaterFavoriteRepository;
 import com.ceos23.cgv_clone.favorite.service.FavoriteService;
@@ -58,10 +60,11 @@ class FavoriteServiceTest {
                         .region("서울")
                         .address("서울 강남구")
                         .build();
+        TheaterFavorite favorite = TheaterFavorite.create(user, theater);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
-        given(theaterFavoriteRepository.existsByUserAndTheater(user, theater)).willReturn(true);
+        given(theaterFavoriteRepository.findByUserAndTheater(user, theater)).willReturn(Optional.of(favorite));
 
         // when
         FavoriteResponse response = favoriteService.toggleFavoriteTheater(userId, theaterId);
@@ -91,7 +94,7 @@ class FavoriteServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(theaterRepository.findById(theaterId)).willReturn(Optional.of(theater));
-        given(theaterFavoriteRepository.existsByUserAndTheater(user, theater)).willReturn(false);
+        given(theaterFavoriteRepository.findByUserAndTheater(user, theater)).willReturn(Optional.empty());
         given(theaterFavoriteRepository.countByUser(user)).willReturn(3);
 
         // when
@@ -119,10 +122,11 @@ class FavoriteServiceTest {
                 .runningTime(156)
                 .ageRestriction(12)
                 .build();
+        MovieFavorite favorite = MovieFavorite.create(user, movie);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(movieRepository.findById(movieId)).willReturn(Optional.of(movie));
-        given(movieFavoriteRepository.existsByUserAndMovie(user, movie)).willReturn(true);
+        given(movieFavoriteRepository.findByUserAndMovie(user, movie)).willReturn(Optional.of(favorite));
 
         // when
         FavoriteResponse response = favoriteService.toggleFavoriteMovie(userId, movieId);
@@ -151,7 +155,7 @@ class FavoriteServiceTest {
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(movieRepository.findById(movieId)).willReturn(Optional.of(movie));
-        given(movieFavoriteRepository.existsByUserAndMovie(user, movie)).willReturn(false);
+        given(movieFavoriteRepository.findByUserAndMovie(user, movie)).willReturn(Optional.empty());
 
         // when
         FavoriteResponse response = favoriteService.toggleFavoriteMovie(userId, movieId);
