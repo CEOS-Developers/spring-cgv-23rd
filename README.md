@@ -2131,3 +2131,8 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 
 
 </details>
+
+### 아키텍처 구조도
+<img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
+
+
