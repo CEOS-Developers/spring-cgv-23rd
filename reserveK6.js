@@ -20,7 +20,10 @@ export const options = {
 const BASE_URL = __ENV.BASE_URL || 'http://13.125.8.199:8080';
 
 // 여러 사용자 JWT를 쉼표로 넣어서 사용
-const TOKENS = (__ENV.TOKENS || 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmciLCJpYXQiOjE3NzgwNDgwNzMsImV4cCI6MTc3ODA1MTY3MywidXNlcklkIjo0fQ.x-NK0x95dBiGHvbNI5xujlsSNIwzX_UIihvSm8qlpDI,eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmcxIiwiaWF0IjoxNzc4MDQ4MTA0LCJleHAiOjE3NzgwNTE3MDQsInVzZXJJZCI6NX0.pyuYSqrkmy68j3MfVMfehAdNNlfIPbBTYtJY_Pp8RjI,eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmcyIiwiaWF0IjoxNzc4MDQ4MTI0LCJleHAiOjE3NzgwNTE3MjQsInVzZXJJZCI6Nn0.NXH737RJpz3R9krL69IQWuk6kZch-8llGZliyOpqCdc').split(',');
+const TOKENS = (__ENV.TOKENS || 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmciLCJpYXQiOjE3NzgwNDgwNzMsImV4cCI6MTc3ODA1MTY3MywidXNlcklkIjo0fQ.x-NK0x95dBiGHvbNI5xujlsSNIwzX_UIihvSm8qlpDI,eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmcxIiwiaWF0IjoxNzc4MDQ4MTA0LCJleHAiOjE3NzgwNTE3MDQsInVzZXJJZCI6NX0.pyuYSqrkmy68j3MfVMfehAdNNlfIPbBTYtJY_Pp8RjI,eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdHJpbmcyIiwiaWF0IjoxNzc4MDQ4MTI0LCJleHAiOjE3NzgwNTE3MjQsInVzZXJJZCI6Nn0.NXH737RJpz3R9krL69IQWuk6kZch-8llGZliyOpqCdc')
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
 
 const reservationSuccess = new Counter('reservation_success');
 const reservationConflict = new Counter('reservation_conflict');
@@ -33,7 +36,7 @@ const reservationDuration = new Trend('reservation_duration');
 const paymentDuration = new Trend('payment_duration');
 
 export default function () {
-    const token = TOKENS[__VU % TOKENS.length];
+    const token = TOKENS[(__VU - 1) % TOKENS.length];
 
     const headers = {
         'Content-Type': 'application/json',
@@ -41,7 +44,7 @@ export default function () {
     };
 
     const payload = JSON.stringify({
-        scheduleId: 1,
+        movieScreenId: 1,
         seatIds: [1], // 모든 VU가 같은 좌석 요청
     });
 
