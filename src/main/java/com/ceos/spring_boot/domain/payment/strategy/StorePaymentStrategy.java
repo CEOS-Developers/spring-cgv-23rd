@@ -30,6 +30,8 @@ public class StorePaymentStrategy implements PaymentStrategy {
         if (isPaymentProcessed) {
             paymentClient.cancelPayment(paymentId);
         }
+
+        storeService.restoreStock(targetId);
     }
 
     @Override

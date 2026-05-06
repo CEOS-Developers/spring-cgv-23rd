@@ -46,23 +46,13 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker stop cgv-server || true;
-            docker rm cgv-server || true;
+            # 작업 디렉토리로 이동
+            cd /home/ubuntu
 
-            docker pull ${{ secrets.DOCKER_USERNAME }}/cgv-backend:latest;
+            echo "${{ secrets.ENV_VARS }}" > .env
+            
+            chmod 600 .env
 
-            docker run -d -p 80:8080 \
-              --name cgv-server \
-              -e db_url=${{ secrets.DB_URL }} \
-              -e db_name=cgv \
-              -e db_username=admin \
-              -e password=${{ secrets.DB_PASSWORD }} \
-              -e JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
-              -e JWT_VALIDITY=3600 \
-              -e PAYMENT_SERVER=https://ceos.diggindie.com \
-              -e GITHUB_ID=Seungwon326 \
-              -e PAYMENT_SECRET_KEY=${{ secrets.PAYMENT_SECRET_KEY }} \
-              -e REDIS_HOST=172.17.0.1 \
-              ${{ secrets.DOCKER_USERNAME }}/cgv-backend:latest;
-
-            docker image prune -f;
+            sudo docker compose pull
+            sudo docker compose up -d
+            sudo docker image prune -f
