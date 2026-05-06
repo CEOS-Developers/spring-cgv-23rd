@@ -23,9 +23,23 @@ jwt:
 logging:
   level:
     org.hibernate.SQL: debug
+    root: INFO
+    com.example.logdemo: DEBUG
+    file:
+      name: logs/application.log
+    pattern:
+      console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+      file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 payment:
   server:
     url: ${PAYMENT_SERVER_URL}
   store-id: ${PAYMENT_STORE_ID}
   api-secret: ${PAYMENT_API_SECRET}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+        exclude: env, heapdump, threaddump, configprops, quartz
