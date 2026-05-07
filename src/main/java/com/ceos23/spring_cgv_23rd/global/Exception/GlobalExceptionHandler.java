@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ErrDTO> handleCustomException(CustomException e) {
         ErrorCode code = e.getCode();

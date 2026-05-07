@@ -1049,10 +1049,7 @@ class ApplicationTests {
 
 		mockmvc.perform(post("/api/reservation?reservationId=" + reservationId)
 						.cookie(authCookie))
-				.andExpect(status().isOk())
-				.andReturn()
-				.getResponse()
-				.getContentAsString();
+				.andExpect(status().isOk());
 
 		//좌석조회
 		String res = mockmvc.perform(get("/api/reservation?screeningId=" + screening.getId())
@@ -1067,7 +1064,7 @@ class ApplicationTests {
 		assertThat(dto.leavingSeatAmount()).isEqualTo(dto.totalSeatAmount() - 2);
 
 		//취소
-		mockmvc.perform(delete("/api/reservation/" + screening.getId())
+		mockmvc.perform(delete("/api/reservation/" + reservationId)
 						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn()

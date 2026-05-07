@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  app:
+    image: kdhyun422/my-app:${IMAGE_TAG}
+    ports:
+      - "80:8080"
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health/ready" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
