@@ -7,9 +7,15 @@ services:
     container_name: ceos-app
     env_file:
       - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
     ports:
       - "8080:8080"
+    volumes:
+      - app-logs:/app/logs
     restart: unless-stopped
+    networks:
+      - loki-network
 
   # Loki - 로그 저장소
   loki:
@@ -20,7 +26,7 @@ services:
     environment:
       - TZ=Asia/Seoul
     volumes:
-      - ./loki-config.yml:/etc/loki/local-config.yaml #설정 파일을 컨테이너 내부로 주입
+      - ./src/main/resources/loki-config.yml:/etc/loki/local-config.yaml #설정 파일을 컨테이너 내부로 주입
       - loki-data:/loki
     command: -config.file=/etc/loki/local-config.yaml
     networks:
@@ -35,8 +41,8 @@ services:
     environment:
       - TZ=Asia/Seoul
     volumes:
-      - ./alloy-config.yml:/etc/alloy/config.alloy # alloy 설정 파일 매핑
-      - ./logs:/var/log/spring-boot               # Spring 로그 파일 경로
+      - ./alloy-config.alloy:/etc/alloy/config.alloy # alloy 설정 파일 매핑
+      - app-logs:/var/log/spring-boot               # Spring 로그 파일 경로
       - /var/run/docker.sock:/var/run/docker.sock # 도커 소켓 (필요 시)
       - ./alloy-data:/tmp
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
@@ -68,7 +74,24 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+      - ./src/main/resources/prometheus-config.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - loki-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
     networks:
       - loki-network
 
@@ -77,5 +100,6 @@ networks:
     driver: bridge
 
 volumes:
+  app-logs:
   loki-data:
   grafana-data:

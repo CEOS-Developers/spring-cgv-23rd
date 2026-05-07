@@ -60,6 +60,7 @@ public class SecurityConfig {
         // API 경로별 접근 권한 설정
         http.authorizeHttpRequests((authorize) -> authorize
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger 허용
+                .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers("/", "/health-check").permitAll()
                 .requestMatchers("/").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()

@@ -30,7 +30,7 @@
     </root>
 
     <!-- 애플리케이션 패키지 로그 레벨 -->
-    <logger name="com.example.logdemo" level="DEBUG" additivity="false">
+    <logger name="cgv_23rd.ceos" level="DEBUG" additivity="false">
         <appender-ref ref="CONSOLE" />
         <appender-ref ref="FILE" />
     </logger>
