@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/payments/(.*)/instant"
+  },
+  "response": {
+    "code":200,
+    "message": "결제 처리 완료",
+    "data": {
+      "paymentId": "{{request.pathSegments.[1]}}",
+      "paymentStatus": "PAID",
+      "orderName": "{{jsonPath request.body '$.orderName'}}",
+      "pgProvider": "string",
+      "currency": "KRW",
+      "customData": "{\"item\":\"노트북\",\"quantity\":1}",
+      "paidAt": "2026-02-07T02:07:00"
+    }
+  }
+}

@@ -46,6 +46,8 @@
                                 return moviePaymentDBService.successPayment(payment.getId());
                             } else {
                                 //요청이 전달되지 않음
+                                payment.paymentFail();
+                                payment = moviePaymentDBService.setPayment(targetId, req, userLoginId);
                                 continue;
                             }
                         default:

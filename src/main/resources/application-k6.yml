@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
@@ -37,6 +37,6 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 concurrency:
-  endpoint: "https://ceos.diggindie.com"
+  endpoint: "https://wiremock:8080"
   storeId: ${CONCURRENCY_ID}
   secret-key: ${CONCURRENCY_SECRET_KEY}

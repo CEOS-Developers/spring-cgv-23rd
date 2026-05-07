@@ -50,7 +50,8 @@ public class FoodPaymentFacadeService implements PaymentFacadeService {
                             return payment;
                         } else {
                             log.warn("결제 실패. 재시도. errorMessage = {}", ce.getMessage());
-                            foodPaymentDBService.changePaymentId(payment);
+                            payment.paymentFail();
+                            payment = foodPaymentDBService.setPayment(targetId, req, userLoginId);
                             continue;
                         }
                     default:

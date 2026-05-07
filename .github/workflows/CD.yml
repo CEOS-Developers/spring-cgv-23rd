@@ -23,18 +23,6 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Set up JDK17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Jar
-        run: ./gradlew build -x test
-
       - name: Setting Buildx Docker
         uses: docker/setup-buildx-action@v3
 
