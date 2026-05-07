@@ -43,7 +43,7 @@ services:
     volumes:
       - ./alloy-config.alloy:/etc/alloy/config.alloy # alloy 설정 파일 매핑
       - app-logs:/var/log/spring-boot               # Spring 로그 파일 경로
-      - /var/run/docker.sock:/var/run/docker.sock # 도커 소켓 (필요 시)
+      - /var/run/docker.sock:/var/run/docker.sock # 도커 소켓
       - ./alloy-data:/tmp
     command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
     depends_on:
