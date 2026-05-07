@@ -2135,4 +2135,23 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 ### 아키텍처 구조도
 <img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
 
+### 모니터링
+alloy, loki, grafana, prometheus 도커 연결
+<img width="1341" height="156" alt="image" src="https://github.com/user-attachments/assets/ef1c3416-695b-46bd-802d-59ea22f282fa" />
+
+### loki 데이터 추가
+<img width="1196" height="349" alt="image" src="https://github.com/user-attachments/assets/2e7717b5-d801-44c0-8ace-3405f334864f" />
+<img width="1158" height="308" alt="image" src="https://github.com/user-attachments/assets/d7274820-7a23-43d8-bfb9-54c89356498e" />
+
+로그 확인
+<img width="1417" height="662" alt="image" src="https://github.com/user-attachments/assets/8ab2d6fd-757d-47c6-abec-4b8c7c786e20" />
+<img width="1359" height="487" alt="image" src="https://github.com/user-attachments/assets/8534dfb8-bf89-4eb4-85bd-411883c3301d" />
+<img width="1434" height="645" alt="image" src="https://github.com/user-attachments/assets/1c75a599-a30b-43ea-a418-83d7e064c1dc" />
+
+
+
+
+
+
+
 
