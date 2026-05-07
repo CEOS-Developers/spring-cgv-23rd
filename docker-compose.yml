@@ -1,0 +1,11 @@
+services:
+  app:
+    image: ${DOCKER_USERNAME}/cgv-clone:latest
+    container_name: deploy-test
+    env_file:
+      - .env
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

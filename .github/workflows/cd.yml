@@ -38,7 +38,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/deploy-test:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cgv-clone:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -49,13 +49,14 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/deploy-test:latest
-            docker stop cgv 2>/dev/null || true
-            docker rm cgv 2>/dev/null || true
+            set -e
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cgv-clone:latest
+            docker rm -f deploy-test 2>/dev/null || true
             docker run -d \
+              --name deploy-test \
+              --env-file /home/ubuntu/cgv/.env \
               -p 8080:8080 \
-              --env-file /home/ubuntu/.env \
-              --name cgv \
               --restart unless-stopped \
-              ${{ secrets.DOCKERHUB_USERNAME }}/deploy-test:latest
+              ${{ secrets.DOCKERHUB_USERNAME }}/cgv-clone:latest
             docker image prune -f
+            docker ps --filter "name=deploy-test"
