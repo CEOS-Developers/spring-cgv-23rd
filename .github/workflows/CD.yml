@@ -1,8 +1,7 @@
 name: CGV CD
 on:
   workflow_run:
-    workflows:
-      - "CI"
+    workflows: ["CGV_CD"]
     types:
       - completed
 
