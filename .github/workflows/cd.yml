@@ -78,7 +78,7 @@ jobs:
           envs: IMAGE_TAG,DOCKER_USERNAME
           script: |
             set -e
-            cd /home/ubuntu/app
+            cd /home/ubuntu/ceos-app
 
             echo ">>> Pulling image"
             sudo docker pull ${DOCKER_USERNAME}/ceos-app:${IMAGE_TAG}
