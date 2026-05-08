@@ -2135,6 +2135,14 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 ### 아키텍처 구조도
 <img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
 
+- 병목 가능성 높은 지점
+  External Payment API
+  DB/RDS
+  Spring thread pool / connection pool
+  JPA transaction/locking
+  
+아키텍처상 병목 가능성이 가장 높은 지점은 외부 Payment API 호출 구간과 MySQL(RDS) 접근 구간이며, 이 둘의 지연이 누적되면 Spring Boot의 요청 처리 스레드가 점유되어 전체 처리율 저하와 timeout 증가로 이어질 수 있다.
+
 ### 모니터링
 alloy, loki, grafana, prometheus 도커 연결
 <img width="1341" height="156" alt="image" src="https://github.com/user-attachments/assets/ef1c3416-695b-46bd-802d-59ea22f282fa" />
@@ -2143,12 +2151,14 @@ alloy, loki, grafana, prometheus 도커 연결
 <img width="1196" height="349" alt="image" src="https://github.com/user-attachments/assets/2e7717b5-d801-44c0-8ace-3405f334864f" />
 <img width="1158" height="308" alt="image" src="https://github.com/user-attachments/assets/d7274820-7a23-43d8-bfb9-54c89356498e" />
 
-로그 확인
+### 로그 확인
 <img width="1417" height="662" alt="image" src="https://github.com/user-attachments/assets/8ab2d6fd-757d-47c6-abec-4b8c7c786e20" />
 <img width="1359" height="487" alt="image" src="https://github.com/user-attachments/assets/8534dfb8-bf89-4eb4-85bd-411883c3301d" />
 <img width="1434" height="645" alt="image" src="https://github.com/user-attachments/assets/1c75a599-a30b-43ea-a418-83d7e064c1dc" />
 
 ### k6 부하테스트
+
+- 외부 페이먼트 api 호출
 ```
   █ TOTAL RESULTS 
 
