@@ -2421,11 +2421,12 @@ ERRO[0248] thresholds on metrics 'http_req_duration{name:create_food_order}, htt
 ```
 <img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/133b8141-80e0-4ace-8c8d-b728ec47933b" />
 
-create_food_order p95 = 5.62s
-get_food_orders p95 = 8.9s
-실패율은 0%
-처리량은 5.99 req/s
-DB/JPA 쪽 문제
+DB 중심 부하테스트 결과, 주문 생성 API는 p95 529ms로 기준을 충족했지만 주문 조회 API는 p95 1.27초로 목표를 초과했다. 실패율은 0%였으므로 현재 문제는 기능 장애가 아니라 조회 경로의 성능 저하이며, 병목은 Spring-JPA-MySQL 구간, 특히 주문 조회 로직에 있을 가능성이 높다.
+외부 결제 이전에 get_food_orders가 느린 가장 큰 이유는, 생성된 주문이 누적되는 상황에서 전체 주문+아이템을 매번 한 번에 다 조회하도록 짜여 있기 때문
+-> 페이지네이션 도입
+### 변경 내용:
+- FoodOrderController GET /api/foods/orders/에 page, size 쿼리 파라미터 추가
 
+- FoodOrderQueryService.java 전체 조회 대신 ID 페이지 조회 -> 상세 fetch 2단계로 변경
 
-
+- FoodOrderRepository.java findPageIdsByUserId()와 findAllByIdInWithDetails() 추가
