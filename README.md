@@ -1284,3 +1284,45 @@ Mac은 Apple Silicon 환경이라 기본적으로 `arm64` 이미지가 빌드될
 이를 해결하기 위해 Docker 이미지를 빌드할 때 EC2 환경에 맞춰 `linux/amd64` 플랫폼을 명시했다.
 
 </details>
+
+<details>
+<summary> <h2> 아키텍처 구조도 </h2></summary>
+
+![img_19.png](image/img_19.png)
+
+</details>
+
+<details>
+<summary> <h2> 부하테스트 </h2></summary>
+
+![k6 최종 요약](image/img_20.png)
+
+![Grafana LockHikariPool](image/img_21.png)
+- **VU 100까지**: 처리량이 VU에 비례해 증가.
+- **VU 100~200 구간**: throughput이 ~130 RPS에 부딪힘
+- **VU 200~300 구간**: VU를 더 늘려도 RPS는 그대로, latency만 1초 → 4초 → 6초로 증가.
+
+-> **시스템이 더 받을 수 없는 게 아니라, 더 빨리 처리할 수 없는 상태**
+
+![img_22.png](image/img_22.png)
+- 
+- Grafana 모니터링 결과, 부하 피크 시점에 `LockHikariPool` active connection은 max(5)로 꽉 차있고, pending 요청 수가 약 195개까지 치솟았다.
+- 반면 `MainHikariPool`은 active가 평균적으로 1.46 으로 여유로움. 즉 Named Lock이 schedule 단위로 요청을 직렬화하고, 이 락 획득에 사용되는 별도 connection pool의 크기가 시스템 동시 처리량의 상한을 결정짓고 있음을 확인.
+
+## 6. 향후 개선 방안
+
+- **`LockHikariPool` 크기 확대** (5 → 10/20)
+  - pending 수치는 절반 정도로 감소 예상
+  - 다만 Named Lock의 직렬화 본질은 그대로 → 결국 더 큰 부하에서 같은 패턴 재현
+
+- **분산 락 백엔드를 Redis로 교체**
+  - 메모리 기반이라 락 획득/해제가 RDBMS 대비 빠름
+  - DB connection을 락 용도로 점유할 필요 없음 → connection pool 압박 사라짐
+
+- **락 단위 세분화**: 현재 `schedule` 단위 → `seat:scheduleId:row:col` 단위
+  - 같은 schedule이라도 다른 좌석이면 병렬 처리 가능
+  
+- **낙관적 락 + 재시도**로 전환
+  - 핫 schedule이 아닌 일반 흐름은 충돌률 낮음 → 비관적 락보다 throughput 유리
+  
+</details>
