@@ -2158,7 +2158,7 @@ alloy, loki, grafana, prometheus 도커 연결
 
 ### k6 부하테스트
 
-- 외부 페이먼트 api 호출
+- 외부 페이먼트 서버에 부하테스트 (결제 요청)
 ```
   █ TOTAL RESULTS 
 
@@ -2189,8 +2189,157 @@ alloy, loki, grafana, prometheus 도커 연결
     data_sent......................: 1.0 MB 3.8 kB/s
 ```
 <img width="2848" height="2032" alt="image" src="https://github.com/user-attachments/assets/9e15aff8-29d2-4395-80b0-e38553a987c3" />
-VU를 200까지 증가시키는 동안 초반 처리율은 약 39 req/s까지 상승했지만, 이후 결제 요청(payment_instant)에서 실패가 급증하며 처리율이 오히려 감소했다. 실패율은 후반부에 60% 이상까지 증가했고, 성공 응답 기준 p95도 지속적으로 상승해 시스템이 해당 부하를 안정적으로 처리하지 못함을 확인
+VU를 200까지 증가시키는 동안 초반 처리율은 약 39 req/s까지 상승했지만, 이후 결제 요청(payment_instant)에서 실패가 급증하며 처리율이 오히려 감소했다. 
+실패율은 후반부에 60% 이상까지 증가했고, 성공 응답 기준 p95도 지속적으로 상승
 
+- 병목 API 찾기
+```
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+const BASE_URL = __ENV.BASE_URL || 'https://ceos.diggindie.com';
+const USER_EMAIL = __ENV.USER_EMAIL || 'string';
+const USER_PASSWORD = __ENV.USER_PASSWORD || 'string';
+const THEATER_ID = Number(__ENV.THEATER_ID || 1);
+const FOOD_ID = Number(__ENV.FOOD_ID || 1);
+const QUANTITY = Number(__ENV.QUANTITY || 1);
+const MODE = __ENV.MODE || 'full_payment';
+
+function buildOptions() {
+  if (MODE === 'db_only') {
+    return {
+      stages: [
+        { duration: '2m', target: 10 },
+        { duration: '2m', target: 30 },
+      ],
+      thresholds: {
+        'http_req_failed{name:create_food_order}': ['rate<0.05'],
+        'http_req_duration{name:create_food_order}': ['p(95)<1000'],
+        'http_req_duration{name:get_food_orders}': ['p(95)<700'],
+      },
+    };
+  }
+
+  return {
+    stages: [
+      { duration: '2m', target: 100 },
+      { duration: '2m', target: 200 },
+    ],
+    thresholds: {
+      'http_req_failed{name:create_food_order}': ['rate<0.05'],
+      'http_req_failed{name:process_food_payment}': ['rate<0.10'],
+      'http_req_duration{name:process_food_payment}': ['p(95)<3000'],
+    },
+  };
+}
+
+export const options = buildOptions();
+
+export function setup() {
+  const loginPayload = JSON.stringify({
+    email: USER_EMAIL,
+    password: USER_PASSWORD,
+  });
+
+  const loginRes = http.post(`${BASE_URL}/api/auth/login`, loginPayload, {
+    headers: { 'Content-Type': 'application/json' },
+    tags: { name: 'login' },
+  });
+
+  check(loginRes, {
+    'login status is 200': (r) => r.status === 200,
+    'login has access token': (r) => !!r.json('result.accessToken'),
+  });
+
+  const accessToken = loginRes.json('result.accessToken');
+
+  if (!accessToken) {
+    throw new Error(`로그인 실패: status=${loginRes.status}, body=${loginRes.body}`);
+  }
+
+  return { accessToken };
+}
+
+function authHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function createFoodOrder(token) {
+  const payload = JSON.stringify({
+    theaterId: THEATER_ID,
+    items: [
+      {
+        foodId: FOOD_ID,
+        quantity: QUANTITY,
+      },
+    ],
+  });
+
+  const res = http.post(`${BASE_URL}/api/foods/orders/`, payload, {
+    headers: authHeaders(token),
+    tags: { name: 'create_food_order' },
+  });
+
+  check(res, {
+    'create food order status is 200': (r) => r.status === 200,
+    'create food order has order id': (r) => !!r.json('result'),
+  });
+
+  return res;
+}
+
+function getFoodOrders(token) {
+  return http.get(`${BASE_URL}/api/foods/orders/`, {
+    headers: authHeaders(token),
+    tags: { name: 'get_food_orders' },
+  });
+}
+
+function processFoodPayment(token, orderId) {
+  return http.post(`${BASE_URL}/api/foods/orders/${orderId}/payments`, null, {
+    headers: authHeaders(token),
+    tags: { name: 'process_food_payment' },
+  });
+}
+
+export default function (data) {
+  const token = data.accessToken;
+
+  if (MODE === 'db_only') {
+    const createRes = createFoodOrder(token);
+    const listRes = getFoodOrders(token);
+
+    check(listRes, {
+      'get food orders status is 200': (r) => r.status === 200,
+    });
+
+    if (createRes.status !== 200) {
+      return;
+    }
+
+    sleep(1);
+    return;
+  }
+
+  const createRes = createFoodOrder(token);
+  if (createRes.status !== 200) {
+    sleep(1);
+    return;
+  }
+
+  const orderId = createRes.json('result');
+  const paymentRes = processFoodPayment(token, orderId);
+
+  check(paymentRes, {
+    'process food payment status is 200': (r) => r.status === 200,
+  });
+
+  sleep(1);
+}
+```
 
 
 
