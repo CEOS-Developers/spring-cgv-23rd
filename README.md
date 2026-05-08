@@ -2152,33 +2152,34 @@ alloy, loki, grafana, prometheus 도커 연결
 ```
   █ TOTAL RESULTS 
 
-    checks_total.......: 10073  37.178073/s
-    checks_succeeded...: 91.06% 9173 out of 10073
-    checks_failed......: 8.93%  900 out of 10073
+    checks_total.......: 3589   13.286044/s
+    checks_succeeded...: 79.13% 2840 out of 3589
+    checks_failed......: 20.86% 749 out of 3589
 
     ✓ auth status is 200
     ✗ payment status is 200
-      ↳  84% — ✓ 4611 / ✗ 855
+      ↳  66% — ✓ 1433 / ✗ 724
     ✗ lookup status is 200
-      ↳  99% — ✓ 4561 / ✗ 45
+      ↳  98% — ✓ 1406 / ✗ 25
 
     HTTP
-    http_req_duration..............: avg=1.53s    min=11.14ms med=21.5ms  max=59.99s p(90)=55ms    p(95)=161.1ms
-      { expected_response:true }...: avg=173.59ms min=11.14ms med=20.93ms max=59.94s p(90)=43.24ms p(95)=63.23ms
-    http_req_failed................: 8.93%  900 out of 10073
-    http_reqs......................: 10073  37.178073/s
+    http_req_duration..............: avg=6.9s     min=11.17ms med=24.82ms max=59.99s p(90)=30.03s   p(95)=58.05s  
+      { expected_response:true }...: avg=655.29ms min=11.17ms med=22.03ms max=59.87s p(90)=101.05ms p(95)=171.27ms
+    http_req_failed................: 20.86% 749 out of 3589
+    http_reqs......................: 3589   13.286044/s
 
     EXECUTION
-    iteration_duration.............: avg=4.62s    min=1.01s   med=2.04s   max=1m31s  p(90)=2.16s   p(95)=31.02s 
-    iterations.....................: 5460   20.152118/s
-    vus............................: 17     min=1            max=199
-    vus_max........................: 200    min=200          max=200
+    iteration_duration.............: avg=12.98s   min=1.01s   med=2.06s   max=2m0s   p(90)=36.95s   p(95)=1m0s    
+    iterations.....................: 2139   7.918319/s
+    vus............................: 22     min=1           max=199
+    vus_max........................: 200    min=200         max=200
 
     NETWORK
-    data_received..................: 6.6 MB 24 kB/s
-    data_sent......................: 2.1 MB 7.7 kB/s
+    data_received..................: 2.7 MB 10 kB/s
+    data_sent......................: 1.0 MB 3.8 kB/s
 ```
-
+<img width="2848" height="2032" alt="image" src="https://github.com/user-attachments/assets/9e15aff8-29d2-4395-80b0-e38553a987c3" />
+VU를 200까지 증가시키는 동안 초반 처리율은 약 39 req/s까지 상승했지만, 이후 결제 요청(payment_instant)에서 실패가 급증하며 처리율이 오히려 감소했다. 실패율은 후반부에 60% 이상까지 증가했고, 성공 응답 기준 p95도 지속적으로 상승해 시스템이 해당 부하를 안정적으로 처리하지 못함을 확인
 
 
 
