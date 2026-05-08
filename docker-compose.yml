@@ -9,7 +9,7 @@ services:
       - .env
 
     environment:
-      SPRING_PROFILES_ACTIVE: k6
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       DB_URL: ${DB_URL}
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
