@@ -20,6 +20,7 @@ const GITHUB_ID = 'shinae1023'; // 예) 'Hoyoung027'
 export function setup() {
     const res = http.get(`${BASE_URL}/auth/${GITHUB_ID}`, {
         headers: { 'Content-Type': 'application/json' },
+        tags: { name: 'auth' },
     });
 
     check(res, {
@@ -60,7 +61,10 @@ export default function (data) {
     const paymentRes = http.post(
         `${BASE_URL}/payments/${paymentId}/instant`,
         paymentPayload,
-        { headers }
+        {
+            headers,
+            tags: { name: 'payment_instant' },
+        }
     );
 
     // 2-1. 결제 요청 API 응답 검증
@@ -78,7 +82,10 @@ export default function (data) {
 
         const lookupRes = http.get(
             `${BASE_URL}/payments/${paymentId}`,
-            { headers }
+            {
+                headers,
+                tags: { name: 'payment_lookup' },
+            }
         );
 
 

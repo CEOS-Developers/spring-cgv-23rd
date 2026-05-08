@@ -12,11 +12,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/foods/orders")
@@ -44,6 +46,7 @@ public class FoodOrderController {
             @PathVariable Long orderId) {
 
         Long userId = userDetails.getUser().getId();
+        log.info("Food payment API requested. userId={}, orderId={}", userId, orderId);
         PaymentResultDto result = foodPaymentFacade.processPayment(userId, orderId);
         return ApiResponse.onSuccess("음식 주문 결제 성공", result);
     }
