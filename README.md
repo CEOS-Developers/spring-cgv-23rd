@@ -1,3 +1,7 @@
+## 아키텍처 구조도
+
+![architecture-diagram.png](docs/images/architecture-diagram.png)
+
 ## 부하테스트 결과
 
 ### 📌 payment
