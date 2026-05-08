@@ -4,6 +4,8 @@ import cgv_23rd.ceos.entity.enums.FoodOrderStatus;
 import cgv_23rd.ceos.entity.enums.PaymentStatus;
 import cgv_23rd.ceos.entity.food.FoodOrder;
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -35,6 +37,24 @@ public interface FoodOrderRepository extends JpaRepository<FoodOrder, Long> {
             "LEFT JOIN FETCH foi.food f " +
             "WHERE fo.user.id = :userId")
     List<FoodOrder> findAllByUserIdWithDetails(@Param("userId") Long userId);
+
+    @Query("""
+        select fo.id
+          from FoodOrder fo
+         where fo.user.id = :userId
+         order by fo.createdAt desc
+    """)
+    Page<Long> findPageIdsByUserId(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("""
+        select distinct fo
+          from FoodOrder fo
+          join fetch fo.theater t
+          left join fetch fo.foodOrderItems foi
+          left join fetch foi.food f
+         where fo.id in :orderIds
+    """)
+    List<FoodOrder> findAllByIdInWithDetails(@Param("orderIds") List<Long> orderIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

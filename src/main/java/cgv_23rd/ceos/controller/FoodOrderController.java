@@ -65,9 +65,11 @@ public class FoodOrderController {
     @GetMapping("/")
     @Operation(summary = "내 매점 주문 내역 조회 API", description = "특정 사용자의 전체 음식 주문 내역을 조회합니다.")
     public ApiResponse<List<FoodOrderResponseDto>> getFoodOrderList(
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long userId = userDetails.getUser().getId();
-        return ApiResponse.onSuccess("주문 내역 조회 성공", foodOrderQueryService.getFoodOrderList(userId));
+        return ApiResponse.onSuccess("주문 내역 조회 성공", foodOrderQueryService.getFoodOrderList(userId, page, size));
     }
 
 }
