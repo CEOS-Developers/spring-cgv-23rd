@@ -24,7 +24,7 @@ jwt:
 
 logging:
   level:
-    org.hibernate.SQL: debug
+    org.hibernate.SQL: warn
     root: INFO
     cgv_23rd.ceos: INFO
   file:
