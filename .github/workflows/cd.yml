@@ -65,6 +65,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Copy compose & monitoring files to EC2
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          source: "docker-compose.yml,docker-compose.monitoring.yml,monitoring/"
+          target: "/home/ubuntu/ceos-app/"
+
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.0
@@ -85,7 +94,10 @@ jobs:
             sudo docker tag ${DOCKER_USERNAME}/ceos-app:${IMAGE_TAG} ${DOCKER_USERNAME}/ceos-app:latest
 
             echo ">>> Recreating container"
-            sudo docker compose up -d
+            sudo docker compose \
+              -f docker-compose.yml \
+              -f docker-compose.monitoring.yml \
+              up -d
 
             echo ">>> Health check"
             for i in $(seq 1 30); do
@@ -95,5 +107,11 @@ jobs:
               if [ $i -eq 30 ]; then sudo docker compose logs --tail=100; exit 1; fi
               sleep 2
             done
+            
+            echo ">>> Prometheus health check"
+            curl -fs http://localhost:9090/-/healthy || echo "WARN: Prometheus unhealthy"
+            
+            echo ">>> Grafana health check"
+            curl -fs http://localhost:3000/api/health || echo "WARN: Grafana unhealthy"
 
             sudo docker image prune -f

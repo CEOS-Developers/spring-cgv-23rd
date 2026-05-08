@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'CEOS CGV Dashboards'
+    orgId: 1
+    folder: 'CEOS CGV'
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 120
+    options:
+      path: /etc/grafana/provisioning/dashboards

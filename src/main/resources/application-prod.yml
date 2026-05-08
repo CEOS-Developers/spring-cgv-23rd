@@ -8,15 +8,6 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 100
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: never
-
 swagger:
   server-url: ${SWAGGER_SERVER_URL}
   server-description: Production Server
