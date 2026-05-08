@@ -2501,6 +2501,16 @@ running (4m05.9s), 00/30 VUs, 2665 complete and 0 interrupted iterations
 default ✓ [======================================] 00/30 VUs  4m0s
 ```
 
+### 개선 결과 정리
+- 페이지네이션 적용 후 `get_food_orders`의 p95는 `1.27s -> 87ms`로 크게 개선되었다.
+- `create_food_order`의 p95도 `529ms -> 92.98ms`로 감소해 기준치 `1s` 이내를 안정적으로 만족했다.
+- 전체 p95는 약 `90ms`, 실패율은 `0%`로 유지되어 조회 경로의 성능 저하가 해소되었음을 확인했다.
+- `data_received`는 `1.0GB -> 13MB`로 줄어들어, 기존 병목의 핵심 원인이 전체 주문 내역을 한 번에 조회하던 구조였음을 확인했다.
+
+### 결론
+기존 `get_food_orders`는 주문이 누적될수록 전체 주문과 주문 아이템을 모두 조회해 응답 크기와 조회 비용이 함께 증가하는 구조였다.  
+페이지네이션 도입 이후 조회량이 제한되면서 DB/JPA 처리 부담이 줄었고, 주문 생성/조회 API 모두 30 VU 환경에서 안정적인 응답 속도를 보였다.
+
 ### full_payment로 외부 서버 호출해서 확인
 <img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/0dd323fc-3bd3-4fa7-8b35-058a29a31fe7" />
 <img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/8f10bb56-d659-405a-94e2-1d8d8f9cfcdf" />
