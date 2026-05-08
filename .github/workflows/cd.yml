@@ -88,6 +88,9 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/ceos-app
+            
+            echo ">>> Ensure monitoring network exists"
+            sudo docker network inspect monitoring >/dev/null 2>&1 || sudo docker network create monitoring
 
             echo ">>> Pulling image"
             sudo docker pull ${DOCKER_USERNAME}/ceos-app:${IMAGE_TAG}
