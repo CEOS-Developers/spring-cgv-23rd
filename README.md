@@ -2148,6 +2148,38 @@ alloy, loki, grafana, prometheus 도커 연결
 <img width="1359" height="487" alt="image" src="https://github.com/user-attachments/assets/8534dfb8-bf89-4eb4-85bd-411883c3301d" />
 <img width="1434" height="645" alt="image" src="https://github.com/user-attachments/assets/1c75a599-a30b-43ea-a418-83d7e064c1dc" />
 
+### k6 부하테스트
+```
+  █ TOTAL RESULTS 
+
+    checks_total.......: 10073  37.178073/s
+    checks_succeeded...: 91.06% 9173 out of 10073
+    checks_failed......: 8.93%  900 out of 10073
+
+    ✓ auth status is 200
+    ✗ payment status is 200
+      ↳  84% — ✓ 4611 / ✗ 855
+    ✗ lookup status is 200
+      ↳  99% — ✓ 4561 / ✗ 45
+
+    HTTP
+    http_req_duration..............: avg=1.53s    min=11.14ms med=21.5ms  max=59.99s p(90)=55ms    p(95)=161.1ms
+      { expected_response:true }...: avg=173.59ms min=11.14ms med=20.93ms max=59.94s p(90)=43.24ms p(95)=63.23ms
+    http_req_failed................: 8.93%  900 out of 10073
+    http_reqs......................: 10073  37.178073/s
+
+    EXECUTION
+    iteration_duration.............: avg=4.62s    min=1.01s   med=2.04s   max=1m31s  p(90)=2.16s   p(95)=31.02s 
+    iterations.....................: 5460   20.152118/s
+    vus............................: 17     min=1            max=199
+    vus_max........................: 200    min=200          max=200
+
+    NETWORK
+    data_received..................: 6.6 MB 24 kB/s
+    data_sent......................: 2.1 MB 7.7 kB/s
+```
+
+
 
 
 
