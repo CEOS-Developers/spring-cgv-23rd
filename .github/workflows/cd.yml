@@ -42,21 +42,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to EC2 via SSH
+      - name: Copy compose & monitoring config to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml,monitoring/"
+          target: "/home/ubuntu/cgv"
+
+      - name: Deploy stack to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DOCKER_USERNAME
           script: |
-            set -e
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cgv-clone:latest
-            docker rm -f deploy-test 2>/dev/null || true
-            docker run -d \
-              --name deploy-test \
-              --env-file /home/ubuntu/cgv/.env \
-              -p 8080:8080 \
-              --restart unless-stopped \
-              ${{ secrets.DOCKERHUB_USERNAME }}/cgv-clone:latest
-            docker image prune -f
-            docker ps --filter "name=deploy-test"
+            set -e                                                                                                                                                                                               
+            cd /home/ubuntu/cgv                           
+            export DOCKER_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}                                                                                                                                             
+            # 첫 마이그레이션: 기존 docker run 컨테이너 정리
+            docker rm -f deploy-test 2>/dev/null || true                                                                                                                                                         
+            docker compose pull                           
+            docker compose up -d                                                                                                                                                                                 
+            docker image prune -f                                                                                                                                                                                
+            docker compose ps
+      
