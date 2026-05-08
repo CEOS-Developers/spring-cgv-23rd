@@ -5,11 +5,9 @@ on:
     branches:
       - dev
       - main
-      - fervovita
   push:
     branches:
       - main
-      - fervovita
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
