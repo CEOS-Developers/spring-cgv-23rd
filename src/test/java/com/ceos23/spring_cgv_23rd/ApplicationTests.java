@@ -57,6 +57,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -265,6 +266,7 @@ class ApplicationTests {
 						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(for1)))
+				.andDo(print())
 				.andExpect(status().isOk());
 
 		mockmvc.perform(post("/api/foods/pay")
@@ -310,6 +312,7 @@ class ApplicationTests {
 						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(for1)))
+				.andDo(print())
 				.andExpect(status().isOk());
 
 		//assert -> Menu에는 수량이 그대로
@@ -423,7 +426,7 @@ class ApplicationTests {
 		//결제(결제 시 장바구니를 비우고 이전주문기록에 추가함)
 		mockmvc.perform(post("/api/foods/pay")
 						.cookie(authCookie))
-				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+				.andExpect(status().isOk()).andDo(print()).andReturn().getResponse().getContentAsString();
 
 		System.out.println("cart >>> " + cartRepository.findAll().get(0).getId() + cartRepository.findAll().get(0).getStatus());
 		System.out.println("order >>> " + foodOrderRepository.findAll());

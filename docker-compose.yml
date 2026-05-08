@@ -5,6 +5,9 @@ services:
       - "80:8080"
     restart: unless-stopped
 
+    env_file:
+      - .env
+
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
       DB_URL: ${DB_URL}
@@ -29,3 +32,15 @@ services:
     command:
       - "--global-response-templating"
 
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: cgvdb
+    ports:
+      - 3306:3306
+    options: >-
+      --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+      --health-interval=10s
+      --health-timeout=5s
+      --health-retries=10
