@@ -2192,7 +2192,7 @@ alloy, loki, grafana, prometheus 도커 연결
 VU를 200까지 증가시키는 동안 초반 처리율은 약 39 req/s까지 상승했지만, 이후 결제 요청(payment_instant)에서 실패가 급증하며 처리율이 오히려 감소했다. 
 실패율은 후반부에 60% 이상까지 증가했고, 성공 응답 기준 p95도 지속적으로 상승
 
-- 병목 API 찾기
+- 병목 찾기
 ```
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -2341,9 +2341,91 @@ export default function (data) {
 }
 ```
 
+```
+shinae@shinaeui-MacBookAir shinae1023 % BASE_URL=http://13.125.8.199:8080 \
+USER_EMAIL=string \
+USER_PASSWORD=string \
+THEATER_ID=1 \
+FOOD_ID=1 \
+MODE=db_only \
+K6_PROMETHEUS_RW_SERVER_URL=http://13.125.8.199:9090/api/v1/write \
+K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max \
+k6 run -o experimental-prometheus-rw k6-app-bottleneck.js
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6-app-bottleneck.js
+        output: Prometheus remote write (http://13.125.8.199:9090/api/v1/write)
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 4m30s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 4m0s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
 
 
 
+  █ THRESHOLDS 
+
+    http_req_duration{name:create_food_order}
+    ✗ 'p(95)<1000' p(95)=5.62s
+
+    http_req_duration{name:get_food_orders}
+    ✗ 'p(95)<700' p(95)=8.9s
+
+    http_req_failed{name:create_food_order}
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 2228    8.987865/s
+    checks_succeeded...: 100.00% 2228 out of 2228
+    checks_failed......: 0.00%   0 out of 2228
+
+    ✓ login status is 200
+    ✓ login has access token
+    ✓ create food order status is 200
+    ✓ create food order has order id
+    ✓ get food orders status is 200
+
+    HTTP
+    http_req_duration..............: avg=1.5s  min=28.13ms med=136.58ms max=59.69s p(90)=2.24s p(95)=6.56s 
+      { expected_response:true }...: avg=1.5s  min=28.13ms med=136.58ms max=59.69s p(90)=2.24s p(95)=6.56s 
+      { name:create_food_order }...: avg=1.54s min=28.13ms med=61.12ms  max=59.69s p(90)=2.01s p(95)=5.62s 
+      { name:get_food_orders }.....: avg=1.45s min=85.37ms med=197.31ms max=59.39s p(90)=2.62s p(95)=8.9s  
+    http_req_failed................: 0.00%  0 out of 1485
+      { name:create_food_order }...: 0.00%  0 out of 742
+    http_reqs......................: 1485   5.990565/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.99s min=1.11s   med=1.27s    max=1m6s   p(90)=7.89s p(95)=15.88s
+    iterations.....................: 742    2.993266/s
+    vus............................: 21     min=0         max=29
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 306 MB 1.2 MB/s
+    data_sent......................: 488 kB 2.0 kB/s
+
+
+
+
+running (4m07.9s), 00/30 VUs, 742 complete and 0 interrupted iterations
+default ✓ [======================================] 00/30 VUs  4m0s
+ERRO[0248] thresholds on metrics 'http_req_duration{name:create_food_order}, http_req_duration{name:get_food_orders}' have been crossed 
+```
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/133b8141-80e0-4ace-8c8d-b728ec47933b" />
+
+create_food_order p95 = 5.62s
+get_food_orders p95 = 8.9s
+실패율은 0%
+처리량은 5.99 req/s
+DB/JPA 쪽 문제
 
 
 
