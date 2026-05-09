@@ -365,6 +365,7 @@
 
 # 부하태스트
 ## 시나리오1 - 영화 조회
+
 <img width="3006" height="1064" alt="Image" src="https://github.com/user-attachments/assets/15826d05-b739-430e-90d1-a3d9b8d366c4" />
 
 <img width="2974" height="1542" alt="Image" src="https://github.com/user-attachments/assets/5f1c23af-c43f-4422-a120-955189dc6400" />
