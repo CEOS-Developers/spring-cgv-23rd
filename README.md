@@ -25,7 +25,7 @@ Request Rate가 꾸준히 증가할 때는 최대 700㎲ 정도지만, Request R
 ![alt text](image-6.png)
 다수의 지표에서 위에서 중간에 Request가 끊긴 지점에서 대기시간이 크게 늘었음을 보인다.
 
-## 해결(?)
+## 해결(?) 
 ![alt text](image-8.png)
 ![alt text](image-9.png)
 서버를 재시작하니 Request Duration이 2초 아래로 줄어들었다. 아마도 2시 8분 경의 오류는 GC 때문으로 추측된다.
@@ -35,3 +35,4 @@ Request Rate가 꾸준히 증가할 때는 최대 700㎲ 정도지만, Request R
 # 모니터링 실습
 ![alt text](image-1.png)
 5분 간 일어나고 있는 에러의 양, 현재 트래픽의 수, 에러로그와 모든 로그를 한 눈에 볼 수 있도록 커스텀하였다.
+
