@@ -1,0 +1,134 @@
+<svg width="1600" height="980" viewBox="0 0 1600 980" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.08"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10V0Z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 34px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 500 18px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .label { font: 700 20px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .small { font: 500 16px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .tiny { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #475569; }
+      .capsule { font: 700 14px 'Segoe UI', Arial, sans-serif; fill: #1d4ed8; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" rx="32" fill="url(#bg)"/>
+
+  <text x="90" y="90" class="title">CGV Deployment Architecture</text>
+  <text x="90" y="126" class="subtitle">Current CI/CD path based on GitHub Actions, EC2, Docker, Spring Boot, and H2 file DB</text>
+
+  <g filter="url(#shadow)">
+    <rect x="110" y="180" width="210" height="120" rx="24" fill="#111827"/>
+    <circle cx="170" cy="224" r="28" fill="#ffffff"/>
+    <circle cx="158" cy="217" r="7" fill="#111827"/>
+    <circle cx="182" cy="217" r="7" fill="#111827"/>
+    <path d="M156 239C162 247 178 247 184 239" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+    <text x="170" y="277" text-anchor="middle" class="label" fill="#ffffff">GitHub</text>
+    <text x="170" y="300" text-anchor="middle" class="tiny" fill="#CBD5E1">Source Repository</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="380" y="180" width="260" height="120" rx="24" fill="#DBEAFE"/>
+    <rect x="430" y="210" width="40" height="40" rx="12" fill="#60A5FA"/>
+    <rect x="478" y="210" width="40" height="40" rx="12" fill="#93C5FD"/>
+    <rect x="526" y="210" width="40" height="40" rx="12" fill="#BFDBFE"/>
+    <text x="510" y="277" text-anchor="middle" class="label">GitHub Actions</text>
+    <text x="510" y="300" text-anchor="middle" class="tiny">clean • test • bootJar</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="700" y="180" width="280" height="120" rx="24" fill="#E2E8F0"/>
+    <rect x="742" y="212" width="196" height="34" rx="10" fill="#F8FAFC" stroke="#CBD5E1"/>
+    <text x="840" y="235" text-anchor="middle" class="tiny">Jar + Dockerfile + docker-compose.cicd.yml</text>
+    <text x="840" y="277" text-anchor="middle" class="label">Artifact Transfer</text>
+    <text x="840" y="300" text-anchor="middle" class="tiny">SCP / SSH Deploy to EC2</text>
+  </g>
+
+  <line x1="320" y1="240" x2="380" y2="240" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="640" y1="240" x2="700" y2="240" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="90" y="360" width="1420" height="540" rx="30" fill="#ffffff" stroke="#CBD5E1" stroke-width="3"/>
+    <text x="130" y="410" class="label">AWS Cloud</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="210" y="440" width="1240" height="400" rx="26" fill="#F5F3FF" stroke="#C4B5FD" stroke-width="3"/>
+    <rect x="230" y="458" width="90" height="28" rx="14" fill="#EDE9FE"/>
+    <text x="275" y="477" text-anchor="middle" class="capsule">VPC</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="280" y="500" width="1090" height="280" rx="24" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="3"/>
+    <rect x="302" y="518" width="140" height="28" rx="14" fill="#DCFCE7"/>
+    <text x="372" y="537" text-anchor="middle" class="capsule" fill="#15803D">Public Subnet</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="400" y="560" width="800" height="170" rx="24" fill="#FFF7ED" stroke="#FDBA74" stroke-width="3"/>
+    <rect x="422" y="578" width="178" height="28" rx="14" fill="#FFEDD5"/>
+    <text x="511" y="597" text-anchor="middle" class="capsule" fill="#C2410C">EC2 Instance (Ubuntu)</text>
+
+    <rect x="470" y="615" width="350" height="80" rx="18" fill="#EFF6FF" stroke="#93C5FD" stroke-width="3"/>
+    <text x="645" y="650" text-anchor="middle" class="label">Docker Compose</text>
+    <text x="645" y="674" text-anchor="middle" class="tiny">spring-cgv-app container</text>
+
+    <rect x="860" y="615" width="280" height="80" rx="18" fill="#F0FDF4" stroke="#86EFAC" stroke-width="3"/>
+    <text x="1000" y="650" text-anchor="middle" class="label">Spring Boot 4</text>
+    <text x="1000" y="674" text-anchor="middle" class="tiny">API • JWT • JPA • Swagger</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="620" y="760" width="360" height="92" rx="20" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="3"/>
+    <text x="800" y="800" text-anchor="middle" class="label">H2 File DB</text>
+    <text x="800" y="826" text-anchor="middle" class="tiny">/app/data/cgv_db</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="108" y="590" width="118" height="92" rx="18" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/>
+    <circle cx="150" cy="625" r="14" fill="#64748B"/>
+    <circle cx="184" cy="625" r="14" fill="#64748B"/>
+    <path d="M132 658C132 644 143 636 150 636C157 636 168 644 168 658" fill="#94A3B8"/>
+    <path d="M166 658C166 644 177 636 184 636C191 636 202 644 202 658" fill="#94A3B8"/>
+    <text x="167" y="700" text-anchor="middle" class="small">Users</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="250" y="595" width="128" height="82" rx="18" fill="#EEF2FF" stroke="#A5B4FC" stroke-width="3"/>
+    <circle cx="314" cy="624" r="18" fill="#C4B5FD"/>
+    <path d="M304 624H324" stroke="#5B21B6" stroke-width="4" stroke-linecap="round"/>
+    <path d="M314 614V634" stroke="#5B21B6" stroke-width="4" stroke-linecap="round"/>
+    <text x="314" y="699" text-anchor="middle" class="small">Internet</text>
+    <text x="314" y="719" text-anchor="middle" class="tiny">Gateway</text>
+  </g>
+
+  <line x1="226" y1="636" x2="250" y2="636" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="378" y1="636" x2="400" y2="636" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="820" y1="655" x2="860" y2="655" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="1000" y1="730" x2="860" y2="760" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+  <line x1="840" y1="300" x2="840" y2="440" stroke="#334155" stroke-width="4" marker-end="url(#arrow)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="1180" y="560" width="220" height="170" rx="20" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/>
+    <text x="1290" y="602" text-anchor="middle" class="label">Deployment Notes</text>
+    <text x="1210" y="638" class="tiny">• EC2 public IP exposes port 8080</text>
+    <text x="1210" y="668" class="tiny">• Actions copies artifacts, then builds</text>
+    <text x="1210" y="698" class="tiny">• Health check: /actuator/health</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1080" y="180" width="340" height="120" rx="24" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="3"/>
+    <text x="1250" y="220" text-anchor="middle" class="label">Current Architecture Point</text>
+    <text x="1112" y="252" class="tiny">This project does not currently use a separate</text>
+    <text x="1112" y="276" class="tiny">RDS or Redis node in CI/CD. The active path is</text>
+    <text x="1112" y="300" class="tiny">single EC2 + Docker + Spring Boot + H2 file DB.</text>
+  </g>
+</svg>

@@ -37,7 +37,10 @@ public class StorePurchaseService {
 
     private CinemaMenuStock findCinemaMenuStock(StorePurchaseRequest request) {
         return cinemaMenuStockRepository
-                .findByCinemaIdAndStoreMenuId(request.cinemaId(), request.storeMenuId())
+                .findByCinemaIdAndStoreMenuIdWithPessimisticLock(
+                        request.cinemaId(),
+                        request.storeMenuId()
+                )
                 .orElseThrow(() -> new NotFoundException(ErrorCode.STORE_MENU_STOCK_NOT_FOUND));
     }
 }

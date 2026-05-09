@@ -1,6 +1,41 @@
-# spring-cgv-23rd
+﻿# spring-cgv-23rd
 
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
+
+## 최근 변경 사항
+
+### 2026-05-09 반영
+
+- JWT access token / refresh token에 `type` claim 검증을 추가해서 refresh token이 보호 API 인증에 재사용되지 않도록 막았습니다.
+- `spring-boot-starter-validation`을 명시적으로 추가해서 요청 검증이 Swagger 전이 의존성에 우연히 기대지 않도록 정리했습니다.
+- `MethodArgumentNotValidException`을 400 응답으로 처리하도록 예외 핸들러를 보강했습니다.
+- 매점 재고 구매 시 `CinemaMenuStock` 조회에 비관적 락을 적용해서 동시 구매 oversell 가능성을 낮췄습니다.
+- 테스트를 추가해서 위 위험 포인트를 회귀 검증할 수 있도록 보강했습니다.
+- `TokenProviderTest`
+- `AuthControllerValidationTest`
+- `StorePurchaseConcurrencyTest`
+- 검증 결과: `./gradlew test` 통과, `32 tests / 0 failures`
+
+## 앞으로 바꿀 것
+
+- 로컬 실행 문서와 CI/CD 배포 문서 사이에 섞여 있는 MySQL / H2 전략을 하나의 기준으로 정리할 예정입니다.
+- validation 에러 응답을 지금의 단일 message 문자열에서 필드 중심 구조로 더 세분화할 예정입니다.
+- 매점 구매 동시성 검증을 서비스 테스트 수준에서 끝내지 않고 API 흐름까지 확인하는 통합 시나리오로 넓힐 예정입니다.
+
+## 미션 제출 정리
+
+- [CGV ERD / 배포 아키텍처 / 서비스 구조도 정리](docs/cgv-erd-architecture.md)
+- [부하테스트 결과 분석 정리](docs/load-test-analysis.md)
+
+핵심 결론은 아래처럼 가져가고 있습니다.
+
+- 가장 먼저 병목이 발생할 가능성이 큰 API는 `POST /api/reservations`입니다.
+- 원인은 EC2 CPU 포화보다 `screening` 단위 `PESSIMISTIC_WRITE`에 따른 DB 락 대기 가능성이 더 큽니다.
+- 조회 API는 비교적 안정적이지만, 좌석 조회 API가 상영 목록 조회보다 더 무거운 read 경로입니다.
+- 문서 정리 기준으로 예매 API는 `200 VU` 구간에서 `p95 4.9s`, `p99 7.2s`, `실패율 34.8%`까지 증가한 것으로 해석했습니다.
+
+<details>
+<summary>기존 정리 보기</summary>
 
 ## 로컬 실행 설정
 
@@ -957,3 +992,6 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 - `app`: Spring Boot 애플리케이션 컨테이너
 
 CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, 자동 배포 환경에서는 가벼운 H2 데이터베이스 설정으로 앱을 띄우도록 구성했습니다.
+
+</details>
+

@@ -60,7 +60,7 @@ class StorePurchaseServiceTest {
         StorePurchaseRequest request = new StorePurchaseRequest(1L, 1L, 3);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuId(1L, 1L))
+        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuIdWithPessimisticLock(1L, 1L))
                 .willReturn(Optional.of(stock));
 
         storePurchaseService.purchase(1L, request);
@@ -82,7 +82,7 @@ class StorePurchaseServiceTest {
         StorePurchaseRequest request = new StorePurchaseRequest(1L, 1L, 3);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuId(1L, 1L))
+        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuIdWithPessimisticLock(1L, 1L))
                 .willReturn(Optional.of(stock));
 
         assertThatThrownBy(() -> storePurchaseService.purchase(1L, request))
@@ -98,7 +98,7 @@ class StorePurchaseServiceTest {
         StorePurchaseRequest request = new StorePurchaseRequest(1L, 1L, 1);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuId(1L, 1L))
+        given(cinemaMenuStockRepository.findByCinemaIdAndStoreMenuIdWithPessimisticLock(1L, 1L))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() -> storePurchaseService.purchase(1L, request))
