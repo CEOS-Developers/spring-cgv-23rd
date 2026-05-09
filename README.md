@@ -360,7 +360,8 @@
 2. pem 키 유출: 실수로 깃허브에 pem키를 올려 새로운 키를 발급받아 새롭게 설정 수정 -> 마지막까지 제대로 확인 하자..
 
 # 서비스 아키텍쳐
-<img width="1144" height="641" alt="Image" src="https://github.com/user-attachments/assets/705f0926-b4e0-4589-a5b0-d4daccc502ae" />
+
+<img width="1144" height="641" alt="Image" src="https://github.com/user-attachments/assets/aafb1617-a2e1-40ac-863a-0824f94f28c9" />
 
 # 부하태스트
 ## 시나리오1 - 영화 조회
