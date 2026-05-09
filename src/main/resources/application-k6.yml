@@ -16,22 +16,24 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
-        default_batch_fetch_size: 100
+        default_batch_fetch_size: 1000
 
 logging:
-  file:
-    name: logs/app.log
   level:
-    root: info
-    com.ceos23: debug
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql: trace
-    org.springframework.boot.context.config: debug
-
+    root: INFO
+    com.example.logdemo: DEBUG
+  file:
+    name: logs/application.log
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+        exclude: env, heapdump, threaddump, configprops, quartz
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
