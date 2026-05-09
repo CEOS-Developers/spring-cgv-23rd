@@ -107,7 +107,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.error("handleBusinessException", e);
+        log.error("handleBusinessException: {}", e.getMessage());
         ErrorCode errorCode = e.getErrorCode();
 
         return new ResponseEntity<>(

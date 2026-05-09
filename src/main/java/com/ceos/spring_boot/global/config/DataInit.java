@@ -22,9 +22,9 @@ public class DataInit implements CommandLineRunner {
         // DB에 좌석이 하나도 없을 때만 초기화
         if (seatRepository.count() == 0) {
             // 일반관 좌석 생성
-            createSeats(ScreenType.GENERAL, 6, 5);
+            createSeats(ScreenType.GENERAL, 5, 6);
             // 특별관 좌석 생성
-            createSeats(ScreenType.SPECIAL, 4, 3);
+            // createSeats(ScreenType.SPECIAL, 4, 3);
         }
     }
 

@@ -358,3 +358,52 @@
 1. 빌드 파일 누락: .gitignore 설정으로 인해 gradle-wrapper.jar 파일이 저장소에 업로드되지 않아 빌드에 실패 -> git add -f 명령어로 필수 파일을 강제 포함시켜 해결
 
 2. pem 키 유출: 실수로 깃허브에 pem키를 올려 새로운 키를 발급받아 새롭게 설정 수정 -> 마지막까지 제대로 확인 하자..
+
+# 부하태스트
+## 시나리오1 - 영화 조회
+<img width="3006" height="1064" alt="Image" src="https://github.com/user-attachments/assets/15826d05-b739-430e-90d1-a3d9b8d366c4" />
+
+<img width="2974" height="1542" alt="Image" src="https://github.com/user-attachments/assets/5f1c23af-c43f-4422-a120-955189dc6400" />
+
+### 결과 분석
+현상: 21:20:00 부근 p99 응답 시간이 1.5초까지 수직 상승, k6 터미널에 뜬 dial: i/o timeout
+
+해석: 가상 유저(VU)가 400명을 넘어 500명에 육박하는 시점에서 서버 혹은 DB가 더 이상 요청을 처리하지 못함 
+
+원인 추정: CPU/Memory 자원 부족 or DB 커넥션 풀(HikariCP) 고갈
+
+분석 결과 정리
+
+> 동시 접속자 수를 500명까지 점진적으로 늘린 결과, 약 400~450명 구간에서 시스템 임계점을 발견함. 이 구간부터 p99 응답 시간이 1.5초 이상으로 급증하며 `i/o timeout`이 발생함. 이는 현재 인프라 환경(EC2/RDS)에서 수용 가능한 최대 가용 성능을 초과한 것으로 판단되며, 향후 스케일 업(Scale-up) 혹은 스케일 아웃(Scale-out)이 필요한 지점을 수치로 확인.
+>
+
+## 시나리오2 - 영화 예매 및 결제
+30명의 사용자가 50개의 랜덤 좌석을 동시 예매(한 사람이 2회 이상 예매 가능)
+
+<img width="2976" height="1020" alt="Image" src="https://github.com/user-attachments/assets/d0c23d79-472d-4fde-a7d6-99c4a7d6aa4e" />
+
+<img width="2988" height="1522" alt="Image" src="https://github.com/user-attachments/assets/a53b44e1-c3f8-4b00-aa60-c43d98964a41" />
+
+<img width="1832" height="1052" alt="Image" src="https://github.com/user-attachments/assets/e80da884-b29e-4f02-8ec4-632c718c27b3" />
+
+결과 분석
+
+### 1️⃣ [정합성 검증] 예약 53건 vs 결제 50건
+
+- 성공 데이터 (200 OK): 53건의 예약이 성공
+- 결제 완료: 그중 50건이 **최종 결제**까지 성공
+- 의미: 1,600건이 넘는 요청 속에서도 실제 예약은 준비한 좌석 수(50개 근처)만큼만 정확히 들어감 -> 3건의 차이는 테스트 종료 시점이나 네트워크 지연으로 결제 단계까지 못 넘어간 것으로 보이며, 이는 중복 예약이 발생하지 않았음을 증명
+
+### 2️⃣ [분산 락의 증거] 96%의 409 Conflict
+
+- reservation status 409: 1,567건
+- 해석: 서버가 죽은 게 아니라, 분산 락이 이미 선점된 좌석에 대한 접근을 철저하게 방어
+
+### 3️⃣ [성능 지표] 10초의 거대한 응답 시간 스파이크
+
+그래프 중앙(21:57:20 부근)에 응답 시간이 약 10초까지 솟구침.
+
+- 원인 분석 (Lock Wait): 여러 유저가 동시에 같은 락을 얻으려고 줄을 서면서 Redisson의 `waitTime` 동안 대기했기 때문에 발생한 현상.
+
+분석 결과 정리
+> 유저 수나 요청 횟수에 상관없이, 시스템은 정확히 좌석 수만큼만 예약을 허용하고 나머지는 모두 안전하게 거절(409)
