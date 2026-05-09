@@ -55,12 +55,7 @@ public class DummyDataLoader implements CommandLineRunner {
         List<Screening> screenings = new ArrayList<>();
         List<Movie> movies = new ArrayList<>();
 
-        for (int i = 0;  i < 1000; i++){
-            User user = User.create(
-                    "user"+i, "user"+i, faker.internet().password(), true, 21
-            );
-            users.add(user);
-        }
+        users.add(User.create("ceos1234", "세오스", "ceos1234**", true, 22));
 
         for (int i = 0; i < 10; i++){
             Theater theater = Theater.create(
@@ -72,7 +67,7 @@ public class DummyDataLoader implements CommandLineRunner {
         for (int i = 0; i < 10; i++){
             for (Theater th : theaters){
                 Screen screen = Screen.create(
-                    th, i+"관", CinemaType.NORMAL, 172
+                    th, String.format("%d관-%s", i, th.getName()), CinemaType.NORMAL, 172
                 );
                 screens.add(screen);
             }
