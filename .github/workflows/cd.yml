@@ -93,7 +93,7 @@ jobs:
 
             for i in {1..36}; do
               curl -s -f http://localhost/actuator/health > /dev/null && break
-              [ $i -eq 12 ] && exit 1
+              [ $i -eq 36 ] && exit 1
               sleep 5
             done
 
