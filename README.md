@@ -359,6 +359,9 @@
 
 2. pem 키 유출: 실수로 깃허브에 pem키를 올려 새로운 키를 발급받아 새롭게 설정 수정 -> 마지막까지 제대로 확인 하자..
 
+# 서비스 아키텍쳐
+<img width="1144" height="641" alt="Image" src="https://github.com/user-attachments/assets/705f0926-b4e0-4589-a5b0-d4daccc502ae" />
+
 # 부하태스트
 ## 시나리오1 - 영화 조회
 <img width="3006" height="1064" alt="Image" src="https://github.com/user-attachments/assets/15826d05-b739-430e-90d1-a3d9b8d366c4" />
@@ -371,6 +374,8 @@
 해석: 가상 유저(VU)가 400명을 넘어 500명에 육박하는 시점에서 서버 혹은 DB가 더 이상 요청을 처리하지 못함 
 
 원인 추정: CPU/Memory 자원 부족 or DB 커넥션 풀(HikariCP) 고갈
+
+병목 지점: 네트워크 대역폭 및 인스턴스 수용량 (User → EC2), 서블릿 스레드 풀 (Spring Boot Application)
 
 분석 결과 정리
 
@@ -405,5 +410,7 @@
 
 - 원인 분석 (Lock Wait): 여러 유저가 동시에 같은 락을 얻으려고 줄을 서면서 Redisson의 `waitTime` 동안 대기했기 때문에 발생한 현상.
 
+
+병목 지점: 분산 락 경합 및 Redis 부하 (Spring Boot ↔ Redis), 외부 API 대기 시간의 전파 (Spring Boot → External Payment API)
 분석 결과 정리
 > 유저 수나 요청 횟수에 상관없이, 시스템은 정확히 좌석 수만큼만 예약을 허용하고 나머지는 모두 안전하게 거절(409)
