@@ -24,10 +24,10 @@ public record ReservationResponse(
                 reservation.getScreening().getTheater().getCinema().getName(),
                 reservation.getScreening().getTheater().getName(),
                 reservation.getStatus(),
-                reservation.getPeopleCount(),
-                reservation.getPrice(),
+                reservation.getReservedSeats().size(),
+                reservation.getTotalPrice(),
                 reservation.getPayment(),
-                reservation.getSaleNumber()
+                String.valueOf(reservation.getId())
         );
     }
 }

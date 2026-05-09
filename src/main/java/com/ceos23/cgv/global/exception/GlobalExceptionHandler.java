@@ -1,6 +1,7 @@
 package com.ceos23.cgv.global.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -42,6 +43,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(ErrorCode.METHOD_NOT_ALLOWED.getStatus())
                 .body(ErrorResponse.from(ErrorCode.METHOD_NOT_ALLOWED));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    protected ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
+        log.error("handleDataIntegrityViolationException", e);
+        return ResponseEntity
+                .status(ErrorCode.SEAT_ALREADY_RESERVED.getStatus())
+                .body(ErrorResponse.from(ErrorCode.SEAT_ALREADY_RESERVED));
     }
 
     /**

@@ -27,6 +27,7 @@ public enum ErrorCode {
     // Domain: Reservation
     RESERVATION_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "예매 정보를 찾을 수 없습니다."),
     SEAT_ALREADY_RESERVED(HttpStatus.CONFLICT, "R002", "이미 예매가 완료된 좌석입니다. 다른 좌석을 선택해 주세요."),
+    RESERVATION_ALREADY_CANCELED(HttpStatus.CONFLICT, "R003", "이미 취소된 예매입니다."),
 
     // Domain: Concession & Inventory
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "S001", "존재하지 않는 매점 상품입니다."),

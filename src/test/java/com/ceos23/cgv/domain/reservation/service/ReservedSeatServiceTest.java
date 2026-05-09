@@ -49,7 +49,7 @@ class ReservedSeatServiceTest {
                 List.of(new ReservedSeatRequest.SeatInfo("G", 4), new ReservedSeatRequest.SeatInfo("G", 5))
         );
 
-        Reservation reservation = Reservation.builder().id(reservationId).build();
+        Reservation reservation = Reservation.builder().build();
         Screening screening = Screening.builder().id(screeningId).build();
 
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));

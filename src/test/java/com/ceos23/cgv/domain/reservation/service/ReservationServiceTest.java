@@ -1,13 +1,17 @@
 package com.ceos23.cgv.domain.reservation.service;
 
+import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.cinema.entity.Theater;
 import com.ceos23.cgv.domain.cinema.enums.TheaterType;
 import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.entity.Screening;
 import com.ceos23.cgv.domain.movie.repository.ScreeningRepository;
+import com.ceos23.cgv.domain.reservation.dto.ReservationCreateRequest;
+import com.ceos23.cgv.domain.reservation.dto.ReservationResponse;
 import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.enums.Payment;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
+import com.ceos23.cgv.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.global.exception.CustomException;
@@ -19,6 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +41,8 @@ class ReservationServiceTest {
     private UserRepository userRepository;
     @Mock
     private ScreeningRepository screeningRepository;
+    @Mock
+    private ReservedSeatRepository reservedSeatRepository;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -46,38 +53,41 @@ class ReservationServiceTest {
         // Given
         Long userId = 1L;
         Long screeningId = 1L;
-        int peopleCount = 2;
         Payment payment = Payment.APP_CARD;
         String couponCode = null;
+        ReservationCreateRequest request = new ReservationCreateRequest(
+                screeningId,
+                payment,
+                couponCode,
+                List.of("A1", "A2")
+        );
 
-        User user = User.builder().id(userId).nickname("우혁").build();
+        User user = User.builder().id(userId).name("우혁").nickname("우혁").build();
 
-        // 💡 영화와 상영관 객체도 가짜로 만들어 줍니다.
         Movie movie = Movie.builder().id(1L).title("테스트 영화").build();
-        // TheaterType 임포트 필요: import com.ceos23.cgv.domain.cinema.enums.TheaterType;
-        Theater theater = Theater.builder().id(1L).name("1관").type(TheaterType.NORMAL).build();
+        Cinema cinema = Cinema.builder().id(1L).name("CGV 신촌").build();
+        Theater theater = Theater.builder().id(1L).name("1관").cinema(cinema).type(TheaterType.NORMAL).build();
 
-        // 💡 텅 빈 Screening이 아니라, 꽉 찬 Screening으로 조립해 줍니다!
         Screening screening = Screening.builder()
                 .id(screeningId)
-                .movie(movie)       // 추가
-                .theater(theater)   // 추가
+                .movie(movie)
+                .theater(theater)
                 .build();
 
         given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(screeningRepository.findById(screeningId)).willReturn(Optional.of(screening));
 
-        // save 될 때 들어온 엔티티 그대로 반환
-        given(reservationRepository.save(any(Reservation.class))).willAnswer(i -> i.getArgument(0));
+        // saveAndFlush 될 때 들어온 엔티티 그대로 반환
+        given(reservationRepository.saveAndFlush(any(Reservation.class))).willAnswer(i -> i.getArgument(0));
 
         // When
-        Reservation reservation = reservationService.createReservation(userId, screeningId, peopleCount, payment, couponCode);
+        ReservationResponse response = reservationService.createReservation(userId, request);
 
         // Then
-        assertThat(reservation.getUser().getNickname()).isEqualTo("우혁");
-        assertThat(reservation.getPeopleCount()).isEqualTo(2);
-        assertThat(reservation.getPayment()).isEqualTo(Payment.APP_CARD);
-        verify(reservationRepository).save(any(Reservation.class));
+        assertThat(response.userName()).isEqualTo("우혁");
+        assertThat(response.peopleCount()).isEqualTo(2);
+        assertThat(response.payment()).isEqualTo(Payment.APP_CARD);
+        verify(reservationRepository).saveAndFlush(any(Reservation.class));
     }
 
     @Test
@@ -86,6 +96,12 @@ class ReservationServiceTest {
         // Given
         Long userId = 1L;
         Long invalidScreeningId = 999L;
+        ReservationCreateRequest request = new ReservationCreateRequest(
+                invalidScreeningId,
+                Payment.APP_CARD,
+                null,
+                List.of("A1", "A2")
+        );
 
         User user = User.builder().id(userId).nickname("우혁").build();
 
@@ -95,7 +111,7 @@ class ReservationServiceTest {
 
         // When & Then
         CustomException exception = assertThrows(CustomException.class, () -> {
-            reservationService.createReservation(userId, invalidScreeningId, 2, Payment.APP_CARD, null);
+            reservationService.createReservation(userId, request);
         });
 
         assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.SCREENING_NOT_FOUND);

@@ -3,6 +3,8 @@ package com.ceos23.cgv.domain.reservation.service;
 import com.ceos23.cgv.domain.cinema.enums.TheaterType;
 import com.ceos23.cgv.domain.movie.entity.Screening;
 import com.ceos23.cgv.domain.movie.repository.ScreeningRepository;
+import com.ceos23.cgv.domain.reservation.dto.ReservationCreateRequest;
+import com.ceos23.cgv.domain.reservation.dto.ReservationResponse;
 import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.enums.Payment;
 import com.ceos23.cgv.domain.reservation.enums.ReservationStatus;
@@ -13,6 +15,7 @@ import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,49 +35,33 @@ public class ReservationService {
     private static final int MORNING_DISCOUNT = 4000;
 
     /**
-     * 영화 예매 로직
+     * 예매 생성 (Rich Domain 활용)
      */
     @Transactional
-    public Reservation createReservation(Long userId, Long screeningId, int peopleCount, Payment payment, String couponCode) {
-        // 1. 엔티티 조회 (유저와 상영일정 존재하는지)
+    public ReservationResponse createReservation(Long userId, ReservationCreateRequest request) {
+
+        // 1. 조회 (Data Loading)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-        Screening screening = screeningRepository.findById(screeningId)
+        Screening screening = screeningRepository.findById(request.screeningId())
                 .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
 
-        // 2. 1인당 결제 금액 계산 (Enum에서 직접 가져옴)
-        int ticketPrice = screening.getTheater().getType().getBasePrice();
+        // 2. 도메인 객체에 생성 및 비즈니스 로직 위임 (Rich Domain)
+        Reservation reservation = Reservation.create(
+                user,
+                screening,
+                request.payment(),
+                request.seatNumbers()
+        );
 
-        // 조조 영화인 경우 할인 상수 적용
-        if (Boolean.TRUE.equals(screening.getIsMorning())){
-            ticketPrice -= MORNING_DISCOUNT;
+        try {
+            // 3. 저장 및 반환 (Cascade 설정으로 인해 ReservedSeat들도 자동으로 함께 INSERT 됨)
+            reservationRepository.saveAndFlush(reservation);
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
 
-        // 최종 금액 = 1인당 티켓 가격 * 예매 인원수
-        int calculatedPrice = ticketPrice * peopleCount;
-
-        // 3. 쿠폰 할인 적용
-        if (couponCode != null && !couponCode.isBlank()) {
-            calculatedPrice = applyCouponDiscount(calculatedPrice, couponCode);
-        }
-
-        // 4. 고유한 예매 번호 생성 (임시로 UUID 사용)
-        String saleNumber = UUID.randomUUID().toString().substring(0, 15);
-
-        // 5. 예매 엔티티 생성
-        Reservation reservation = Reservation.builder()
-                .user(user)
-                .screening(screening)
-                .status(ReservationStatus.COMPLETED)
-                .peopleCount(peopleCount)
-                .price(calculatedPrice)
-                .payment(payment)
-                .coupon(couponCode)
-                .saleNumber(saleNumber)
-                .build();
-
-        // 6. DB에 저장
-        return reservationRepository.save(reservation);
+        return ReservationResponse.from(reservation);
     }
 
     /**

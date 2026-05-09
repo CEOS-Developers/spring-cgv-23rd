@@ -15,10 +15,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
+    defer-datasource-initialization: true
 
   logging:
     level:
       org.hibernate.SQL: debug
+
+  sql:
+    init:
+      mode: always
 
 jwt:
   secret: cGUxq8+7npM2ivr6ge6xjVttZDAod9XD+Qlbyn1jFqUajswLXoFHfbHXdn75FGhPDw1aEAwkwpcfJl8SaFafHA==

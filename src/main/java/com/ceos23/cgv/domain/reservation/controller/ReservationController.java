@@ -2,7 +2,6 @@ package com.ceos23.cgv.domain.reservation.controller;
 
 import com.ceos23.cgv.domain.reservation.dto.ReservationCreateRequest;
 import com.ceos23.cgv.domain.reservation.dto.ReservationResponse;
-import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.service.ReservationService;
 import com.ceos23.cgv.global.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,16 +29,10 @@ public class ReservationController {
 
         Long userId = Long.parseLong(userDetails.getUsername());
 
-        Reservation reservation = reservationService.createReservation(
-                userId,
-                request.screeningId(),
-                request.peopleCount(),
-                request.payment(),
-                request.couponCode()
-        );
+        ReservationResponse response = reservationService.createReservation(userId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(ReservationResponse.from(reservation)));
+                .body(ApiResponse.created(response));
     }
 
     @PatchMapping("/{reservationId}/cancel")
