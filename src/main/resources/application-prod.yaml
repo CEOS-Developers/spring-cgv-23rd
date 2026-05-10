@@ -6,7 +6,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: create #임시
+      ddl-auto: none
     show-sql: false
   data:
     redis:
