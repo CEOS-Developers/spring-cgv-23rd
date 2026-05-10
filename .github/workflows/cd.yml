@@ -84,6 +84,8 @@ jobs:
                   - "80:8080"
                 env_file:
                   - .env
+                volumes:
+                  - /home/ubuntu/logs:/logs
                 depends_on:
                   redis-server:
                     condition: service_healthy
