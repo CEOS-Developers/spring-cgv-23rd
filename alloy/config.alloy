@@ -45,7 +45,7 @@ loki.source.file "app_logs" {
 // ============================================================
 prometheus.scrape "spring_app" {
   targets = [{
-    __address__ = "localhost:80",
+    __address__ = "app:8080",
   }]
   metrics_path    = "/actuator/prometheus"
   scrape_interval = "15s"

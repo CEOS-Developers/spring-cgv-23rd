@@ -57,10 +57,65 @@ jobs:
           script: |
             echo "${{ secrets.DOCKER_PASSWORD }}" | sudo docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-            mkdir -p /home/ubuntu/app
+            mkdir -p /home/ubuntu/app/alloy/positions
             cd /home/ubuntu/app
 
             echo "${{ secrets.ENV_VARS }}" > .env
+
+            cat <<'ALLOYEOF' > alloy/config.alloy
+            loki.write "default" {
+              endpoint {
+                url = "http://172.31.41.20:3100/loki/api/v1/push"
+              }
+            }
+
+            local.file_match "system_logs" {
+              path_targets = [{
+                __path__ = "/var/log/*.log",
+                job      = "varlogs",
+                host     = env("HOSTNAME"),
+              }]
+            }
+
+            loki.source.file "system_logs" {
+              targets       = local.file_match.system_logs.targets
+              forward_to    = [loki.write.default.receiver]
+              tail_from_end = false
+            }
+
+            local.file_match "app_logs" {
+              path_targets = [{
+                __path__ = "/logs/*.log",
+                job      = "applogs",
+                host     = env("HOSTNAME"),
+              }]
+            }
+
+            loki.source.file "app_logs" {
+              targets    = local.file_match.app_logs.targets
+              forward_to = [loki.write.default.receiver]
+            }
+
+            prometheus.scrape "spring_app" {
+              targets = [{
+                __address__ = "app:8080",
+              }]
+              metrics_path    = "/actuator/prometheus"
+              scrape_interval = "15s"
+              forward_to      = [prometheus.remote_write.monitoring.receiver]
+              job_name        = "spring-app"
+            }
+
+            prometheus.remote_write "monitoring" {
+              endpoint {
+                url = "http://172.31.41.20:9090/api/v1/write"
+              }
+              external_labels = {
+                host = env("HOSTNAME"),
+                env  = "production",
+              }
+            }
+            ALLOYEOF
 
             cat <<EOF > docker-compose.yml
             version: '3.8'
@@ -90,6 +145,24 @@ jobs:
                   redis-server:
                     condition: service_healthy
                 restart: always
+
+              alloy:
+                image: grafana/alloy:v1.8.2
+                container_name: alloy
+                restart: always
+                volumes:
+                  - /home/ubuntu/logs:/logs:ro
+                  - /var/log:/var/log:ro
+                  - /home/ubuntu/app/alloy/config.alloy:/etc/alloy/config.alloy
+                  - /home/ubuntu/app/alloy/positions:/var/lib/alloy/data
+                command:
+                  - run
+                  - /etc/alloy/config.alloy
+                  - --server.http.listen-addr=0.0.0.0:12345
+                ports:
+                  - "12345:12345"
+                depends_on:
+                  - app
             EOF
 
             sudo docker compose pull app
