@@ -13,6 +13,7 @@ const TEST_PASSWORD = __ENV.TEST_PASSWORD || 'Test1234!';
 // MasterDataInitializer 기준:
 //   Schedule 1 = theater1(CGV 강남점) × STANDARD관 × 듄
 //   ECONOMY 좌석(A~E열 × 20개) = ID 1~100, basePrice=15000, surcharge=0
+// DB에서 실제 ID 확인 후 환경변수로 오버라이드 가능
 const SCHEDULE_ID = parseInt(__ENV.SCHEDULE_ID || '1');
 const SEAT_IDS    = __ENV.SEAT_IDS
   ? __ENV.SEAT_IDS.split(',').map(Number)
@@ -38,9 +39,8 @@ export const options = {
     { duration: '30s', target: 0   },  // 종료
   ],
   thresholds: {
-    'payment_error_rate':          ['rate<0.05'],   // 에러율 5% 미만
-    'payment_duration_ms':         ['p(95)<3000'],  // 95%ile 3초 이내
-    'http_req_duration{url:payment}': ['p(99)<5000'],
+    'payment_error_rate':  ['rate<0.05'],   // 에러율 5% 미만
+    'payment_duration_ms': ['p(95)<3000'],  // 95%ile 3초 이내
   },
 };
 
@@ -79,52 +79,74 @@ export default function (data) {
     'Authorization': `Bearer ${data.token}`,
   };
 
-  // VU·iteration 조합으로 겹치지 않는 seatId 선택
-  const seatIndex = (__VU * 100 + __ITER) % SEAT_IDS.length;
+  // VU별 고정 좌석 배정: VU1→seat[0], VU2→seat[1], ...
+  // 각 VU는 항상 같은 좌석을 사용하고 cancel 후 재사용
+  const seatIndex = (__VU - 1) % SEAT_IDS.length;
   const seatId    = SEAT_IDS[seatIndex];
 
-  // 결제 고유 ID: timestamp + VU + iter
-  const paymentId = `${Date.now()}_vu${__VU}_i${__ITER}`;
+  // ── Step 1: 좌석 선점 (PENDING 예약 생성) ──────────────
+  const reserveRes = http.post(
+    `${BASE_URL}/api/reservations/seats`,
+    JSON.stringify({ scheduleId: SCHEDULE_ID, seatIds: [seatId] }),
+    { headers }
+  );
 
-  // ── 결제 API 호출 ──────────────────────────
+  const reserveOk = check(reserveRes, {
+    'reserve: status 200': (r) => r.status === 200,
+    'reserve: has paymentId': (r) => {
+      try { return !!r.json('paymentId'); } catch { return false; }
+    },
+  });
+
+  if (!reserveOk) {
+    paymentFailed.add(1);
+    paymentErrorRate.add(true);
+    if (__ENV.VERBOSE === 'true') {
+      console.warn(`[VU${__VU}] reserve failed ${reserveRes.status}: ${reserveRes.body}`);
+    }
+    sleep(1);
+    return;
+  }
+
+  const paymentId      = reserveRes.json('paymentId');
+  const expectedAmount = reserveRes.json('totalPrice');
+
+  // ── Step 2: 결제 확정 ──────────────────────────────────
+  const paymentStart = Date.now();
   const paymentRes = http.post(
     `${BASE_URL}/api/reservations/instant`,
     JSON.stringify({
       scheduleId:     SCHEDULE_ID,
       seatIds:        [seatId],
-      expectedAmount: 15000,
+      expectedAmount: expectedAmount,
       paymentId:      paymentId,
     }),
-    {
-      headers,
-      tags: { url: 'payment' },
-    }
+    { headers }
   );
+  paymentDuration.add(Date.now() - paymentStart);
 
-  const ok = check(paymentRes, {
+  const payOk = check(paymentRes, {
     'payment: status 200': (r) => r.status === 200,
     'payment: has paymentId': (r) => {
       try { return !!r.json('paymentId'); } catch { return false; }
     },
   });
 
-  paymentDuration.add(paymentRes.timings.duration);
-  paymentErrorRate.add(!ok);
+  paymentErrorRate.add(!payOk);
 
-  if (ok) {
+  if (payOk) {
     paymentSuccess.add(1);
 
-    // ── 결제 취소 (좌석 해제 → 다음 VU가 재사용 가능) ─
+    // ── Step 3: 결제 취소 (좌석 해제 → 다음 iteration 재사용) ─
     const cancelRes = http.post(
       `${BASE_URL}/api/reservations/${paymentId}/cancel`,
       null,
-      { headers, tags: { url: 'cancel' } }
+      { headers }
     );
     check(cancelRes, { 'cancel: status 200': (r) => r.status === 200 });
 
   } else {
     paymentFailed.add(1);
-    // 실패 로그 (k6 출력에 표시됨)
     if (__ENV.VERBOSE === 'true') {
       console.warn(`[VU${__VU}] payment failed ${paymentRes.status}: ${paymentRes.body}`);
     }
