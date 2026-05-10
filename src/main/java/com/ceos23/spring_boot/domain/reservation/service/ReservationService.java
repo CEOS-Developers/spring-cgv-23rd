@@ -46,6 +46,7 @@ public class ReservationService {
     private final PaymentService paymentService;
 
 
+    @Transactional
     public PaymentDataInfo requestInstantPayment(String paymentId, String email, FrontendPaymentRequest request) {
         Reservation reservation = reservationRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
@@ -79,6 +80,7 @@ public class ReservationService {
     }
 
 
+    @Transactional
     public void cancelPayment(String paymentId, String email) {
         Reservation reservation = reservationRepository.findByPaymentId(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESERVATION_NOT_FOUND));
