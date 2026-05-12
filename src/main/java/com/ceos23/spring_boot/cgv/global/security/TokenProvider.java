@@ -19,6 +19,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class TokenProvider implements InitializingBean {
 
+    private static final String TOKEN_TYPE_CLAIM = "type";
+    private static final String ACCESS_TOKEN_TYPE = "access";
+    private static final String REFRESH_TOKEN_TYPE = "refresh";
+
     private final String secret;
     private final long accessTokenValidityInMilliseconds;
     private final long refreshTokenValidityInMilliseconds;
@@ -55,7 +59,7 @@ public class TokenProvider implements InitializingBean {
         return Jwts.builder()
                 .setSubject(String.valueOf(id))
                 .claim("auth", authorities)
-                .claim("type", "access")
+                .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
@@ -67,20 +71,14 @@ public class TokenProvider implements InitializingBean {
 
         return Jwts.builder()
                 .setSubject(String.valueOf(id))
-                .claim("type", "refresh")
+                .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
                 .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
     public String getTokenUserId(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        return claims.getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public Authentication getAuthentication(String token) {
@@ -95,23 +93,28 @@ public class TokenProvider implements InitializingBean {
     }
 
     public boolean validateAccessToken(String token) {
-        return validateToken(token);
+        return validateToken(token, ACCESS_TOKEN_TYPE);
     }
 
     public boolean validateRefreshToken(String token) {
-        return validateToken(token);
+        return validateToken(token, REFRESH_TOKEN_TYPE);
     }
 
-    private boolean validateToken(String token) {
+    private boolean validateToken(String token, String expectedTokenType) {
         try {
-            Jwts.parserBuilder()
-                    .setSigningKey(key)
-                    .build()
-                    .parseClaimsJws(token);
-            return true;
+            Claims claims = parseClaims(token);
+            return expectedTokenType.equals(claims.get(TOKEN_TYPE_CLAIM, String.class));
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public long getRefreshTokenValidityInMilliseconds() {

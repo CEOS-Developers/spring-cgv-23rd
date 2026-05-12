@@ -1,21 +1,82 @@
-# spring-cgv-23rd
+﻿# spring-cgv-23rd
 
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
+이번 제출에서는 서비스 구조도 정리, 부하테스트 분석, 인증/매점 구매 안정성 보강까지 같이 묶어서 정리했음.
+
+제출용 한 줄 요약:
+예매 API가 가장 먼저 병목이 날 가능성이 컸고, 원인은 EC2 CPU 포화보다는 `PESSIMISTIC_WRITE` 기반 DB lock wait에 더 가까웠음.
+
+## 이번 미션에서 한 것
+
+### 1. CGV 서비스 아키텍처 구조도 그리기
+
+- 현재 저장소 기준으로 `ERD`, `배포 아키텍처`, `서비스 아키텍처`를 분리해서 문서화했음.
+- 실제 활성 배포 흐름 기준으로 `GitHub -> GitHub Actions -> EC2 -> Docker Compose -> Spring Boot -> file-based H2` 구조를 정리했음.
+- 병목 후보도 구조도와 같이 정리했음: `JWT 인증 DB 조회`, `screening` 단위 비관적 락 예매, 좌석 조회 read 경로, 예약 만료 스케줄러, 매점 재고 락.
+- 문서: [CGV ERD / 배포 아키텍처 / 서비스 아키텍처 정리](docs/cgv-erd-architecture.md)
+
+![CGV architecture diagram](docs/images/architecture-diagram-conservative.svg)
+
+### 2. 부하테스트 결과 분석하기
+
+- `k6` 기준으로 `GET /api/screenings`, `GET /api/screenings/{screeningId}/seats`, `POST /api/reservations`, `POST /api/store/purchases` 시나리오를 나눠 분석했음.
+- 조회 API는 전반적으로 안정적이었지만, 좌석 조회가 상영 목록 조회보다 더 무거운 read 경로였음.
+- 가장 먼저 병목이 드러난 API는 `POST /api/reservations`였고, `200 VU` 구간에서 `p95 4.9s`, `p99 7.2s`, `실패율 34.8%`까지 증가했음.
+- 매점 구매는 같은 메뉴 재고 row 락 영향으로 지연은 늘었지만, 예매 API처럼 먼저 무너지지는 않았음.
+- 현재 병목은 EC2 CPU 포화보다는 `PESSIMISTIC_WRITE` 기반 `DB lock wait`에 더 가까웠음.
+- 문서: [부하테스트 결과 분석 정리](docs/load-test-analysis.md)
+
+| 구간 | 핵심 수치 | 해석 |
+| --- | --- | --- |
+| `GET /api/screenings` | `100 VU`, `p95 110ms`, 실패율 `0%` | 비교적 안정적인 read API |
+| `GET /api/screenings/{screeningId}/seats` | `200 VU`, `p95 390ms`, 실패율 `0%` | 좌석 상태를 함께 읽어서 더 무거운 조회 경로 |
+| `POST /api/reservations` | `200 VU`, `p95 4.9s`, `p99 7.2s`, 실패율 `34.8%` | 가장 먼저 병목이 발생한 write 경로 |
+| `POST /api/store/purchases` | `200 VU`, `p95 2.0s`, 실패율 `0%` | 락 영향은 있지만 1차 병목은 아님 |
+
+부하테스트 결과를 바탕으로 개선 방향도 같이 정리했음.
+
+- 예매는 현재 `screening` 단위로 직렬화돼서, 장기적으로는 더 작은 좌석 제어 단위가 필요함.
+- 좌석 조회는 `SeatLayout`, `SeatTemplate` 같은 정적 데이터 캐시로 read 부하를 줄일 수 있음.
+- 지금은 앱과 DB가 같은 EC2 안에 있으므로, 이후에는 MySQL/RDS 분리와 메트릭 분리가 중요함.
+
+### 3. 이번 미션과 함께 보강한 코드
+
+#### 2026-05-09 반영
+
+- JWT access token / refresh token에 `type` claim 검증을 추가해서 refresh token이 보호 API 인증에 재사용되지 않도록 막았음.
+- `spring-boot-starter-validation`을 명시적으로 추가해서 요청 검증이 Swagger 전이 의존성에 우연히 기대지 않도록 정리했음.
+- `MethodArgumentNotValidException`을 400 응답으로 처리하도록 예외 핸들러를 보강했음.
+- 매점 재고 구매 시 `CinemaMenuStock` 조회에 비관적 락을 적용해서 동시 구매 oversell 가능성을 낮췄음.
+- 테스트를 추가해서 위 위험 포인트를 회귀 검증할 수 있게 보강했음.
+- `TokenProviderTest`
+- `AuthControllerValidationTest`
+- `StorePurchaseConcurrencyTest`
+- 검증 결과: `./gradlew test` 통과, `32 tests / 0 failures`
+
+## 앞으로 바꿀 것
+
+- 로컬 실행 문서와 CI/CD 배포 문서 사이에 섞여 있는 MySQL / H2 전략을 하나의 기준으로 다시 정리할 예정임.
+- validation 에러 응답은 지금의 단일 message 문자열보다 필드 중심 구조로 더 세분화할 예정임.
+- 매점 구매 동시성 검증도 서비스 테스트 수준에서 끝내지 않고 API 흐름까지 확인하는 통합 시나리오로 넓힐 예정임.
+
+<details>
+<summary>기존 정리 보기</summary>
+
 ## 로컬 실행 설정
 
-프로젝트 실행 전 아래 환경변수가 필요합니다.
+프로젝트 실행 전 아래 환경변수가 필요함.
 
 - `DB_URL`
 - `DB_USERNAME`
 - `DB_PASSWORD`
 - `JWT_SECRET`
 
-편하게 시작할 수 있도록 루트에 `.env.example` 파일을 추가했습니다.
+바로 시작할 수 있게 루트에 `.env.example` 파일도 추가했음.
 
 ## 수동 배포 정리
 
-PDF 실습 흐름에 맞춰 수동 배포는 `bootJar -> docker build -> docker push -> EC2에서 docker compose up` 순서로 진행합니다.
+PDF 실습 흐름에 맞춰 수동 배포는 `bootJar -> docker build -> docker push -> EC2에서 docker compose up` 순서로 진행했음.
 
 ### 1. 로컬에서 jar 빌드
 
@@ -43,7 +104,7 @@ EC2에는 아래 파일을 올립니다.
 - `docker-compose.yml`
 - `.env`
 
-`.env`는 `.env.example`을 복사해서 만들고, 특히 `APP_IMAGE`와 `DB_URL`을 EC2/RDS 환경에 맞게 수정합니다.
+`.env`는 `.env.example`을 복사해서 만들고, 특히 `APP_IMAGE`와 `DB_URL`을 EC2/RDS 환경에 맞게 수정하면 됨.
 
 ```env
 APP_IMAGE=<dockerhub-id>/spring-cgv-23rd:latest
@@ -68,37 +129,37 @@ docker ps
 - `http://<ec2-public-ip>:8080/swagger-ui.html`
 - 또는 `curl http://<ec2-public-ip>:8080/swagger-ui.html`
 
-현재 프로젝트는 `docker-compose.yml` 기준으로 애플리케이션 컨테이너만 실행하고, 데이터베이스는 RDS 같은 외부 MySQL을 연결하는 방식을 기본으로 잡았습니다.
+현재 프로젝트는 `docker-compose.yml` 기준으로 애플리케이션 컨테이너만 실행하고, DB는 RDS 같은 외부 MySQL을 연결하는 방식을 기본으로 잡았음.
 
 ## 코드 리팩토링 정리
 
-리팩토링은 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 진행했습니다.
+리팩토링은 "서비스는 흐름을 조율하고, 도메인은 자신의 상태를 책임진다"는 기준으로 진행했음.
 
 ### 1. 예약 로직 책임 분리
 
-- `ReservationService`의 예매 생성 로직에서 조회, 검증, 좌석 생성 단계를 메서드로 분리했습니다.
-- 예매 목록 조회는 전체 조회 후 메모리에서 필터링하던 방식 대신 `findAllByUserId` repository query를 사용하도록 변경했습니다.
-- `Reservation.cancel()`이 이미 취소된 예매인지 직접 검사하도록 바꿔 상태 변경 책임을 엔티티에 더 가깝게 옮겼습니다.
+- `ReservationService`의 예매 생성 로직에서 조회, 검증, 좌석 생성 단계를 메서드로 분리했음.
+- 예매 목록 조회는 전체 조회 후 메모리에서 필터링하던 방식 대신 `findAllByUserId` repository query를 쓰도록 바꿨음.
+- `Reservation.cancel()`이 이미 취소된 예매인지 직접 검사하도록 바꿔서 상태 변경 책임을 엔티티 쪽으로 더 붙였음.
 
 ### 2. 매점 구매 로직 단순화
 
-- `StorePurchaseService`에서 중복되던 조회 로직을 전용 메서드로 분리해 구매 흐름이 한눈에 보이도록 정리했습니다.
-- `CinemaMenuStock.decreaseStock()`이 수량 검증과 재고 부족 검증을 함께 책임지도록 바꿔, 재고 관련 규칙이 한곳에 모이도록 개선했습니다.
-- 매점 구매 실패 상황을 더 잘 드러내기 위해 `STORE_MENU_STOCK_NOT_FOUND`, `INSUFFICIENT_MENU_STOCK` 에러 코드를 추가했습니다.
+- `StorePurchaseService`에서 중복되던 조회 로직을 전용 메서드로 분리해서 구매 흐름이 한눈에 보이게 정리했음.
+- `CinemaMenuStock.decreaseStock()`이 수량 검증과 재고 부족 검증을 같이 맡도록 바꿔서, 재고 관련 규칙이 한곳에 모이게 했음.
+- 매점 구매 실패 상황을 더 잘 드러내려고 `STORE_MENU_STOCK_NOT_FOUND`, `INSUFFICIENT_MENU_STOCK` 에러 코드를 추가했음.
 
 ### 3. 조회 기능 보강과 Query Service 분리
 
-- 예매 생성 전에 실제로 필요한 조회 기능을 채우기 위해 `GET /api/screenings`, `GET /api/screenings/{screeningId}/seats` API를 추가했습니다.
-- 매점 화면과 마이페이지에서 바로 사용할 수 있도록 `GET /api/store/menus`, `GET /api/store/purchases` API를 추가했습니다.
-- 찜 기능도 생성/취소에서 끝나지 않도록 `GET /api/cinemas/likes`, `GET /api/movies/likes` API를 추가했습니다.
-- 읽기 전용 흐름은 `ScreeningQueryService`, `StoreQueryService`로 분리해, 쓰기 서비스가 조회 책임까지 과하게 들고 있지 않도록 정리했습니다.
+- 예매 생성 전에 실제로 필요한 조회 기능을 채우려고 `GET /api/screenings`, `GET /api/screenings/{screeningId}/seats` API를 추가했음.
+- 매점 화면과 마이페이지에서 바로 쓸 수 있게 `GET /api/store/menus`, `GET /api/store/purchases` API를 추가했음.
+- 찜 기능도 생성/취소에서 끝나지 않게 `GET /api/cinemas/likes`, `GET /api/movies/likes` API를 추가했음.
+- 읽기 전용 흐름은 `ScreeningQueryService`, `StoreQueryService`로 분리해서, 쓰기 서비스가 조회 책임까지 과하게 들고 있지 않게 정리했음.
 
 ### 4. 테스트 가능성 개선
 
-- 변경된 예매 로직에 맞춰 `ReservationServiceTest`를 정리했습니다.
-- `StorePurchaseServiceTest`를 추가해 재고 차감과 예외 흐름을 검증할 수 있게 했습니다.
-- `ScreeningQueryServiceTest`, `StoreQueryServiceTest`, `LikeQueryServiceTest`를 추가해 새 조회 API의 핵심 조회 흐름도 검증했습니다.
-- 테스트 전용 H2 설정을 추가해 로컬 MySQL 환경 없이도 `./gradlew test`가 실행되도록 개선했습니다.
+- 변경된 예매 로직에 맞춰 `ReservationServiceTest`를 정리했음.
+- `StorePurchaseServiceTest`를 추가해서 재고 차감과 예외 흐름을 검증할 수 있게 했음.
+- `ScreeningQueryServiceTest`, `StoreQueryServiceTest`, `LikeQueryServiceTest`를 추가해서 새 조회 API 핵심 흐름도 검증했음.
+- 테스트 전용 H2 설정을 추가해서 로컬 MySQL 없이도 `./gradlew test`가 돌아가게 했음.
 
 ## 마무리 단계에서 추가한 API
 
@@ -112,37 +173,37 @@ docker ps
 
 ## 동시성 제어 정리
 
-동시성 제어는 "같은 상영관의 같은 좌석에 동시에 예매 요청이 들어오면 한 건만 성공해야 한다"는 상황을 기준으로 비교하고 적용했습니다.
+동시성 제어는 "같은 상영관의 같은 좌석에 동시에 예매 요청이 들어오면 한 건만 성공해야 한다"는 상황을 기준으로 비교하고 적용했음.
 
 ### 비교한 방법
 
 #### 1. synchronized / 애플리케이션 레벨 락
 
-- 장점: 코드로 빠르게 적용할 수 있고 개념이 단순합니다.
-- 단점: 서버가 여러 대로 늘어나면 JVM 밖에서는 효과가 없습니다.
+- 장점: 코드로 빠르게 적용할 수 있고 개념이 단순함.
+- 단점: 서버가 여러 대로 늘어나면 JVM 밖에서는 효과가 없음.
 - 적합한 경우: 단일 인스턴스에서만 동작하는 간단한 배치나 임시 보호 로직
 
 #### 2. Optimistic Lock (`@Version`)
 
-- 장점: 실제 충돌이 적을 때 성능상 유리하고, DB row를 오래 잠그지 않습니다.
-- 단점: 충돌이 나면 재시도가 필요하고, 인기 좌석처럼 충돌 빈도가 높은 상황에서는 실패가 자주 발생할 수 있습니다.
+- 장점: 실제 충돌이 적을 때 성능상 유리하고, DB row를 오래 잠그지 않음.
+- 단점: 충돌이 나면 재시도가 필요하고, 인기 좌석처럼 충돌 빈도가 높은 상황에서는 실패가 자주 발생할 수 있음.
 - 적합한 경우: 동시에 수정될 가능성은 낮지만, 충돌이 나더라도 다시 시도해도 되는 데이터 수정
 
 #### 3. Pessimistic Lock (`@Lock(PESSIMISTIC_WRITE)`)
 
-- 장점: 충돌 가능성이 높은 데이터에 대해 먼저 락을 잡고 처리하므로 정합성을 강하게 보장할 수 있습니다.
-- 단점: 대기 시간이 생길 수 있고, 락 범위가 크면 처리량이 줄어들 수 있습니다.
+- 장점: 충돌 가능성이 높은 데이터에 먼저 락을 잡고 처리해서 정합성을 강하게 보장할 수 있음.
+- 단점: 대기 시간이 생길 수 있고, 락 범위가 크면 처리량이 줄어들 수 있음.
 - 적합한 경우: 같은 자원에 대한 동시 접근이 많고, 중복 예약이나 초과 판매가 절대 발생하면 안 되는 상황
 
 #### 4. DB Unique Constraint
 
-- 장점: 마지막 방어선으로 매우 중요하며, 중복 데이터 저장을 DB 차원에서 막을 수 있습니다.
-- 단점: 충돌을 "사전에 제어"하는 방식이 아니라 저장 시점에 실패시키는 방식이라 사용자 경험이 거칠 수 있습니다.
+- 장점: 마지막 방어선으로 중요하고, 중복 데이터 저장을 DB 차원에서 막을 수 있음.
+- 단점: 충돌을 "사전에 제어"하는 방식이 아니라 저장 시점에 실패시키는 방식이라 사용자 경험이 거칠 수 있음.
 - 적합한 경우: 애플리케이션 로직과 별개로 반드시 지켜야 하는 무결성 규칙
 
 #### 5. Distributed Lock (Redis 등)
 
-- 장점: 서버가 여러 대여도 공통 자원에 대한 락을 잡을 수 있습니다.
+- 장점: 서버가 여러 대여도 공통 자원에 대한 락을 잡을 수 있음.
 - 단점: Redis 같은 별도 인프라가 필요하고 운영 복잡도가 올라갑니다.
 - 적합한 경우: 멀티 인스턴스 환경에서 DB row lock만으로는 부족하거나, 외부 시스템 연동까지 함께 제어해야 하는 경우
 
@@ -150,68 +211,68 @@ docker ps
 
 이 프로젝트에서 가장 중요한 동시성 포인트는 `같은 screening 에 같은 seatTemplate 을 동시에 예매하는 경우`입니다.
 
-- 인기 상영 시간에는 충돌 가능성이 높습니다.
-- 좌석 중복 예매는 절대 허용되면 안 됩니다.
-- 현재 구조는 좌석 재고를 별도 엔티티로 관리하지 않고, `ReservationSeat` 존재 여부로 예매 가능 여부를 계산합니다.
+- 인기 상영 시간에는 충돌 가능성이 높음.
+- 좌석 중복 예매는 절대 허용되면 안 됨.
+- 현재 구조는 좌석 재고를 별도 엔티티로 관리하지 않고, `ReservationSeat` 존재 여부로 예매 가능 여부를 계산함.
 
-이 구조에서는 충돌이 드문 상황을 전제로 하는 낙관적 락보다, 예매 시점에 먼저 락을 잡고 한 트랜잭션이 끝날 때까지 다른 요청을 기다리게 하는 비관적 락이 더 적합하다고 봤습니다.
+이 구조에서는 충돌이 드문 상황을 전제로 하는 낙관적 락보다, 예매 시점에 먼저 락을 잡고 한 트랜잭션이 끝날 때까지 다른 요청을 기다리게 하는 비관적 락이 더 맞다고 봤음.
 
 ### 실제 적용한 방식
 
-- `ScreeningRepository.findByIdWithPessimisticLock()`에서 `PESSIMISTIC_WRITE` 락을 사용해 같은 상영 정보에 대한 예매 요청을 직렬화했습니다.
-- `ReservationService.createReservation()`는 락이 걸린 `Screening`을 먼저 조회한 뒤, 좌석 검증과 예매 생성까지 한 트랜잭션 안에서 처리합니다.
-- `ReservationSeat`의 unique constraint는 마지막 방어선으로 유지하고, `saveAllAndFlush()` 시 충돌이 발생하면 `ConflictException`으로 변환해 사용자에게 의미 있는 예외를 반환하도록 했습니다.
+- `ScreeningRepository.findByIdWithPessimisticLock()`에서 `PESSIMISTIC_WRITE` 락을 사용해 같은 상영 정보에 대한 예매 요청을 직렬화했음.
+- `ReservationService.createReservation()`는 락이 걸린 `Screening`을 먼저 조회한 뒤, 좌석 검증과 예매 생성까지 한 트랜잭션 안에서 처리함.
+- `ReservationSeat`의 unique constraint는 마지막 방어선으로 유지했고, `saveAllAndFlush()` 시 충돌이 발생하면 `ConflictException`으로 바꿔서 의미 있는 예외를 내려주게 했음.
 
 ### 왜 이 방법을 선택했는가
 
-- 기존 모델을 크게 바꾸지 않고 적용할 수 있습니다.
-- 좌석 중복 예매를 막는 것이 성능보다 더 중요합니다.
+- 기존 모델을 크게 바꾸지 않고 적용할 수 있었음.
+- 좌석 중복 예매를 막는 게 성능보다 더 중요했음.
 - 예매 오픈 직후처럼 충돌이 자주 발생하는 상황에서는 재시도를 전제로 하는 낙관적 락보다 안정적입니다.
 
 ### 한계와 다음 개선 방향
 
-- 지금 방식은 `screening` 단위로 락을 잡기 때문에, 같은 상영에서 서로 다른 좌석을 예매하는 요청도 순차 처리됩니다.
-- 트래픽이 훨씬 커지면 좌석별 재고 엔티티를 두고 더 세밀한 단위로 락을 잡는 구조가 더 적합할 수 있습니다.
-- 서버가 여러 대로 확장되는 환경에서는 Redis 기반 distributed lock도 함께 검토할 수 있습니다.
+- 지금 방식은 `screening` 단위로 락을 잡기 때문에, 같은 상영에서 서로 다른 좌석을 예매하는 요청도 순차 처리됨.
+- 트래픽이 훨씬 커지면 좌석별 재고 엔티티를 두고 더 세밀한 단위로 락을 잡는 구조가 더 맞을 수 있음.
+- 서버가 여러 대로 확장되는 환경에서는 Redis 기반 distributed lock도 같이 검토할 수 있음.
 
 ### 검증
 
-- `ReservationConcurrencyTest`에서 같은 좌석에 동시에 두 요청을 보내면 한 요청만 성공하고, 다른 요청은 `ConflictException`이 발생하는 것을 확인했습니다.
+- `ReservationConcurrencyTest`에서 같은 좌석에 동시에 두 요청을 보내면 한 요청만 성공하고, 다른 요청은 `ConflictException`이 발생하는 걸 확인했음.
 
 ## 결제 시스템 연동 정리
 
-결제 시스템은 참고 레포 `Hoyoung027/concurrency-control`의 결제 로그 기반 구조를 바탕으로, 티켓팅 흐름에 맞게 적용했습니다.
+결제 시스템은 참고 레포 `Hoyoung027/concurrency-control`의 결제 로그 기반 구조를 바탕으로, 티켓팅 흐름에 맞게 적용했음.
 
 ### 참고한 포인트
 
-- 결제는 `paymentId`로 추적합니다.
-- 결제 상태는 `READY`, `PAID`, `FAILED`, `CANCELLED`, `EXPIRED` 같은 상태값으로 관리합니다.
-- 도메인 로직은 결제 내부 구현을 직접 알지 않고, 결제 서비스만 호출합니다.
-- 취소와 만료 시 결제 상태도 함께 정리되도록 묶습니다.
+- 결제는 `paymentId`로 추적함.
+- 결제 상태는 `READY`, `PAID`, `FAILED`, `CANCELLED`, `EXPIRED` 같은 상태값으로 관리함.
+- 도메인 로직은 결제 내부 구현을 직접 알지 않고, 결제 서비스만 호출함.
+- 취소와 만료 시 결제 상태도 함께 정리되도록 묶었음.
 
 ### 적용 대상
 
-결제 흐름은 `Reservation` 도메인에 우선 적용했습니다.
+결제 흐름은 `Reservation` 도메인에 먼저 적용했음.
 
 - 티켓 예매는 좌석을 고른 뒤 결제창에 진입하면서 임시 선점이 되고, 결제가 완료되면 최종 확정되는 흐름입니다.
-- 따라서 "좌석 홀드 -> 결제 완료 -> 예매 확정"과 "미결제 만료 -> 좌석 해제"를 함께 다루기 좋은 도메인이 `Reservation`이었습니다.
-- 반면 `StorePurchase`는 아직 취소 도메인이 없어, 이번 구현은 예매 흐름에 한정했습니다.
+- 따라서 "좌석 홀드 -> 결제 완료 -> 예매 확정"과 "미결제 만료 -> 좌석 해제"를 함께 다루기 좋은 도메인이 `Reservation`이었음.
+- 반면 `StorePurchase`는 아직 취소 도메인이 없어서, 이번 구현은 예매 흐름에 한정했음.
 
 ### 실제 적용한 방식
 
-- `POST /api/reservations`를 호출하면 `PENDING_PAYMENT` 상태의 예매를 생성하고, 좌석을 5분 동안 임시 선점합니다.
-- 이때 서버가 `paymentId`를 발급하고, 결제 로그는 `READY` 상태로 생성됩니다.
+- `POST /api/reservations`를 호출하면 `PENDING_PAYMENT` 상태 예매를 만들고, 좌석을 5분 동안 임시 선점함.
+- 이때 서버가 `paymentId`를 발급하고, 결제 로그는 `READY` 상태로 생성됨.
 - 사용자가 결제를 완료하면 `POST /api/reservations/{reservationId}/confirm-payment`을 호출해 예매를 `CONFIRMED`, 결제를 `PAID`로 바꿉니다.
 - 사용자가 취소하면 예매는 `CANCELED`, 결제는 `CANCELLED`로 바꾸고 좌석을 다시 풀어줍니다.
-- 5분 안에 결제를 완료하지 못하면 스케줄러와 만료 정리 로직이 예매를 `EXPIRED`, 결제를 `EXPIRED`로 바꾸고 좌석 점유를 해제합니다.
-- 결제 내역 확인용으로 `GET /api/payments/{paymentId}` API를 추가했습니다.
+- 5분 안에 결제를 완료하지 못하면 스케줄러와 만료 정리 로직이 예매를 `EXPIRED`, 결제를 `EXPIRED`로 바꾸고 좌석 점유를 해제함.
+- 결제 내역 확인용으로 `GET /api/payments/{paymentId}` API도 추가했음.
 
 ### 적용한 결제 흐름
 
 1. 클라이언트가 좌석 선택 후 예매 요청을 보냅니다.
-2. 서버는 `PENDING_PAYMENT` 예약과 `READY` 결제 로그를 만들고, 좌석을 5분 동안 선점합니다.
-3. 사용자가 결제를 완료하면 예약은 `CONFIRMED`, 결제는 `PAID`로 확정됩니다.
-4. 사용자가 취소하면 좌석을 해제하고 예약은 `CANCELED`, 결제는 `CANCELLED`로 변경합니다.
+2. 서버는 `PENDING_PAYMENT` 예약과 `READY` 결제 로그를 만들고, 좌석을 5분 동안 선점함.
+3. 사용자가 결제를 완료하면 예약은 `CONFIRMED`, 결제는 `PAID`로 확정됨.
+4. 사용자가 취소하면 좌석을 해제하고 예약은 `CANCELED`, 결제는 `CANCELLED`로 변경됨.
 5. 5분 안에 결제가 완료되지 않으면 예약은 `EXPIRED`, 결제는 `EXPIRED`가 되며 좌석이 다시 예매 가능 상태로 돌아갑니다.
 
 ### Feign Client / HTTP Client 비교
@@ -224,28 +285,28 @@ docker ps
 
 #### 2. RestClient / HTTP Interface
 
-- 장점: Spring Framework 기본 선택지라 현재 스택과 잘 맞고, 동기식 호출을 깔끔하게 작성할 수 있습니다.
-- 단점: Feign보다 선언형 추상화는 조금 덜할 수 있습니다.
+- 장점: Spring Framework 기본 선택지라 현재 스택과 잘 맞고, 동기식 호출을 깔끔하게 작성할 수 있음.
+- 단점: Feign보다 선언형 추상화는 조금 덜할 수 있음.
 - 적합한 경우: Spring Boot 3.x/4.x 기반에서 외부 REST API를 단순하고 공식적인 방식으로 붙이고 싶은 경우
 
 #### 3. 프로젝트에서 선택한 방식
 
-- 지금은 같은 애플리케이션 안에서 동작하는 과제용 결제 시스템이므로, 실제 HTTP 호출 대신 `PaymentService`를 직접 연동했습니다.
-- 이 방식은 테스트가 쉽고, 외부 서버 실행 없이 `좌석 선점`, `결제 완료`, `미결제 만료`, `취소` 흐름을 한 번에 검증할 수 있습니다.
-- 이후 결제 서버를 별도 서비스로 분리한다면, 현재 스택에서는 `RestClient` 또는 Spring HTTP Interface 방식이 더 적합합니다.
+- 지금은 같은 애플리케이션 안에서 동작하는 과제용 결제 시스템이라, 실제 HTTP 호출 대신 `PaymentService`를 직접 연동했음.
+- 이 방식은 테스트가 쉽고, 외부 서버 실행 없이 `좌석 선점`, `결제 완료`, `미결제 만료`, `취소` 흐름을 한 번에 검증할 수 있었음.
+- 이후 결제 서버를 별도 서비스로 분리한다면, 현재 스택에서는 `RestClient` 또는 Spring HTTP Interface 방식이 더 맞음.
 
 ### 한계와 다음 개선 방향
 
 - 현재 결제는 외부 PG를 실제 호출하는 구조가 아니라, 같은 DB 안에서 결제 로그를 관리하는 과제용 내부 결제 모듈입니다.
-- 외부 결제망과 연동하려면 timeout, retry, idempotency key, 보상 트랜잭션 같은 항목을 추가로 고려해야 합니다.
-- 만료 스케줄러는 1분 주기로 동작하므로, 실제 서비스처럼 정확한 타이머 이벤트를 쓰는 구조로 확장할 여지가 있습니다.
-- `StorePurchase`에도 취소 도메인이 생기면 같은 결제 모듈을 재사용해서 커머스 케이스로 확장할 수 있습니다.
+- 외부 결제망과 연동하려면 timeout, retry, idempotency key, 보상 트랜잭션 같은 항목을 추가로 고려해야 함.
+- 만료 스케줄러는 1분 주기로 동작해서, 실제 서비스처럼 더 정확한 타이머 이벤트 구조로 확장할 여지가 있음.
+- `StorePurchase`에도 취소 도메인이 생기면 같은 결제 모듈을 재사용해서 커머스 케이스로 확장할 수 있음.
 
 ### 검증
 
-- `ReservationPaymentFlowTest`에서 예매 생성 시 `PENDING_PAYMENT/READY`, 결제 완료 시 `CONFIRMED/PAID`, 만료 시 `EXPIRED/EXPIRED`, 취소 시 `CANCELED/CANCELLED`로 바뀌는 것을 확인했습니다.
-- `ReservationPaymentFlowTest`에서 만료된 좌석이 다시 예매 가능해지는 것도 검증했습니다.
-- `ReservationConcurrencyTest`에서도 같은 좌석 경쟁 상황에서 한 요청만 좌석 홀드에 성공하는 것을 확인했습니다.
+- `ReservationPaymentFlowTest`에서 예매 생성 시 `PENDING_PAYMENT/READY`, 결제 완료 시 `CONFIRMED/PAID`, 만료 시 `EXPIRED/EXPIRED`, 취소 시 `CANCELED/CANCELLED`로 바뀌는 걸 확인했음.
+- `ReservationPaymentFlowTest`에서 만료된 좌석이 다시 예매 가능해지는 것도 검증했음.
+- `ReservationConcurrencyTest`에서도 같은 좌석 경쟁 상황에서 한 요청만 좌석 홀드에 성공하는 걸 확인했음.
 
 <details>
 <summary><h2>CGV 클론 코딩 : 찜, 구매</h2></summary>
@@ -910,19 +971,19 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 ## CI/CD 정리
 
-`4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했습니다. workflow 파일은 `.github/workflows/cicd.yml`에 있으며, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있습니다.
+`4.pdf` 실습 흐름에 맞춰 GitHub Actions 기반 CI/CD 워크플로우를 추가했음. workflow 파일은 `.github/workflows/cicd.yml`에 있고, `main` 또는 `Oh-Jisong` 브랜치에 push 하거나 `workflow_dispatch`로 수동 실행할 수 있음.
 
-이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있도록, `EC2 내부에서 Spring Boot 컨테이너를 직접 빌드/실행`하는 구조로 정리했습니다. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했습니다.
+이번 자동 배포는 Docker Hub와 외부 RDS 없이도 과제를 진행할 수 있게, `EC2 내부에서 Spring Boot 컨테이너를 직접 빌드/실행`하는 구조로 정리했음. 수동 배포용 `docker-compose.yml`은 그대로 두고, CI/CD 전용으로 `docker-compose.cicd.yml`을 추가했음.
 
 ### 동작 흐름
 
-1. `actions/checkout`으로 코드를 가져옵니다.
-2. JDK 21과 Gradle cache를 설정합니다.
-3. `./gradlew clean test bootJar`로 테스트와 jar 빌드를 수행합니다.
-4. 배포에 필요한 `jar`, `Dockerfile`, `docker-compose.cicd.yml`을 artifact로 묶습니다.
-5. EC2로 배포 파일을 복사합니다.
-6. EC2에서 `.env`를 생성하고 `docker compose -f docker-compose.cicd.yml up --build -d`를 실행합니다.
-7. 마지막으로 `http://localhost:<APP_PORT>/actuator/health`를 호출해 헬스체크를 확인합니다.
+1. `actions/checkout`으로 코드를 가져옴.
+2. JDK 21과 Gradle cache를 설정함.
+3. `./gradlew clean test bootJar`로 테스트와 jar 빌드를 수행함.
+4. 배포에 필요한 `jar`, `Dockerfile`, `docker-compose.cicd.yml`을 artifact로 묶음.
+5. EC2로 배포 파일을 복사함.
+6. EC2에서 `.env`를 생성하고 `docker compose -f docker-compose.cicd.yml up --build -d`를 실행함.
+7. 마지막으로 `http://localhost:<APP_PORT>/actuator/health`를 호출해 헬스체크를 확인함.
 
 ### GitHub Actions Secrets
 
@@ -947,7 +1008,7 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 ### 헬스체크
 
-배포 후 검증을 위해 Spring Boot Actuator를 추가했고, 아래 endpoint를 공개했습니다.
+배포 후 검증용으로 Spring Boot Actuator를 추가했고, 아래 endpoint를 열어뒀음.
 
 - `GET /actuator/health`
 - `GET /actuator/info`
@@ -956,4 +1017,7 @@ String newRefreshToken = tokenProvider.createRefreshToken(user.getId());
 
 - `app`: Spring Boot 애플리케이션 컨테이너
 
-CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, 자동 배포 환경에서는 가벼운 H2 데이터베이스 설정으로 앱을 띄우도록 구성했습니다.
+CI/CD 전용 compose 파일인 `docker-compose.cicd.yml`은 GitHub Actions가 만든 jar를 기준으로 EC2에서 이미지를 다시 build하고, 자동 배포 환경에서는 가벼운 H2 데이터베이스 설정으로 앱을 띄우도록 구성했음.
+
+</details>
+
