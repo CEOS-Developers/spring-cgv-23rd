@@ -1,4 +1,9 @@
 spring:
+  application:
+    name: spring-cgv
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   config:
     import: optional:file:.env[.properties]
 
@@ -7,6 +12,8 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: cgv-hikari-pool
 
   data:
     redis:
@@ -23,3 +30,16 @@ jwt:
   access-token-expiration: ${JWT_ACCESSTOKEN_EXPIRATION}
   refresh-token-expiration: ${JWT_REFRESHTOKEN_EXPIRATION}
   cookie-secure: ${JWT_COOKIE_SECURE}
+
+management:
+  metrics:
+    tags:
+      application: cgv-spring
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,metrics
+        exclude: env, heapdump, threaddump, configprops, quartz
+  endpoint:
+    health:
+      show-details: never
