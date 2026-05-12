@@ -9,7 +9,7 @@ permissions:
 
 env:
   IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-  IMAGE_TAG: latest
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-and-push:
@@ -61,7 +61,11 @@ jobs:
             cd /home/ubuntu
 
             echo "${{ secrets.ENV_VARS }}" > app.env
+            
+            echo "IMAGE_NAME=${{ vars.DOCKER_IMAGE_NAME }}" > .env
+            echo "IMAGE_TAG=${{ github.sha }}" >> .env
 
             sudo docker compose pull
             sudo docker compose up -d
             sudo docker compose ps
+            sudo docker image prune -f

@@ -7,6 +7,8 @@ public enum ErrorCode {
 
     // 공통
     INTERNAL_ERROR(500, "INTERNAL_ERROR", "서버 에러입니다"),
+    DATABASE_ERROR(500, "DATABASE_ERROR", "데이터베이스 처리 중 오류가 발생했습니다"),
+    LOCK_ACQUISITION_FAILED(409, "LOCK_ACQUISITION_FAILED", "락 획득에 실패했습니다"),
 
     // 잘못된 요청
     BAD_REQUEST(400, "BAD_REQUEST", "잘못된 요청입니다"),
@@ -28,8 +30,6 @@ public enum ErrorCode {
     ITEM_NOT_FOUND(404, "ITEM_NOT_FOUND", "상품을 찾을 수 없습니다"),
     ITEM_STOCK_NOT_FOUND(404, "ITEM_STOCK_NOT_FOUND", "해당 영화관의 상품 재고를 찾을 수 없습니다"),
     ITEM_ORDER_NOT_FOUND(404, "ITEM_ORDER_NOT_FOUND", "주문 정보를 찾을 수 없습니다"),
-    ITEM_ORDER_LOCK_FAILED(409, "ITEM_ORDER_LOCK_FAILED", "주문 처리 중 재고 락 획득에 실패했습니다"),
-    ITEM_ORDER_DB_ERROR(500, "ITEM_ORDER_DB_ERROR", "주문 저장 중 데이터베이스 오류가 발생했습니다"),
     ITEM_ORDER_NOT_PAID(400, "ITEM_ORDER_NOT_PAID", "결제 완료된 주문만 취소할 수 있습니다"),
     INVALID_ORDER_REQUEST(400, "INVALID_ORDER_REQUEST", "주문 요청이 올바르지 않습니다"),
     INVALID_ORDER_ITEM(400, "INVALID_ORDER_ITEM", "주문 상품 정보가 올바르지 않습니다"),

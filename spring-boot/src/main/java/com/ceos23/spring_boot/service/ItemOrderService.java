@@ -21,7 +21,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ItemOrderService {
 
     private static final DateTimeFormatter PAYMENT_ID_FORMATTER =
@@ -69,6 +68,7 @@ public class ItemOrderService {
         throw e;
     }
 
+    @Transactional(readOnly = true)
     public ItemOrderResponse getOrder(Long orderId) {
         validateId(orderId);
 
@@ -78,6 +78,7 @@ public class ItemOrderService {
         return ItemOrderResponse.from(itemOrder);
     }
 
+    @Transactional(readOnly = true)
     public List<ItemOrderResponse> getOrdersByUser(Long userId) {
         validateId(userId);
         validateUserExists(userId);

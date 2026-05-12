@@ -14,4 +14,5 @@ public class PaymentProperties {
     private String baseUrl;
     private String githubId;
     private String storeId;
+    private String apiSecretKey;
 }

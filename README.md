@@ -344,3 +344,43 @@ github actions으로 자동 배포 적용
 * 펨키 안 보이면 명령어로 `cat ~/.ssh/ceos-cgv-key.pem`하고 `-----BEGIN ... PRIVATE KEY-----` 줄도 다 포함해서 전체 다 복사해야함
 
 </details>
+
+<details>
+    <summary>6주차 부하테스트</summary>
+
+### 1. CGV 서비스 아키텍처 구조도 그려보기
+
+구조도에서 병목 지점 예상
+<img src="/images/9-1_bottleneck.png" alt="구조도">
+
+### 2. 부하테스트 결과 분석하기
+
+k6 실행
+테스트 API: GET /api/movies
+<img src="/images/9-2_k6.png" alt="1차 테스트">
+* 최대 VU: 200
+* 총 요청 수: 13,620건
+* 처리량: 75.4 req/s
+* 평균 응답시간: 147.02ms
+* p95 응답시간: 156.78ms
+* 최대 응답시간: 909.71ms
+* CPU: 0.13%
+* Memory: 310.1MiB / 908.7MiB
+* Memory %: 34.13%
+* PIDS: 50
+* NET I/O: 16.2MB / 28MB
+
+K6 대시보드
+<img src="/images/9-3_k6dashboard.png" alt="대시보드">
+<img src="/images/9-4_k6dashboard.png" alt="대시보드">
+<img src="/images/9-5_k6dashboard.png" alt="대시보드">
+* Iteration Rate: 36/s
+* HTTP Request Rate: 30.5/s
+* HTTP Request Duration: 149ms
+* HTTP Request Failed: 0.0%
+* Received Rate: 14.5 kB/s
+* Sent Rate: 10.6 kB/s
+
+### 느낀점
+* k6실행할 때 EC2의 .env안에 JWT_SECRET값이 없었어서 애를 먹었다
+</details>

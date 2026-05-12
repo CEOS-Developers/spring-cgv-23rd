@@ -6,6 +6,7 @@ import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
 import com.ceos23.spring_boot.infra.payment.dto.PaymentInstantRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +58,10 @@ public class PaymentGatewayImpl implements PaymentGateway {
     }
 
     private String getApiSecretKey() {
+        if (StringUtils.hasText(paymentProperties.getApiSecretKey())) {
+            return paymentProperties.getApiSecretKey();
+        }
+
         if (cachedApiSecretKey == null) {
             synchronized (this) {
                 if (cachedApiSecretKey == null) {
