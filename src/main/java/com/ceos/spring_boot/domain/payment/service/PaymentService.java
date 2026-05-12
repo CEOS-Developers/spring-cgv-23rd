@@ -126,6 +126,17 @@ public class PaymentService {
         } catch (Exception e) {
             log.error("[CRITICAL] 결제 취소 API는 성공했으나 DB 반영에 실패했습니다. 결제 ID: {}, 원인: {}",
                     paymentId, e.getMessage(), e);
+            try {
+                transactionTemplate.executeWithoutResult(fallbackStatus -> {
+                    Payment p = paymentRepository.findByPaymentId(paymentId).orElse(null);
+                    if (p != null) {
+                        p.markAsCancelFailed(); // CANCEL_FAILED 상태로 기록
+                    }
+                });
+            } catch (Exception ex) {
+                log.error("[FATAL] 결제 취소 실패 상태 기록조차 실패했습니다. 수동 복구가 시급합니다. 결제 ID: {}", paymentId, ex);
+            }
+
             throw new BusinessException(ErrorCode.PAYMENT_ROLLBACK_FAILED);
         }
 

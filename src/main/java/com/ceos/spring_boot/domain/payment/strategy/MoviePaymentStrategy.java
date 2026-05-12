@@ -1,5 +1,6 @@
 package com.ceos.spring_boot.domain.payment.strategy;
 
+import com.ceos.spring_boot.domain.payment.client.PaymentClient;
 import com.ceos.spring_boot.domain.payment.entity.PaymentCategory;
 import com.ceos.spring_boot.domain.reservation.service.ReservationService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 public class MoviePaymentStrategy implements PaymentStrategy {
 
     private final ReservationService reservationService;
+    private final PaymentClient paymentClient;
 
     @Override
     public boolean supports(PaymentCategory category) {
@@ -23,6 +25,10 @@ public class MoviePaymentStrategy implements PaymentStrategy {
 
     @Override
     public void compensate(Long targetId, String paymentId, boolean isPaymentProcessed) {
+        if (isPaymentProcessed) {
+            paymentClient.cancelPayment(paymentId);
+        }
+
         // 결제 중 에러 나면 좌석 선점 해제
         reservationService.rollbackPreOccupiedReservation(targetId);
     }
