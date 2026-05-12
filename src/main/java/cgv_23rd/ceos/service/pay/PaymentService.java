@@ -19,6 +19,7 @@ public class PaymentService {
     private final PaymentFeignClient paymentFeignClient; // RestTemplate 대신 FeignClient 주입
 
     public PaymentResponse requestInstantPayment(String paymentId, String orderName, int amount, String customData) {
+        long startedAt = System.currentTimeMillis();
         InstantPaymentRequest request = new InstantPaymentRequest(
                 paymentProperties.storeId(),
                 orderName,
@@ -27,23 +28,30 @@ public class PaymentService {
                 customData
         );
 
+        log.info("Payment instant request started. paymentId={}, amount={}, orderName={}",
+                paymentId, amount, orderName);
+
         try {
             // Feign 인터페이스 호출
             PaymentResponse response = paymentFeignClient.requestInstantPayment(paymentId, request);
             if (response == null || response.data() == null) {
-                log.warn("Payment instant request returned empty success body. paymentId={}", paymentId);
+                log.warn("Payment instant request returned empty success body. paymentId={}, durationMs={}",
+                        paymentId, System.currentTimeMillis() - startedAt);
                 return getPayment(paymentId);
             }
+            log.info("Payment instant request completed. paymentId={}, paymentStatus={}, durationMs={}",
+                    paymentId, response.data().paymentStatus(), System.currentTimeMillis() - startedAt);
             return response;
         } catch (FeignException e) {
-            log.warn("Payment instant request failed. status={}, body={}", e.status(), safeBody(e));
+            log.warn("Payment instant request failed. paymentId={}, status={}, durationMs={}, body={}",
+                    paymentId, e.status(), System.currentTimeMillis() - startedAt, safeBody(e));
             if (isEmptySuccessResponse(e)) {
                 return getPayment(paymentId);
             }
             throw translateInstantPaymentException(e);
         } catch (Exception e) { // ResourceAccessException 대신 일반 Exception 처리
-            log.warn("Payment instant request unexpected error. type={}, message={}",
-                    e.getClass().getName(), e.getMessage());
+            log.error("Payment instant request unexpected error. paymentId={}, durationMs={}, type={}, message={}",
+                    paymentId, System.currentTimeMillis() - startedAt, e.getClass().getName(), e.getMessage(), e);
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }
@@ -62,14 +70,21 @@ public class PaymentService {
     }
 
     public PaymentResponse getPayment(String paymentId) {
+        long startedAt = System.currentTimeMillis();
         try {
-            return paymentFeignClient.getPayment(paymentId);
+            PaymentResponse response = paymentFeignClient.getPayment(paymentId);
+            log.info("Payment get request completed. paymentId={}, paymentStatus={}, durationMs={}",
+                    paymentId,
+                    response != null && response.data() != null ? response.data().paymentStatus() : "null",
+                    System.currentTimeMillis() - startedAt);
+            return response;
         } catch (FeignException e) {
-            log.warn("Payment get request failed. status={}, body={}", e.status(), safeBody(e));
+            log.warn("Payment get request failed. paymentId={}, status={}, durationMs={}, body={}",
+                    paymentId, e.status(), System.currentTimeMillis() - startedAt, safeBody(e));
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 내역 조회에 실패했습니다. status=" + e.status());
         } catch (Exception e) {
-            log.warn("Payment get request unexpected error. type={}, message={}",
-                    e.getClass().getName(), e.getMessage());
+            log.error("Payment get request unexpected error. paymentId={}, durationMs={}, type={}, message={}",
+                    paymentId, System.currentTimeMillis() - startedAt, e.getClass().getName(), e.getMessage(), e);
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }

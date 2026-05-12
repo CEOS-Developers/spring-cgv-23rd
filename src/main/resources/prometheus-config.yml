@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s # 15초에 한 번씩 매트릭 수집
+
+scrape_configs:
+  - job_name: 'server_metric'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: [ 'app:8080' ]  # 같은 compose 네트워크에서 Spring 앱 메트릭 수집
+        labels:
+          instance: 'ceos-app'
+
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: [ 'node-exporter:9100' ]
+        labels:
+          instance: 'server-host'

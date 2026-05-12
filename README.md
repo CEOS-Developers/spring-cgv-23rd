@@ -2131,3 +2131,538 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 
 
 </details>
+
+### 아키텍처 구조도
+<img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
+
+- 병목 가능성 높은 지점
+  External Payment API
+  DB/RDS
+  Spring thread pool / connection pool
+  JPA transaction/locking
+  
+아키텍처상 병목 가능성이 가장 높은 지점은 외부 Payment API 호출 구간과 MySQL(RDS) 접근 구간이며, 이 둘의 지연이 누적되면 Spring Boot의 요청 처리 스레드가 점유되어 전체 처리율 저하와 timeout 증가로 이어질 수 있다.
+
+### 모니터링
+alloy, loki, grafana, prometheus 도커 연결
+<img width="1341" height="156" alt="image" src="https://github.com/user-attachments/assets/ef1c3416-695b-46bd-802d-59ea22f282fa" />
+
+### loki 데이터 추가
+<img width="1196" height="349" alt="image" src="https://github.com/user-attachments/assets/2e7717b5-d801-44c0-8ace-3405f334864f" />
+<img width="1158" height="308" alt="image" src="https://github.com/user-attachments/assets/d7274820-7a23-43d8-bfb9-54c89356498e" />
+
+### 로그 확인
+<img width="1417" height="662" alt="image" src="https://github.com/user-attachments/assets/8ab2d6fd-757d-47c6-abec-4b8c7c786e20" />
+<img width="1359" height="487" alt="image" src="https://github.com/user-attachments/assets/8534dfb8-bf89-4eb4-85bd-411883c3301d" />
+<img width="1434" height="645" alt="image" src="https://github.com/user-attachments/assets/1c75a599-a30b-43ea-a418-83d7e064c1dc" />
+
+### k6 부하테스트
+
+- 외부 페이먼트 서버에 부하테스트 (결제 요청)
+```
+  █ TOTAL RESULTS 
+
+    checks_total.......: 3589   13.286044/s
+    checks_succeeded...: 79.13% 2840 out of 3589
+    checks_failed......: 20.86% 749 out of 3589
+
+    ✓ auth status is 200
+    ✗ payment status is 200
+      ↳  66% — ✓ 1433 / ✗ 724
+    ✗ lookup status is 200
+      ↳  98% — ✓ 1406 / ✗ 25
+
+    HTTP
+    http_req_duration..............: avg=6.9s     min=11.17ms med=24.82ms max=59.99s p(90)=30.03s   p(95)=58.05s  
+      { expected_response:true }...: avg=655.29ms min=11.17ms med=22.03ms max=59.87s p(90)=101.05ms p(95)=171.27ms
+    http_req_failed................: 20.86% 749 out of 3589
+    http_reqs......................: 3589   13.286044/s
+
+    EXECUTION
+    iteration_duration.............: avg=12.98s   min=1.01s   med=2.06s   max=2m0s   p(90)=36.95s   p(95)=1m0s    
+    iterations.....................: 2139   7.918319/s
+    vus............................: 22     min=1           max=199
+    vus_max........................: 200    min=200         max=200
+
+    NETWORK
+    data_received..................: 2.7 MB 10 kB/s
+    data_sent......................: 1.0 MB 3.8 kB/s
+```
+<img width="2848" height="2032" alt="image" src="https://github.com/user-attachments/assets/9e15aff8-29d2-4395-80b0-e38553a987c3" />
+VU를 200까지 증가시키는 동안 초반 처리율은 약 39 req/s까지 상승했지만, 이후 결제 요청(payment_instant)에서 실패가 급증하며 처리율이 오히려 감소했다. 
+실패율은 후반부에 60% 이상까지 증가했고, 성공 응답 기준 p95도 지속적으로 상승
+
+- 병목 찾기
+```
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+const BASE_URL = __ENV.BASE_URL || 'https://ceos.diggindie.com';
+const USER_EMAIL = __ENV.USER_EMAIL || 'string';
+const USER_PASSWORD = __ENV.USER_PASSWORD || 'string';
+const THEATER_ID = Number(__ENV.THEATER_ID || 1);
+const FOOD_ID = Number(__ENV.FOOD_ID || 1);
+const QUANTITY = Number(__ENV.QUANTITY || 1);
+const MODE = __ENV.MODE || 'full_payment';
+
+function buildOptions() {
+  if (MODE === 'db_only') {
+    return {
+      stages: [
+        { duration: '2m', target: 10 },
+        { duration: '2m', target: 30 },
+      ],
+      thresholds: {
+        'http_req_failed{name:create_food_order}': ['rate<0.05'],
+        'http_req_duration{name:create_food_order}': ['p(95)<1000'],
+        'http_req_duration{name:get_food_orders}': ['p(95)<700'],
+      },
+    };
+  }
+
+  return {
+    stages: [
+      { duration: '2m', target: 100 },
+      { duration: '2m', target: 200 },
+    ],
+    thresholds: {
+      'http_req_failed{name:create_food_order}': ['rate<0.05'],
+      'http_req_failed{name:process_food_payment}': ['rate<0.10'],
+      'http_req_duration{name:process_food_payment}': ['p(95)<3000'],
+    },
+  };
+}
+
+export const options = buildOptions();
+
+export function setup() {
+  const loginPayload = JSON.stringify({
+    email: USER_EMAIL,
+    password: USER_PASSWORD,
+  });
+
+  const loginRes = http.post(`${BASE_URL}/api/auth/login`, loginPayload, {
+    headers: { 'Content-Type': 'application/json' },
+    tags: { name: 'login' },
+  });
+
+  check(loginRes, {
+    'login status is 200': (r) => r.status === 200,
+    'login has access token': (r) => !!r.json('result.accessToken'),
+  });
+
+  const accessToken = loginRes.json('result.accessToken');
+
+  if (!accessToken) {
+    throw new Error(`로그인 실패: status=${loginRes.status}, body=${loginRes.body}`);
+  }
+
+  return { accessToken };
+}
+
+function authHeaders(token) {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  };
+}
+
+function createFoodOrder(token) {
+  const payload = JSON.stringify({
+    theaterId: THEATER_ID,
+    items: [
+      {
+        foodId: FOOD_ID,
+        quantity: QUANTITY,
+      },
+    ],
+  });
+
+  const res = http.post(`${BASE_URL}/api/foods/orders/`, payload, {
+    headers: authHeaders(token),
+    tags: { name: 'create_food_order' },
+  });
+
+  check(res, {
+    'create food order status is 200': (r) => r.status === 200,
+    'create food order has order id': (r) => !!r.json('result'),
+  });
+
+  return res;
+}
+
+function getFoodOrders(token) {
+  return http.get(`${BASE_URL}/api/foods/orders/`, {
+    headers: authHeaders(token),
+    tags: { name: 'get_food_orders' },
+  });
+}
+
+function processFoodPayment(token, orderId) {
+  return http.post(`${BASE_URL}/api/foods/orders/${orderId}/payments`, null, {
+    headers: authHeaders(token),
+    tags: { name: 'process_food_payment' },
+  });
+}
+
+export default function (data) {
+  const token = data.accessToken;
+
+  if (MODE === 'db_only') {
+    const createRes = createFoodOrder(token);
+    const listRes = getFoodOrders(token);
+
+    check(listRes, {
+      'get food orders status is 200': (r) => r.status === 200,
+    });
+
+    if (createRes.status !== 200) {
+      return;
+    }
+
+    sleep(1);
+    return;
+  }
+
+  const createRes = createFoodOrder(token);
+  if (createRes.status !== 200) {
+    sleep(1);
+    return;
+  }
+
+  const orderId = createRes.json('result');
+  const paymentRes = processFoodPayment(token, orderId);
+
+  check(paymentRes, {
+    'process food payment status is 200': (r) => r.status === 200,
+  });
+
+  sleep(1);
+}
+```
+
+```
+shinae@shinaeui-MacBookAir shinae1023 % BASE_URL=http://13.125.8.199:8080 \
+USER_EMAIL=string \
+USER_PASSWORD=string \
+THEATER_ID=1 \
+FOOD_ID=1 \
+MODE=db_only \
+K6_PROMETHEUS_RW_SERVER_URL=http://13.125.8.199:9090/api/v1/write \
+K6_PROMETHEUS_RW_TREND_STATS=p(95),p(99),min,max \
+k6 run -o experimental-prometheus-rw k6-app-bottleneck.js
+
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6-app-bottleneck.js
+        output: Prometheus remote write (http://13.125.8.199:9090/api/v1/write)
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 4m30s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 4m0s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{name:create_food_order}
+    ✗ 'p(95)<1000' p(95)=5.62s
+
+    http_req_duration{name:get_food_orders}
+    ✗ 'p(95)<700' p(95)=8.9s
+
+    http_req_failed{name:create_food_order}
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 2228    8.987865/s
+    checks_succeeded...: 100.00% 2228 out of 2228
+    checks_failed......: 0.00%   0 out of 2228
+
+    ✓ login status is 200
+    ✓ login has access token
+    ✓ create food order status is 200
+    ✓ create food order has order id
+    ✓ get food orders status is 200
+
+    HTTP
+    http_req_duration..............: avg=1.5s  min=28.13ms med=136.58ms max=59.69s p(90)=2.24s p(95)=6.56s 
+      { expected_response:true }...: avg=1.5s  min=28.13ms med=136.58ms max=59.69s p(90)=2.24s p(95)=6.56s 
+      { name:create_food_order }...: avg=1.54s min=28.13ms med=61.12ms  max=59.69s p(90)=2.01s p(95)=5.62s 
+      { name:get_food_orders }.....: avg=1.45s min=85.37ms med=197.31ms max=59.39s p(90)=2.62s p(95)=8.9s  
+    http_req_failed................: 0.00%  0 out of 1485
+      { name:create_food_order }...: 0.00%  0 out of 742
+    http_reqs......................: 1485   5.990565/s
+
+    EXECUTION
+    iteration_duration.............: avg=3.99s min=1.11s   med=1.27s    max=1m6s   p(90)=7.89s p(95)=15.88s
+    iterations.....................: 742    2.993266/s
+    vus............................: 21     min=0         max=29
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 306 MB 1.2 MB/s
+    data_sent......................: 488 kB 2.0 kB/s
+
+
+
+
+running (4m07.9s), 00/30 VUs, 742 complete and 0 interrupted iterations
+default ✓ [======================================] 00/30 VUs  4m0s
+ERRO[0248] thresholds on metrics 'http_req_duration{name:create_food_order}, http_req_duration{name:get_food_orders}' have been crossed 
+```
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/133b8141-80e0-4ace-8c8d-b728ec47933b" />
+
+DB 중심 부하테스트 결과, 주문 생성 API는 p95 529ms로 기준을 충족했지만 주문 조회 API는 p95 1.27초로 목표를 초과했다. 실패율은 0%였으므로 현재 문제는 기능 장애가 아니라 조회 경로의 성능 저하이며, 병목은 Spring-JPA-MySQL 구간, 특히 주문 조회 로직에 있을 가능성이 높다.
+외부 결제 이전에 get_food_orders가 느린 가장 큰 이유는, 생성된 주문이 누적되는 상황에서 전체 주문+아이템을 매번 한 번에 다 조회하도록 짜여 있기 때문
+-> 페이지네이션 도입
+### 변경 내용:
+- FoodOrderController GET /api/foods/orders/에 page, size 쿼리 파라미터 추가
+
+- FoodOrderQueryService.java 전체 조회 대신 ID 페이지 조회 -> 상세 fetch 2단계로 변경
+
+- FoodOrderRepository.java findPageIdsByUserId()와 findAllByIdInWithDetails() 추가
+
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/d99b6057-493a-42c4-97f1-b83267b61db5" />
+
+```
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6-app-bottleneck.js
+        output: Prometheus remote write (http://13.125.8.199:9090/api/v1/write)
+
+     scenarios: (100.00%) 1 scenario, 30 max VUs, 4m30s max duration (incl. graceful stop):
+              * default: Up to 30 looping VUs for 4m0s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{name:create_food_order}
+    ✓ 'p(95)<1000' p(95)=92.98ms
+
+    http_req_duration{name:get_food_orders}
+    ✓ 'p(95)<700' p(95)=87ms
+
+    http_req_failed{name:create_food_order}
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 7997    32.51493/s
+    checks_succeeded...: 100.00% 7997 out of 7997
+    checks_failed......: 0.00%   0 out of 7997
+
+    ✓ login status is 200
+    ✓ login has access token
+    ✓ create food order status is 200
+    ✓ create food order has order id
+    ✓ get food orders status is 200
+
+    HTTP
+    http_req_duration..............: avg=55.39ms min=24.51ms med=39.35ms max=7.05s p(90)=63.36ms p(95)=90.22ms
+      { expected_response:true }...: avg=55.39ms min=24.51ms med=39.35ms max=7.05s p(90)=63.36ms p(95)=90.22ms
+      { name:create_food_order }...: avg=58.68ms min=24.51ms med=37.57ms max=7.04s p(90)=64.7ms  p(95)=92.98ms
+      { name:get_food_orders }.....: avg=50.31ms min=26.44ms med=40.98ms max=7.05s p(90)=62.09ms p(95)=87ms   
+    http_req_failed................: 0.00%  0 out of 5331
+      { name:create_food_order }...: 0.00%  0 out of 2665
+    http_reqs......................: 5331   21.675265/s
+
+    EXECUTION
+    iteration_duration.............: avg=1.11s   min=1.05s   med=1.08s   max=8.12s p(90)=1.12s   p(95)=1.18s  
+    iterations.....................: 2665   10.835599/s
+    vus............................: 27     min=0         max=29
+    vus_max........................: 30     min=30        max=30
+
+    NETWORK
+    data_received..................: 13 MB  54 kB/s
+    data_sent......................: 1.8 MB 7.3 kB/s
+
+
+
+
+running (4m05.9s), 00/30 VUs, 2665 complete and 0 interrupted iterations
+default ✓ [======================================] 00/30 VUs  4m0s
+```
+
+### 개선 결과 정리
+- 페이지네이션 적용 후 `get_food_orders`의 p95는 `1.27s -> 87ms`로 크게 개선되었다.
+- `create_food_order`의 p95도 `529ms -> 92.98ms`로 감소해 기준치 `1s` 이내를 안정적으로 만족했다.
+- 전체 p95는 약 `90ms`, 실패율은 `0%`로 유지되어 조회 경로의 성능 저하가 해소되었음을 확인했다.
+- `data_received`는 `1.0GB -> 13MB`로 줄어들어, 기존 병목의 핵심 원인이 전체 주문 내역을 한 번에 조회하던 구조였음을 확인했다.
+
+### 결론
+기존 `get_food_orders`는 주문이 누적될수록 전체 주문과 주문 아이템을 모두 조회해 응답 크기와 조회 비용이 함께 증가하는 구조였다.  
+페이지네이션 도입 이후 조회량이 제한되면서 DB/JPA 처리 부담이 줄었고, 주문 생성/조회 API 모두 30 VU 환경에서 안정적인 응답 속도를 보였다.
+
+### full_payment로 외부 서버 호출해서 확인
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/0dd323fc-3bd3-4fa7-8b35-058a29a31fe7" />
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/8f10bb56-d659-405a-94e2-1d8d8f9cfcdf" />
+
+```
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6-app-bottleneck.js
+        output: Prometheus remote write (http://13.125.8.199:9090/api/v1/write)
+
+     scenarios: (100.00%) 1 scenario, 200 max VUs, 4m30s max duration (incl. graceful stop):
+              * default: Up to 200 looping VUs for 4m0s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{name:process_food_payment}
+    ✓ 'p(95)<3000' p(95)=1.11s
+
+    http_req_failed{name:create_food_order}
+    ✓ 'rate<0.05' rate=0.00%
+
+    http_req_failed{name:process_food_payment}
+    ✗ 'rate<0.10' rate=90.81%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 32651  134.433061/s
+    checks_succeeded...: 69.73% 22768 out of 32651
+    checks_failed......: 30.26% 9883 out of 32651
+
+    ✓ login status is 200
+    ✓ login has access token
+    ✓ create food order status is 200
+    ✓ create food order has order id
+    ✗ process food payment status is 200
+      ↳  9% — ✓ 1000 / ✗ 9883
+
+    HTTP
+    http_req_duration.................: avg=605.14ms min=24.83ms med=176.66ms max=24.26s p(90)=768.35ms p(95)=1.16s
+      { expected_response:true }......: avg=659.28ms min=24.83ms med=118.84ms max=24.24s p(90)=710.27ms p(95)=1.16s
+      { name:process_food_payment }...: avg=504.64ms min=53.64ms med=209.23ms max=24.26s p(90)=781.08ms p(95)=1.11s
+    http_req_failed...................: 45.40% 9883 out of 21767
+      { name:create_food_order }......: 0.00%  0 out of 10883
+      { name:process_food_payment }...: 90.81% 9883 out of 10883
+    http_reqs.........................: 21767  89.620668/s
+
+    EXECUTION
+    iteration_duration................: avg=2.22s    min=1.08s   med=1.38s    max=26.51s p(90)=2.56s    p(95)=4.87s
+    iterations........................: 10883  44.808275/s
+    vus...............................: 106    min=1             max=199
+    vus_max...........................: 200    min=200           max=200
+
+    NETWORK
+    data_received.....................: 11 MB  47 kB/s
+    data_sent.........................: 7.5 MB 31 kB/s
+
+
+
+
+running (4m02.9s), 000/200 VUs, 10883 complete and 0 interrupted iterations
+default ✓ [======================================] 000/200 VUs  4m0s
+ERRO[0243] thresholds on metrics 'http_req_failed{name:process_food_payment}' have been crossed 
+```
+
+full_payment 부하테스트 결과, 주문 생성 API는 정상 동작했지만 결제 처리 API의 실패율은 90.81%까지 상승했다. 그러나 로그 분석 결과 외부 결제 API 호출은 대부분 20ms 내외로 빠르게 성공했으며, 실제 실패 원인은 결제 이후 재고 차감 단계에서 발생한 OUT_OF_STOCK 예외였다. 따라서 이번 테스트의 주된 문제는 외부 결제 성능이 아니라 재고 소진으로 인한 비즈니스 실패이다.
+ㅠㅠ -> 재고 100만개로 하고 다시 돌려보기
+
+<img width="2848" height="2640" alt="image" src="https://github.com/user-attachments/assets/54d0a1c5-6aaa-4a09-b1d7-b1b63498f45b" />
+```
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: k6-app-bottleneck.js
+        output: Prometheus remote write (http://13.125.8.199:9090/api/v1/write)
+
+     scenarios: (100.00%) 1 scenario, 200 max VUs, 4m30s max duration (incl. graceful stop):
+              * default: Up to 200 looping VUs for 4m0s over 2 stages (gracefulRampDown: 30s, gracefulStop: 30s)
+
+
+
+  █ THRESHOLDS 
+
+    http_req_duration{name:process_food_payment}
+    ✓ 'p(95)<3000' p(95)=1.08s
+
+    http_req_failed{name:create_food_order}
+    ✓ 'rate<0.05' rate=0.20%
+
+    http_req_failed{name:process_food_payment}
+    ✗ 'rate<0.10' rate=10.40%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 35135  143.706329/s
+    checks_succeeded...: 96.39% 33870 out of 35135
+    checks_failed......: 3.60%  1265 out of 35135
+
+    ✓ login status is 200
+    ✓ login has access token
+    ✗ create food order status is 200
+      ↳  99% — ✓ 11695 / ✗ 24
+    ✗ create food order has order id
+      ↳  99% — ✓ 11695 / ✗ 24
+    ✗ process food payment status is 200
+      ↳  89% — ✓ 10478 / ✗ 1217
+
+    HTTP
+    http_req_duration.................: avg=529.91ms min=23.73ms med=109.77ms max=44.89s p(90)=792.1ms  p(95)=1.03s
+      { expected_response:true }......: avg=409.17ms min=23.73ms med=108.77ms max=40.52s p(90)=784.93ms p(95)=1.02s
+      { name:process_food_payment }...: avg=516.46ms min=51.11ms med=135.65ms max=44.45s p(90)=824.44ms p(95)=1.08s
+    http_req_failed...................: 5.30%  1241 out of 23415
+      { name:create_food_order }......: 0.20%  24 out of 11719
+      { name:process_food_payment }...: 10.40% 1217 out of 11695
+    http_reqs.........................: 23415  95.770135/s
+
+    EXECUTION
+    iteration_duration................: avg=2.06s    min=1.07s   med=1.22s    max=46.05s p(90)=2.6s     p(95)=2.95s
+    iterations........................: 11719  47.932104/s
+    vus...............................: 63     min=0             max=199
+    vus_max...........................: 200    min=200           max=200
+
+    NETWORK
+    data_received.....................: 12 MB  51 kB/s
+    data_sent.........................: 8.1 MB 33 kB/s
+
+
+
+
+running (4m04.5s), 000/200 VUs, 11719 complete and 0 interrupted iterations
+default ✓ [======================================] 000/200 VUs  4m0s
+```
+process_food_payment p95 = 1.08s
+process_food_payment 실패율 = 10.40%
+create_food_order 실패율 = 0.20%
+전체 요청 처리량 95.77 req/s
+전체 반복 처리량 47.93 iter/s
+로그에 보이는 실패는 대부분 Payment instant request failed ... status=500 code=PAYMENT_FAILED
+주문 생성은 거의 다 성공 -> 결제 요청까지도 정상 진입 -> 외부 결제 instant API에서 일부 500
+-> 그 결과 FoodPaymentFacade가 PAYMENT_FAILED로 종료
+따라서 현재 병목은 내부 DB 조회보다는 외부 결제 연동 안정성에 더 가까움

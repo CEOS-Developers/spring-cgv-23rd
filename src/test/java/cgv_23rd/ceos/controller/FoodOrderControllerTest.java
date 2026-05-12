@@ -89,7 +89,7 @@ class FoodOrderControllerTest extends ControllerTestSupport {
     @Test
     @DisplayName("매점 주문 내역 조회 성공")
     void getFoodOrderListSuccess() throws Exception {
-        given(foodOrderQueryService.getFoodOrderList(1L)).willReturn(List.of(
+        given(foodOrderQueryService.getFoodOrderList(1L, 0, 20)).willReturn(List.of(
                 FoodOrderResponseDto.builder()
                         .orderId(1L)
                         .theaterName("CGV 강남")

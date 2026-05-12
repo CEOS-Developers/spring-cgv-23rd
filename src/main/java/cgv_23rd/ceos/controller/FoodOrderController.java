@@ -12,11 +12,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/foods/orders")
@@ -44,6 +46,7 @@ public class FoodOrderController {
             @PathVariable Long orderId) {
 
         Long userId = userDetails.getUser().getId();
+        log.info("Food payment API requested. userId={}, orderId={}", userId, orderId);
         PaymentResultDto result = foodPaymentFacade.processPayment(userId, orderId);
         return ApiResponse.onSuccess("음식 주문 결제 성공", result);
     }
@@ -62,9 +65,11 @@ public class FoodOrderController {
     @GetMapping("/")
     @Operation(summary = "내 매점 주문 내역 조회 API", description = "특정 사용자의 전체 음식 주문 내역을 조회합니다.")
     public ApiResponse<List<FoodOrderResponseDto>> getFoodOrderList(
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         Long userId = userDetails.getUser().getId();
-        return ApiResponse.onSuccess("주문 내역 조회 성공", foodOrderQueryService.getFoodOrderList(userId));
+        return ApiResponse.onSuccess("주문 내역 조회 성공", foodOrderQueryService.getFoodOrderList(userId, page, size));
     }
 
 }

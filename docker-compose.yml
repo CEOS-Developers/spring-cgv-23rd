@@ -7,6 +7,103 @@ services:
     container_name: ceos-app
     env_file:
       - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
     ports:
       - "8080:8080"
+    volumes:
+      - app-logs:/app/logs
     restart: unless-stopped
+    networks:
+      - loki-network
+
+  # Loki - 로그 저장소
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./src/main/resources/loki-config.yml:/etc/loki/local-config.yaml #설정 파일을 컨테이너 내부로 주입
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - loki-network
+
+  # Grafana Alloy - 로그 및 메트릭 수집 (Promtail 대체)
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./alloy-config.alloy:/etc/alloy/config.alloy # alloy 설정 파일 매핑
+      - app-logs:/var/log/spring-boot               # Spring 로그 파일 경로
+      - /var/run/docker.sock:/var/run/docker.sock # 도커 소켓
+      - ./alloy-data:/tmp
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    networks:
+      - loki-network
+
+  # Grafana - 시각화 대시보드
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin #변경 가능합니당
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=Asia/Seoul
+    volumes:
+      - grafana-data:/var/lib/grafana #초기화되지 않게 저장
+    depends_on:
+      - loki
+    networks:
+      - loki-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./src/main/resources/prometheus-config.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-remote-write-receiver'
+    networks:
+      - loki-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports:
+      - "9100:9100"
+    networks:
+      - loki-network
+
+networks:
+  loki-network: #서비스 이름만으로 서로 통신 가능
+    driver: bridge
+
+volumes:
+  app-logs:
+  loki-data:
+  grafana-data:
