@@ -40,9 +40,9 @@ public class SecurityConfig {
                                 "/api/menus",
                                 "/api/theater",
                                 "/api/movie",
-                                "/api/screen"
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.POST
+                                "/api/screen",
+                                "/health/**",
+                                "/api/login"
                         ).permitAll()
                         .requestMatchers(
                                 "/",

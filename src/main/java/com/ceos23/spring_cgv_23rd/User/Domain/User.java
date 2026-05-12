@@ -6,6 +6,7 @@ import lombok.*;
 
 @Entity
 @Getter
+@Table(name = "users")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
     private User(String loginId, String username, String password, boolean men, int age, ROLE role){

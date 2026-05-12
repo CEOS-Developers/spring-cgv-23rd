@@ -38,6 +38,12 @@ public class LoginService {
     public UserWrapperDTO login(LoginRequestDTO req,
                                 HttpServletResponse res){
 
+
+        String DB = userRepository.findByLoginId(req.loginId()).get().getPassword();
+        System.out.println("RAW: " + req.password());
+        System.out.println("DB: " + DB);
+        System.out.println("Match >>> " + encoder.matches(req.password(), DB));
+
         User user = userRepository.findByLoginId(req.loginId()).orElseThrow(
                 () -> new CustomException(ErrorCode.ID_NOT_FOUND)
         );

@@ -1,0 +1,25 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPattern": "/payments/(.*)/cancel"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "code": 200,
+      "message": "결제 취소 완료",
+      "data": {
+        "paymentId": "20251022_0001",
+        "paymentStatus": "CANCELLED",
+        "orderName": "노트북 구매",
+        "pgProvider": "string",
+        "currency": "KRW",
+        "customData": "{\"item\":\"노트북\",\"quantity\":1}",
+        "paidAt": "2026-02-07T02:07:00"
+      }
+    }
+  }
+}

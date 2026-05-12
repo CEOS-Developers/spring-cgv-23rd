@@ -2,6 +2,9 @@ package com.ceos23.spring_cgv_23rd.Payment.Service.PaymentDBService;
 
 import com.ceos23.spring_cgv_23rd.FoodOrder.Domain.Cart;
 import com.ceos23.spring_cgv_23rd.FoodOrder.Repository.CartRepository;
+import com.ceos23.spring_cgv_23rd.Payment.Domain.Payment;
+import com.ceos23.spring_cgv_23rd.Payment.Repository.PaymentRepository;
+import com.ceos23.spring_cgv_23rd.Payment.Service.PaymentFacadeService.PaymentIdHandler;
 import com.ceos23.spring_cgv_23rd.Reservation.Domain.ReservationStatus;
 import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
@@ -30,5 +33,10 @@ public class DefaultPaymentDBService {
         return cartRepository.findByUserAndStatus(user, ReservationStatus.RESERVED).orElseThrow(
                 () -> new CustomException(ErrorCode.EMPTY_CART)
         );
+    }
+
+    @Transactional
+    public void changePaymentId(String paymentId){
+
     }
 }

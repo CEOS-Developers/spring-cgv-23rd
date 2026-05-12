@@ -1,0 +1,50 @@
+# docker-compose.yml
+
+networks:
+  monitoring_network: # 모니터링 전용 네트워크
+    driver: bridge
+
+services:
+  #Loki(로그 저장소) -log engine역할
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    command: --config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml # 설정 파일 마운트
+      - ./loki/data:/loki # 로그 데이터 저장
+    networks:
+      - monitoring_network
+
+    #Prometheus(메트릭 저장소)
+    prometheus:
+      image: prom/prometheus:latest
+      restart: unless-stopped
+      ports:
+        - "9090:9090"
+      conmmand: --config.file=/etc/prometheus/prometheus.yml
+      volumes:
+        - ./prometheus/prometheus-config.yml:/etc/prometheus/prometheus-config.yml #설정 파일 마운드
+        - ./prometheus/data:/prometheus #메트릭 데이터 저장
+      networks:
+        - monitoring_network
+
+    #Grafana(시각화 대시보드)
+    grafana:
+      image: grafana/grafana:latest
+      ports:
+        - "3000:3000"
+      volumes:
+        - ./grafana:/var/lib/grafana
+      networks:
+        - loki
+        - prometheus
+      restarts: always
+      environment:
+        - GF_SECURITY_ADMIN_USER=admin
+        - GF_SECURITY_ADMIN_PASSWORD=admin
+        - GF_USERS_ALLOW_SIGN_UP=false
+      restart: unless-stopped
+      networks:
+        - monitoring_network

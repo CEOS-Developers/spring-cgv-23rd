@@ -2,6 +2,8 @@ server:
   address: 0.0.0.0
 
 spring:
+  profiles:
+    active: k6
 
   datasource:
     url: ${DB_URL}
@@ -11,7 +13,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update #테스트 이후 수정
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -38,5 +40,6 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 concurrency:
+  endpoint: "https://ceos.diggindie.com"
   storeId: ${CONCURRENCY_ID}
-  secret-key: ${CONCURRENCY_SECRET_KEY}`
+  secret-key: ${CONCURRENCY_SECRET_KEY}

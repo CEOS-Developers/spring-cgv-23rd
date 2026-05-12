@@ -28,10 +28,14 @@ import com.ceos23.spring_cgv_23rd.User.DTO.LoginRequestDTO;
 import com.ceos23.spring_cgv_23rd.User.DTO.SignupRequestDTO;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import com.ceos23.spring_cgv_23rd.global.DTO.ErrDTO;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.hamcrest.Matchers.*;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -47,13 +51,19 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@WireMockTest
 class ApplicationTests {
 	@Autowired
 	private MockMvc mockmvc;
@@ -82,6 +92,14 @@ class ApplicationTests {
 	private CartRepository cartRepository;
 	@Autowired
 	private FoodOrderRepository foodOrderRepository;
+
+    @RegisterExtension
+    static WireMockExtension wireMockServer =
+            WireMockExtension.newInstance()
+                    .options(wireMockConfig()
+							.port(8089)
+							.globalTemplating(true))
+                    .build();
 
 	void signup() throws Exception {
 		if (userRepository.existsByLoginId("ceos1234")) {
@@ -230,6 +248,7 @@ class ApplicationTests {
 		assertThat(map.get(tms.get(1).getId())).isEqualTo(1);
 	}
 
+
 	@Test
 	@Transactional
 	@DisplayName("장바구니 결제하기")
@@ -247,6 +266,7 @@ class ApplicationTests {
 						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(for1)))
+				.andDo(print())
 				.andExpect(status().isOk());
 
 		mockmvc.perform(post("/api/foods/pay")
@@ -292,6 +312,7 @@ class ApplicationTests {
 						.cookie(authCookie)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(objectMapper.writeValueAsString(for1)))
+				.andDo(print())
 				.andExpect(status().isOk());
 
 		//assert -> Menu에는 수량이 그대로
@@ -405,7 +426,7 @@ class ApplicationTests {
 		//결제(결제 시 장바구니를 비우고 이전주문기록에 추가함)
 		mockmvc.perform(post("/api/foods/pay")
 						.cookie(authCookie))
-				.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+				.andExpect(status().isOk()).andDo(print()).andReturn().getResponse().getContentAsString();
 
 		System.out.println("cart >>> " + cartRepository.findAll().get(0).getId() + cartRepository.findAll().get(0).getStatus());
 		System.out.println("order >>> " + foodOrderRepository.findAll());
@@ -1049,10 +1070,7 @@ class ApplicationTests {
 
 		mockmvc.perform(post("/api/reservation?reservationId=" + reservationId)
 						.cookie(authCookie))
-				.andExpect(status().isOk())
-				.andReturn()
-				.getResponse()
-				.getContentAsString();
+				.andExpect(status().isOk());
 
 		//좌석조회
 		String res = mockmvc.perform(get("/api/reservation?screeningId=" + screening.getId())
@@ -1067,7 +1085,7 @@ class ApplicationTests {
 		assertThat(dto.leavingSeatAmount()).isEqualTo(dto.totalSeatAmount() - 2);
 
 		//취소
-		mockmvc.perform(delete("/api/reservation/" + screening.getId())
+		mockmvc.perform(delete("/api/reservation/" + reservationId)
 						.cookie(authCookie))
 				.andExpect(status().isOk())
 				.andReturn()
