@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/theaters/**").permitAll()
                         .requestMatchers("/api/schedules/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -40,3 +40,13 @@ payment:
 logging:
   level:
     org.hibernate.SQL: debug
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, metrics, prometheus
+        exclude: env, heapdump, threaddump, configprops, quartz
+  metrics:
+    tags:
+      application: cgv-clone
