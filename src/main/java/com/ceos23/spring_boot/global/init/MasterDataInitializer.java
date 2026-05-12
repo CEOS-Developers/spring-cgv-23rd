@@ -26,7 +26,7 @@ import java.util.List;
 
 @Slf4j
 @Component
-@Profile("local")
+@Profile({"local", "prod"})
 @RequiredArgsConstructor
 public class MasterDataInitializer implements CommandLineRunner {
 
@@ -112,7 +112,7 @@ public class MasterDataInitializer implements CommandLineRunner {
         inventoryRepository.saveAll(List.of(popcornInventory, popcornLInventory, colaInventory, colaLInventory));
 
         // 7. 좌석 템플릿(SeatTemplate) 세팅
-        createSeats(standardType, 'O', 15, economy, vip); // A~O열, 15번까지 (15x15)
+        createSeats(standardType, 'T', 20, economy, vip); // A~T열, 20번까지 (20x20)
         createSeats(imaxType, 'T', 20, economy, vip);     // A~T열, 20번까지 (20x20)
         createSeats(threeDType, 'O', 15, economy, vip);   // A~O열, 15번까지 (15x15)
 

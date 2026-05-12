@@ -1,0 +1,64 @@
+// ============================================================
+// 1. Loki 전송 endpoint
+// ============================================================
+loki.write "default" {
+  endpoint {
+    url = "http://172.31.41.20:3100/loki/api/v1/push"
+  }
+}
+
+// ============================================================
+// 2. 시스템 로그 수집
+// ============================================================
+local.file_match "system_logs" {
+  path_targets = [{
+    __path__ = "/var/log/*.log",
+    job      = "varlogs",
+    host     = env("HOSTNAME"),
+  }]
+}
+
+loki.source.file "system_logs" {
+  targets       = local.file_match.system_logs.targets
+  forward_to    = [loki.write.default.receiver]
+  tail_from_end = false
+}
+
+// ============================================================
+// 3. 앱 로그 수집
+// ============================================================
+local.file_match "app_logs" {
+  path_targets = [{
+    __path__ = "/logs/*.log",
+    job      = "applogs",
+    host     = env("HOSTNAME"),
+  }]
+}
+
+loki.source.file "app_logs" {
+  targets    = local.file_match.app_logs.targets
+  forward_to = [loki.write.default.receiver]
+}
+
+// ============================================================
+// 4. 메트릭 수집 → Prometheus remote_write
+// ============================================================
+prometheus.scrape "spring_app" {
+  targets = [{
+    __address__ = "app:8080",
+  }]
+  metrics_path    = "/actuator/prometheus"
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.monitoring.receiver]
+  job_name        = "spring-app"
+}
+
+prometheus.remote_write "monitoring" {
+  endpoint {
+    url = "http://172.31.41.20:9090/api/v1/write"
+  }
+  external_labels = {
+    host = env("HOSTNAME"),
+    env  = "production",
+  }
+}
