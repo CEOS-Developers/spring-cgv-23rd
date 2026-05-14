@@ -170,8 +170,6 @@ JOIN m.team t  -- Member 엔티티 내부의 team 필드(연관관계) 기준
 
 
 
-
-
 <details>
 <summary><h1>CGV 클론코딩 ERD 연관관계 및 제약조건 정리</h1></summary>
   
@@ -2670,3 +2668,20 @@ create_food_order 실패율 = 0.20%
 따라서 현재 병목은 내부 DB 조회보다는 외부 결제 연동 안정성에 더 가까움
 
 </details>
+
+## Redis Cache 적용 내역
+
+- `MovieQueryService#getMovieList()`: 현재 상영 중 영화 목록은 메인 화면에서 반복 조회될 가능성이 높아서 `movieList` 캐시 적용
+- `MovieQueryService#getMovieDetail()`: 영화 상세 정보는 이미지와 통계 정보를 함께 조회하므로 `movieDetail` 캐시 적용
+- `MovieQueryService#getMovieActors()`: 출연진 정보는 자주 바뀌지 않는 조회 데이터라서 `movieActors` 캐시 적용
+- `TheaterQueryService#getTheatersByRegion()`: 지역별 극장 목록은 같은 조건으로 재조회될 가능성이 높아 `theatersByRegion` 캐시 적용
+- `TheaterQueryService#getTheaterDetail()`: 극장 상세는 상대적으로 변경이 적은 조회라 `theaterDetail` 캐시 적용
+- `ScheduleQueryService#getSchedules()`: 극장과 날짜 기준 시간표 조회는 호출 빈도가 높고 조건이 명확해서 `schedules` 캐시 적용
+- `ReviewQueryService#getMovieReviews()`: 리뷰 목록은 반복 조회가 많아 `movieReviews` 캐시를 적용했고, 최신성을 위해 TTL을 짧게 적용
+
+## Redis Cache 무효화 내역
+
+- `AdminMovieService#createMovie()`: 영화 생성 후 현재 상영작 목록이 바뀔 수 있어서 `movieList` 캐시 무효화
+- `AdminMovieService#createTheater()`: 극장 생성 후 해당 지역 목록이 달라지므로 `theatersByRegion` 캐시 무효화
+- `AdminMovieService#createSchedule()`: 시간표 등록 후 같은 극장/날짜 조회 결과가 달라지므로 해당 `schedules` 캐시 무효화
+- `ReviewService#createReview()`: 리뷰 작성 후 리뷰 목록과 영화 평점 정보가 달라질 수 있어서 `movieReviews`, `movieDetail` 캐시 무효화

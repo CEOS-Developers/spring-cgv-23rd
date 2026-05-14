@@ -8,6 +8,8 @@ import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
@@ -24,6 +26,10 @@ public class ReviewService {
     private final MovieService movieService;
 
     // 1. 리뷰 생성
+    @Caching(evict = {
+            @CacheEvict(value = "movieReviews", key = "#requestDto.movieId()"),
+            @CacheEvict(value = "movieDetail", key = "#requestDto.movieId()")
+    })
     @Retryable(
             retryFor = ObjectOptimisticLockingFailureException.class,
             maxAttempts = 3,

@@ -8,6 +8,7 @@ import cgv_23rd.ceos.mapper.ScheduleMapper;
 import cgv_23rd.ceos.repository.movie.MovieScreenRepository;
 import cgv_23rd.ceos.repository.theater.TheaterRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class ScheduleQueryService {
     private final MovieScreenRepository movieScreenRepository;
     private final ScheduleMapper scheduleMapper;
 
+    @Cacheable(value = "schedules", key = "#theaterId + ':' + #targetDate")
     public List<ScheduleResponseDto> getSchedules(Long theaterId, LocalDate targetDate) {
         theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));

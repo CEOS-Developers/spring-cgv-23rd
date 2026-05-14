@@ -15,6 +15,8 @@ import cgv_23rd.ceos.repository.theater.ScreenRepository;
 import cgv_23rd.ceos.repository.theater.TheaterRepository;
 import cgv_23rd.ceos.service.MovieService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class AdminMovieService {
 
     // 4. 극장 생성
     @Transactional
+    @CacheEvict(value = "theatersByRegion", key = "#requestDto.region()")
     public void createTheater(TheaterRequestDto requestDto){
         Theater theater = Theater.create(
                 requestDto.name(),
@@ -44,6 +47,7 @@ public class AdminMovieService {
 
     // 1. 영화 생성
     @Transactional
+    @CacheEvict(value = "movieList", key = "'nowPlaying'")
     public Long createMovie(MovieRequestDto requestDto){
         Movie movie = Movie.create(
                 requestDto.title(),
@@ -57,6 +61,9 @@ public class AdminMovieService {
 
     // 1. 극장별 상영 시간표 등록
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "schedules", key = "#theaterId + ':' + #requestDto.startAt().toLocalDate()")
+    })
     public void createSchedule(Long theaterId, ScheduleCreateRequestDto requestDto) {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(()-> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND));
