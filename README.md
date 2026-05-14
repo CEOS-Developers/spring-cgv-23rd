@@ -2132,6 +2132,8 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 
 </details>
 
+<details><summary><h1>부하테스트 및 모니터링</h1></summary>
+
 ### 아키텍처 구조도
 <img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
 
@@ -2666,3 +2668,5 @@ create_food_order 실패율 = 0.20%
 주문 생성은 거의 다 성공 -> 결제 요청까지도 정상 진입 -> 외부 결제 instant API에서 일부 500
 -> 그 결과 FoodPaymentFacade가 PAYMENT_FAILED로 종료
 따라서 현재 병목은 내부 DB 조회보다는 외부 결제 연동 안정성에 더 가까움
+
+</details>
