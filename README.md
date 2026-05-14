@@ -1,3 +1,25 @@
+## 운영 로깅 개선
+
+### 이번 리팩토링에서 적용한 내용
+
+- 요청 단위 추적을 위해 `RequestContextLoggingFilter`를 추가하고 모든 요청에 `requestId`, `method`, `uri`, `clientIp`를 MDC에 저장
+- JWT 인증 성공 시 `userId`, `userEmail`을 MDC에 추가해서 이후 서비스/예외 로그에서 같은 요청 흐름을 함께 추적 가능하게 구성
+- `logback-spring.xml`을 JSON 구조화 로그 기반으로 변경하고 운영 로그 `application.log`, 감사 로그 `logs/audit/audit.log`를 분리
+- 결제/예매/매점 결제 흐름 로그를 `event` 중심으로 통일해서 Loki/Grafana에서 `event`, `errorCode`, `requestId` 기준 검색이 가능하도록 정리
+- `ExceptionAdvice`, 인증 실패, 인가 실패 로그에도 `event`, `uri`, `method`, `errorCode`를 담아 장애 분석 시 HTTP 요청 문맥이 남도록 개선
+- `alloy-config.alloy`를 JSON 로그 파싱 방식으로 변경해서 `level`, `event`, `errorCode`, `logType`를 Loki label로 활용할 수 있게 구성
+
+### 주요 로그 이벤트
+
+- 운영 로그: `request_completed`, `jwt_authenticated`, `business_exception`, `validation_failed`, `payment_instant_requested`, `payment_instant_completed`, `food_payment_failed`, `reservation_payment_completed`
+- 감사 로그: `food_payment_completed`, `food_payment_cancelled`, `reservation_payment_completed`, `reservation_payment_cancelled`
+
+### 기대 효과
+
+- 장애 발생 시 `requestId` 하나로 인증 → 서비스 → 예외 흐름을 연결해서 추적 가능
+- 결제 실패를 `errorCode`, `paymentId`, `orderId`, `reservationId` 기준으로 바로 필터링 가능
+- 일반 운영 로그와 돈이 관련된 감사 로그를 분리해서 보관 정책과 접근 제어를 다르게 가져갈 수 있음
+
 ## 캐싱과 로깅
 
 ### Redis Cache 적용 내역

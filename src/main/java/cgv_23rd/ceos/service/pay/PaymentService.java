@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -28,30 +30,47 @@ public class PaymentService {
                 customData
         );
 
-        log.info("Payment instant request started. paymentId={}, amount={}, orderName={}",
-                paymentId, amount, orderName);
+        log.info("payment instant request started",
+                kv("event", "payment_instant_requested"),
+                kv("paymentId", paymentId),
+                kv("amount", amount),
+                kv("orderName", orderName));
 
         try {
             // Feign 인터페이스 호출
             PaymentResponse response = paymentFeignClient.requestInstantPayment(paymentId, request);
             if (response == null || response.data() == null) {
-                log.warn("Payment instant request returned empty success body. paymentId={}, durationMs={}",
-                        paymentId, System.currentTimeMillis() - startedAt);
+                log.warn("payment instant request returned empty success body",
+                        kv("event", "payment_instant_empty_response"),
+                        kv("paymentId", paymentId),
+                        kv("durationMs", System.currentTimeMillis() - startedAt));
                 return getPayment(paymentId);
             }
-            log.info("Payment instant request completed. paymentId={}, paymentStatus={}, durationMs={}",
-                    paymentId, response.data().paymentStatus(), System.currentTimeMillis() - startedAt);
+            log.info("payment instant request completed",
+                    kv("event", "payment_instant_completed"),
+                    kv("paymentId", paymentId),
+                    kv("paymentStatus", response.data().paymentStatus()),
+                    kv("pgProvider", response.data().pgProvider()),
+                    kv("durationMs", System.currentTimeMillis() - startedAt));
             return response;
         } catch (FeignException e) {
-            log.warn("Payment instant request failed. paymentId={}, status={}, durationMs={}, body={}",
-                    paymentId, e.status(), System.currentTimeMillis() - startedAt, safeBody(e));
+            log.warn("payment instant request failed",
+                    kv("event", "payment_instant_failed"),
+                    kv("paymentId", paymentId),
+                    kv("status", e.status()),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("body", safeBody(e)));
             if (isEmptySuccessResponse(e)) {
                 return getPayment(paymentId);
             }
             throw translateInstantPaymentException(e);
         } catch (Exception e) { // ResourceAccessException 대신 일반 Exception 처리
-            log.error("Payment instant request unexpected error. paymentId={}, durationMs={}, type={}, message={}",
-                    paymentId, System.currentTimeMillis() - startedAt, e.getClass().getName(), e.getMessage(), e);
+            log.error("payment instant request unexpected error",
+                    kv("event", "payment_instant_error"),
+                    kv("paymentId", paymentId),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("exceptionType", e.getClass().getName()),
+                    kv("message", e.getMessage()), e);
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }
@@ -60,11 +79,18 @@ public class PaymentService {
         try {
             return paymentFeignClient.cancelPayment(paymentId);
         } catch (FeignException e) {
-            log.warn("Payment cancel request failed. status={}, body={}", e.status(), safeBody(e));
+            log.warn("payment cancel request failed",
+                    kv("event", "payment_cancel_failed"),
+                    kv("paymentId", paymentId),
+                    kv("status", e.status()),
+                    kv("body", safeBody(e)));
             throw translateCancelPaymentException(e);
         } catch (Exception e) {
-            log.warn("Payment cancel request unexpected error. type={}, message={}",
-                    e.getClass().getName(), e.getMessage());
+            log.error("payment cancel request unexpected error",
+                    kv("event", "payment_cancel_error"),
+                    kv("paymentId", paymentId),
+                    kv("exceptionType", e.getClass().getName()),
+                    kv("message", e.getMessage()), e);
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }
@@ -73,18 +99,27 @@ public class PaymentService {
         long startedAt = System.currentTimeMillis();
         try {
             PaymentResponse response = paymentFeignClient.getPayment(paymentId);
-            log.info("Payment get request completed. paymentId={}, paymentStatus={}, durationMs={}",
-                    paymentId,
-                    response != null && response.data() != null ? response.data().paymentStatus() : "null",
-                    System.currentTimeMillis() - startedAt);
+            log.info("payment get request completed",
+                    kv("event", "payment_get_completed"),
+                    kv("paymentId", paymentId),
+                    kv("paymentStatus", response != null && response.data() != null ? response.data().paymentStatus() : "null"),
+                    kv("durationMs", System.currentTimeMillis() - startedAt));
             return response;
         } catch (FeignException e) {
-            log.warn("Payment get request failed. paymentId={}, status={}, durationMs={}, body={}",
-                    paymentId, e.status(), System.currentTimeMillis() - startedAt, safeBody(e));
+            log.warn("payment get request failed",
+                    kv("event", "payment_get_failed"),
+                    kv("paymentId", paymentId),
+                    kv("status", e.status()),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("body", safeBody(e)));
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 내역 조회에 실패했습니다. status=" + e.status());
         } catch (Exception e) {
-            log.error("Payment get request unexpected error. paymentId={}, durationMs={}, type={}, message={}",
-                    paymentId, System.currentTimeMillis() - startedAt, e.getClass().getName(), e.getMessage(), e);
+            log.error("payment get request unexpected error",
+                    kv("event", "payment_get_error"),
+                    kv("paymentId", paymentId),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("exceptionType", e.getClass().getName()),
+                    kv("message", e.getMessage()), e);
             throw new GeneralException(GeneralErrorCode.EXTERNAL_SERVICE_TIMEOUT, "결제 서버 연결에 실패했습니다.");
         }
     }

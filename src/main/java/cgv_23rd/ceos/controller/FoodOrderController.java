@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -46,7 +48,10 @@ public class FoodOrderController {
             @PathVariable Long orderId) {
 
         Long userId = userDetails.getUser().getId();
-        log.info("Food payment API requested. userId={}, orderId={}", userId, orderId);
+        log.info("food payment api requested",
+                kv("event", "food_payment_api_requested"),
+                kv("userId", userId),
+                kv("orderId", orderId));
         PaymentResultDto result = foodPaymentFacade.processPayment(userId, orderId);
         return ApiResponse.onSuccess("음식 주문 결제 성공", result);
     }

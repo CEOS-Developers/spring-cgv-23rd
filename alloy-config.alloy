@@ -1,24 +1,24 @@
 loki.process "spring_boot" {
   forward_to = [loki.write.default.receiver]
 
-  stage.regex {
-    expression = "^(?P<timestamp>\\\\d{4}-\\\\d{2}-\\\\d{2} \\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3})"
-  }
-
-  stage.regex {
-    expression = "\\\\[.*?\\\\]\\\\s+(?P<level>(TRACE|DEBUG|INFO|WARN|ERROR))"
+  stage.json {
+    expressions = {
+      level     = "level",
+      event     = "event",
+      errorCode = "errorCode",
+      requestId = "requestId",
+      logger    = "logger_name",
+      logType   = "logType",
+    }
   }
 
   stage.labels {
     values = {
-      level = null,
+      level     = "",
+      event     = "",
+      errorCode = "",
+      logType   = "",
     }
-  }
-
-  stage.timestamp {
-    source   = "timestamp"
-    format   = "2006-01-02 15:04:05.000"
-    location = "Asia/Seoul"
   }
 }
 
@@ -28,6 +28,12 @@ loki.source.file "spring_boot" {
     __path__    = "/var/log/spring-boot/*.log",
     app         = "ceos-app",
     job         = "spring-boot",
+  },
+  {
+    __address__ = "localhost",
+    __path__    = "/var/log/spring-boot/audit/*.log",
+    app         = "ceos-app",
+    job         = "spring-boot-audit",
   }]
 
   forward_to = [loki.process.spring_boot.receiver]

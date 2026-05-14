@@ -10,14 +10,20 @@ import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.service.FoodOrderService;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
+
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class FoodPaymentFacade {
+
+    private static final Logger auditLogger = LoggerFactory.getLogger("AUDIT_LOGGER");
 
     private final FoodOrderService foodOrderService;
     private final PaymentService paymentService;
@@ -26,8 +32,11 @@ public class FoodPaymentFacade {
     public PaymentResultDto processPayment(Long userId ,Long orderId) {
         long startedAt = System.currentTimeMillis();
         FoodOrder order = foodOrderService.getOwnedFoodOrder(userId, orderId);
-        log.info("Food payment processing started. userId={}, orderId={}, totalPrice={}",
-                userId, orderId, order.getTotalPrice());
+        log.info("food payment processing started",
+                kv("event", "food_payment_started"),
+                kv("userId", userId),
+                kv("orderId", orderId),
+                kv("totalPrice", order.getTotalPrice()));
 
         // 매점 결제용 고유 paymentId 생성
         String paymentId = "FOOD_" + orderId + "_" + UUID.randomUUID().toString().substring(0, 8);
@@ -49,32 +58,61 @@ public class FoodPaymentFacade {
                 try {
                     // 결제 성공 뒤에만 짧은 로컬 트랜잭션을 열어 재고 차감과 주문 확정을 수행
                     foodOrderService.confirmOrderAndDeductStock(userId, orderId);
-                    log.info("Food payment processing completed. userId={}, orderId={}, paymentId={}, durationMs={}",
-                            userId, orderId, paymentId, System.currentTimeMillis() - startedAt);
+                    log.info("food payment processing completed",
+                            kv("event", "food_payment_completed"),
+                            kv("userId", userId),
+                            kv("orderId", orderId),
+                            kv("paymentId", paymentId),
+                            kv("durationMs", System.currentTimeMillis() - startedAt));
+                    auditLogger.info("food payment completed",
+                            kv("event", "food_payment_completed"),
+                            kv("userId", userId),
+                            kv("orderId", orderId),
+                            kv("paymentId", paymentId),
+                            kv("amount", order.getTotalPrice()));
                     return new PaymentResultDto(true, "매점 결제 및 주문이 완료되었습니다.");
 
                 } catch (GeneralException e) {
                     compensateFailedFoodOrder(userId, orderId, paymentId);
-                    log.warn("Food payment post-processing failed. userId={}, orderId={}, paymentId={}, code={}, durationMs={}",
-                            userId, orderId, paymentId, e.getCode(), System.currentTimeMillis() - startedAt);
+                    log.warn("food payment post processing failed",
+                            kv("event", "food_payment_post_processing_failed"),
+                            kv("userId", userId),
+                            kv("orderId", orderId),
+                            kv("paymentId", paymentId),
+                            kv("errorCode", e.getCode().getCode()),
+                            kv("durationMs", System.currentTimeMillis() - startedAt));
                     throw e;
                 }
             } else {
                 foodOrderService.markPaymentUnknown(userId, orderId);
-                log.warn("Food payment returned unexpected response. userId={}, orderId={}, paymentId={}, durationMs={}",
-                        userId, orderId, paymentId, System.currentTimeMillis() - startedAt);
+                log.warn("food payment returned unexpected response",
+                        kv("event", "food_payment_unexpected_response"),
+                        kv("userId", userId),
+                        kv("orderId", orderId),
+                        kv("paymentId", paymentId),
+                        kv("durationMs", System.currentTimeMillis() - startedAt));
                 throw new GeneralException(GeneralErrorCode.PAYMENT_SERVER_FAILED);
             }
 
         } catch (GeneralException e) {
             updatePaymentStatusOnFailure(userId, orderId, e);
-            log.warn("Food payment processing failed. userId={}, orderId={}, paymentId={}, code={}, durationMs={}",
-                    userId, orderId, paymentId, e.getCode(), System.currentTimeMillis() - startedAt);
+            log.warn("food payment processing failed",
+                    kv("event", "food_payment_failed"),
+                    kv("userId", userId),
+                    kv("orderId", orderId),
+                    kv("paymentId", paymentId),
+                    kv("errorCode", e.getCode().getCode()),
+                    kv("durationMs", System.currentTimeMillis() - startedAt));
             throw e;
         } catch (Exception e) {
             foodOrderService.markPaymentUnknown(userId, orderId);
-            log.error("Food payment processing unexpected error. userId={}, orderId={}, paymentId={}, durationMs={}, message={}",
-                    userId, orderId, paymentId, System.currentTimeMillis() - startedAt, e.getMessage(), e);
+            log.error("food payment processing unexpected error",
+                    kv("event", "food_payment_error"),
+                    kv("userId", userId),
+                    kv("orderId", orderId),
+                    kv("paymentId", paymentId),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("message", e.getMessage()), e);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED);
         }
     }
@@ -103,6 +141,11 @@ public class FoodPaymentFacade {
             }
 
             foodOrderService.cancelOrderAfterPaymentCancellation(userId, orderId);
+            auditLogger.info("food payment cancelled",
+                    kv("event", "food_payment_cancelled"),
+                    kv("userId", userId),
+                    kv("orderId", orderId),
+                    kv("paymentId", order.getPaymentId()));
             return;
         }
 
