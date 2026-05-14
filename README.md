@@ -2657,6 +2657,7 @@ full_payment 부하테스트 결과, 주문 생성 API는 정상 동작했지만
 running (4m04.5s), 000/200 VUs, 11719 complete and 0 interrupted iterations
 default ✓ [======================================] 000/200 VUs  4m0s
 ```
+
 process_food_payment p95 = 1.08s
 process_food_payment 실패율 = 10.40%
 create_food_order 실패율 = 0.20%
@@ -2669,6 +2670,8 @@ create_food_order 실패율 = 0.20%
 
 </details>
 
+
+<details><summary><h1>캐싱과 로깅</h1></summary>
 ## Redis Cache 적용 내역
 
 - `MovieQueryService#getMovieList()`: 현재 상영 중 영화 목록은 메인 화면에서 반복 조회될 가능성이 높아서 `movieList` 캐시 적용
@@ -2685,3 +2688,5 @@ create_food_order 실패율 = 0.20%
 - `AdminMovieService#createTheater()`: 극장 생성 후 해당 지역 목록이 달라지므로 `theatersByRegion` 캐시 무효화
 - `AdminMovieService#createSchedule()`: 시간표 등록 후 같은 극장/날짜 조회 결과가 달라지므로 해당 `schedules` 캐시 무효화
 - `ReviewService#createReview()`: 리뷰 작성 후 리뷰 목록과 영화 평점 정보가 달라질 수 있어서 `movieReviews`, `movieDetail` 캐시 무효화
+
+</details>
