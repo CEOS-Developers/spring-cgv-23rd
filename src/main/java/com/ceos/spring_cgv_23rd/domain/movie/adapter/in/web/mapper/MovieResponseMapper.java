@@ -1,102 +1,103 @@
 package com.ceos.spring_cgv_23rd.domain.movie.adapter.in.web.mapper;
 
-import com.ceos.spring_cgv_23rd.domain.movie.adapter.in.web.dto.response.MovieResponse;
-import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.ToggleMovieLikeResult;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.Movie;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.MovieCredit;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.MovieMedia;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.MovieStatistic;
+import java.util.List;
+
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import com.ceos.spring_cgv_23rd.domain.movie.adapter.in.web.dto.response.MovieResponse;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieCreditResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieDetailResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieMediaResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieStatisticResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.ToggleMovieLikeResult;
 
 @Component
 public class MovieResponseMapper {
 
-    public List<MovieResponse.MovieListResponse> toMovieListResponse(List<Movie> movies) {
-        return movies.stream()
-                .map(this::toMovieListDto)
-                .toList();
-    }
+	public List<MovieResponse.MovieListResponse> toMovieListResponse(List<MovieResult> results) {
+		return results.stream()
+			.map(this::toMovieListDto)
+			.toList();
+	}
 
-    public MovieResponse.MovieDetailResponse toMovieDetailResponse(Movie movie) {
-        return MovieResponse.MovieDetailResponse.builder()
-                .id(movie.getId())
-                .title(movie.getTitle())
-                .prolog(movie.getProlog())
-                .status(movie.getStatus())
-                .duration(movie.getDuration())
-                .genre(movie.getGenre())
-                .ageRating(movie.getAgeRating())
-                .releasedAt(movie.getReleasedAt())
-                .posterUrl(movie.getPosterUrl())
-                .statistic(toStatisticDto(movie.getMovieStatistic()))
-                .build();
-    }
+	public MovieResponse.MovieDetailResponse toMovieDetailResponse(MovieDetailResult result) {
+		return MovieResponse.MovieDetailResponse.builder()
+			.id(result.id())
+			.title(result.title())
+			.prolog(result.prolog())
+			.status(result.status())
+			.duration(result.duration())
+			.genre(result.genre())
+			.ageRating(result.ageRating())
+			.releasedAt(result.releasedAt())
+			.posterUrl(result.posterUrl())
+			.statistic(toStatisticDto(result.statistic()))
+			.build();
+	}
 
-    public List<MovieResponse.MovieCreditResponse> toMovieCreditResponse(List<MovieCredit> credits) {
-        return credits.stream()
-                .map(credit -> MovieResponse.MovieCreditResponse.builder()
-                        .contributorId(credit.getContributor().getId())
-                        .name(credit.getContributor().getName())
-                        .profileImageUrl(credit.getContributor().getProfileImageUrl())
-                        .roleType(credit.getRoleType())
-                        .build())
-                .toList();
-    }
+	public List<MovieResponse.MovieCreditResponse> toMovieCreditResponse(List<MovieCreditResult> results) {
+		return results.stream()
+			.map(credit -> MovieResponse.MovieCreditResponse.builder()
+				.contributorId(credit.contributorId())
+				.name(credit.name())
+				.profileImageUrl(credit.profileImageUrl())
+				.roleType(credit.roleType())
+				.build())
+			.toList();
+	}
 
-    public List<MovieResponse.MovieMediaResponse> toMovieMediaResponse(List<MovieMedia> medias) {
-        return medias.stream()
-                .map(media -> MovieResponse.MovieMediaResponse.builder()
-                        .id(media.getId())
-                        .mediaType(media.getMediaType())
-                        .mediaUrl(media.getMediaUrl())
-                        .build())
-                .toList();
-    }
+	public List<MovieResponse.MovieMediaResponse> toMovieMediaResponse(List<MovieMediaResult> results) {
+		return results.stream()
+			.map(media -> MovieResponse.MovieMediaResponse.builder()
+				.id(media.id())
+				.mediaType(media.mediaType())
+				.mediaUrl(media.mediaUrl())
+				.build())
+			.toList();
+	}
 
-    public MovieResponse.MovieLikeResponse toMovieLikeResponse(ToggleMovieLikeResult result) {
-        return MovieResponse.MovieLikeResponse.builder()
-                .movieId(result.movieId())
-                .liked(result.liked())
-                .build();
-    }
+	public MovieResponse.MovieLikeResponse toMovieLikeResponse(ToggleMovieLikeResult result) {
+		return MovieResponse.MovieLikeResponse.builder()
+			.movieId(result.movieId())
+			.liked(result.liked())
+			.build();
+	}
 
-    private MovieResponse.MovieListResponse toMovieListDto(Movie movie) {
-        MovieStatistic stat = movie.getMovieStatistic();
-        return MovieResponse.MovieListResponse.builder()
-                .id(movie.getId())
-                .title(movie.getTitle())
-                .posterUrl(movie.getPosterUrl())
-                .status(movie.getStatus())
-                .ageRating(movie.getAgeRating())
-                .reservationRate(stat.getReservationRate())
-                .reservationRank(stat.getReservationRank())
-                .viewCount(stat.getViewCount())
-                .eggCount(stat.getEggCount())
-                .releasedAt(movie.getReleasedAt())
-                .build();
-    }
+	private MovieResponse.MovieListResponse toMovieListDto(MovieResult result) {
+		return MovieResponse.MovieListResponse.builder()
+			.id(result.id())
+			.title(result.title())
+			.posterUrl(result.posterUrl())
+			.status(result.status())
+			.ageRating(result.ageRating())
+			.reservationRate(result.reservationRate())
+			.reservationRank(result.reservationRank())
+			.viewCount(result.viewCount())
+			.eggCount(result.eggCount())
+			.releasedAt(result.releasedAt())
+			.build();
+	}
 
-    private MovieResponse.MovieStatisticResponse toStatisticDto(MovieStatistic stat) {
-        return MovieResponse.MovieStatisticResponse.builder()
-                .reservationRate(stat.getReservationRate())
-                .reservationRank(stat.getReservationRank())
-                .viewCount(stat.getViewCount())
-                .eggCount(stat.getEggCount())
-                .maleReservationRate(stat.getMaleReservationRate())
-                .femaleReservationRate(stat.getFemaleReservationRate())
-                .ageRates(toAgeRateDto(stat))
-                .build();
-    }
+	private MovieResponse.MovieStatisticResponse toStatisticDto(MovieStatisticResult result) {
+		return MovieResponse.MovieStatisticResponse.builder()
+			.reservationRate(result.reservationRate())
+			.reservationRank(result.reservationRank())
+			.viewCount(result.viewCount())
+			.eggCount(result.eggCount())
+			.maleReservationRate(result.maleReservationRate())
+			.femaleReservationRate(result.femaleReservationRate())
+			.ageRates(toAgeRateDto(result))
+			.build();
+	}
 
-    private MovieResponse.AgeRateResponse toAgeRateDto(MovieStatistic stat) {
-        return MovieResponse.AgeRateResponse.builder()
-                .age10sRate(stat.getAge10sRate())
-                .age20sRate(stat.getAge20sRate())
-                .age30sRate(stat.getAge30sRate())
-                .age40sRate(stat.getAge40sRate())
-                .age50sRate(stat.getAge50sRate())
-                .build();
-    }
+	private MovieResponse.AgeRateResponse toAgeRateDto(MovieStatisticResult result) {
+		return MovieResponse.AgeRateResponse.builder()
+			.age10sRate(result.age10sRate())
+			.age20sRate(result.age20sRate())
+			.age30sRate(result.age30sRate())
+			.age40sRate(result.age40sRate())
+			.age50sRate(result.age50sRate())
+			.build();
+	}
 }

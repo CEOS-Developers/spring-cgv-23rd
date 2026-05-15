@@ -1,16 +1,16 @@
 package com.ceos.spring_cgv_23rd.domain.movie.application.port.in;
 
-import com.ceos.spring_cgv_23rd.domain.movie.domain.Movie;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.MovieCredit;
-import com.ceos.spring_cgv_23rd.domain.movie.domain.MovieMedia;
-
 import java.util.List;
+
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieCreditResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieDetailResult;
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieMediaResult;
 
 public interface GetMovieDetailUseCase {
 
-    Movie getMovieDetail(long movieId);
+	MovieDetailResult getMovieDetail(long movieId);
 
-    List<MovieCredit> getMovieCredits(long movieId);
+	List<MovieCreditResult> getMovieCredits(long movieId);
 
-    List<MovieMedia> getMovieMedia(long movieId);
+	List<MovieMediaResult> getMovieMedia(long movieId);
 }
