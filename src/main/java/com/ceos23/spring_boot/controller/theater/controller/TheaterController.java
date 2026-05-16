@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,8 +29,15 @@ public class TheaterController {
     public ResponseEntity<List<TheaterResponse>> findTheaters(
             @ParameterObject
             @ModelAttribute TheaterSearchRequest request) {
-        List<TheaterResponse> responses = theaterService.findTheaters(request.toCommand())
-                .stream()
+        List<TheaterInfo> theaterInfos;
+
+        if (StringUtils.hasText(request.location())) {
+            theaterInfos = theaterService.searchTheaters(request.location());
+        } else {
+            theaterInfos = theaterService.findAllTheaters();
+        }
+
+        List<TheaterResponse> responses = theaterInfos.stream()
                 .map(TheaterResponse::from)
                 .toList();
 
