@@ -11,6 +11,7 @@ import com.cgv.spring_boot.domain.theater.exception.TheaterErrorCode;
 import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +26,14 @@ public class TheaterService {
     private final TheaterWishRepository theaterWishRepository;
     private final UserRepository userRepository;
 
+    @Cacheable(cacheNames = "theaters", key = "'all'")
     public List<TheaterResponse> findAllTheaters() {
         return theaterRepository.findAll().stream()
                 .map(TheaterResponse::from)
                 .toList();
     }
 
+    @Cacheable(cacheNames = "theater", key = "#id")
     public TheaterResponse findTheaterById(Long id) {
         Theater theater = theaterRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(TheaterErrorCode.THEATER_NOT_FOUND));

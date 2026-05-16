@@ -12,6 +12,9 @@ import com.cgv.spring_boot.domain.movie.exception.MovieErrorCode;
 import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,17 +30,20 @@ public class MovieService {
     private final UserRepository userRepository;
 
     @Transactional
+    @CacheEvict(cacheNames = "movies", allEntries = true)
     public Long saveMovie(MovieCreateRequest request) {
         Movie movie = request.toEntity();
         return movieRepository.save(movie).getId();
     }
 
+    @Cacheable(cacheNames = "movies", key = "'all'")
     public List<MovieResponse> findAllMovies() {
         return movieRepository.findAll().stream()
                 .map(MovieResponse::from)
                 .toList();
     }
 
+    @Cacheable(cacheNames = "movie", key = "#id")
     public MovieResponse findMovieById(Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
@@ -45,6 +51,10 @@ public class MovieService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "movies", allEntries = true),
+            @CacheEvict(cacheNames = "movie", key = "#id")
+    })
     public void deleteMovieById(Long id) {
         Movie movie = movieRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
