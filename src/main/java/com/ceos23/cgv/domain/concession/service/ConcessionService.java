@@ -16,9 +16,12 @@ import com.ceos23.cgv.domain.concession.repository.ProductRepository;
 import com.ceos23.cgv.domain.payment.service.PaymentService;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.cache.CacheNames;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -62,6 +65,7 @@ public class ConcessionService {
     /**
      * [GET] 매점의 모든 상품 목록 조회
      */
+    @Cacheable(cacheNames = CacheNames.CONCESSION_PRODUCTS, key = "'all'")
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
@@ -200,6 +204,7 @@ public class ConcessionService {
     /**
      * [POST] 새로운 매점 상품 등록 (관리자용)
      */
+    @CacheEvict(cacheNames = CacheNames.CONCESSION_PRODUCTS, allEntries = true)
     public Product createProduct(String name, int price, String description,
                                  String origin, String ingredient,
                                  Boolean pickupPossible, ProductCategory category) {

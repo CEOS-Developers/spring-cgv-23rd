@@ -7,9 +7,12 @@ import com.ceos23.cgv.domain.event.repository.EventRepository;
 import com.ceos23.cgv.domain.event.repository.MovieEventRepository;
 import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
+import com.ceos23.cgv.global.cache.CacheNames;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +32,7 @@ public class EventService {
      * [POST] 새로운 이벤트 생성
      */
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.EVENTS, allEntries = true)
     public Event createEvent(EventCreateRequest request) {
         Event event = Event.create(
                 request.title(),
@@ -44,6 +48,7 @@ public class EventService {
      * [POST] 특정 이벤트를 특정 영화와 연결
      */
     @Transactional
+    @CacheEvict(cacheNames = CacheNames.EVENTS, allEntries = true)
     public MovieEvent linkEventToMovie(Long eventId, Long movieId) {
         Event event = findEvent(eventId);
         Movie movie = findMovie(movieId);
@@ -65,6 +70,7 @@ public class EventService {
     /**
      * [GET] 전체 진행 중인 이벤트 목록 조회
      */
+    @Cacheable(cacheNames = CacheNames.EVENTS, key = "'all'")
     public List<Event> getAllEvents() {
         return eventRepository.findAll();
     }
@@ -72,6 +78,7 @@ public class EventService {
     /**
      * [GET] 특정 영화와 관련된 이벤트만 조회
      */
+    @Cacheable(cacheNames = CacheNames.EVENTS, key = "'movie:' + #movieId")
     public List<Event> getEventsByMovieId(Long movieId) {
         // MovieEvent(중간 테이블) 목록을 가져와서 Event 객체만 추출하여 반환
         return movieEventRepository.findByMovieId(movieId).stream()

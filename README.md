@@ -2,6 +2,216 @@
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
 <details>
+<summary>7주차 캐싱 & 로깅 미션 정리</summary>
+
+## 1. 캐시 도입
+
+### 캐시 적용 대상
+
+| 기준 | 질문 | 예시 |
+| --- | --- | --- |
+| **Read-heavy** | 읽기가 쓰기보다 압도적으로 많은가? | 게시글 상세 조회 |
+| **Slow I/O** | DB 조회나 계산 비용이 비싼가? | 복잡한 통계 쿼리, 외부 API |
+| **Low Volatility** | 데이터가 자주 바뀌지 않는가? | 공지사항, 상품 카테고리 |
+| **Repeatability** | 동일한 요청이 반복적으로 오는가? | 인기 게시글, 메인 피드 |
+| **Staleness 허용** | 1~2초 오래된 데이터여도 괜찮은가? | 조회수, 좋아요 수 |
+
+위 표를 참고해 조회 빈도가 높고 데이터 변경 빈도가 상대적으로 낮은 API를 우선 캐시 대상으로 선택했다.
+
+- 영화 목록 조회: `/api/v1/movies`
+- 영화 상세 조회: `/api/v1/movies/{movieId}`
+- 영화관 목록/상세 조회
+- 매점 상품 목록 조회: `/api/concessions/products`
+- 이벤트 목록/영화별 이벤트 조회
+
+예매 생성, 좌석 조회, 매점 주문, 재고 차감처럼 실시간 상태가 중요한 흐름에는 캐시를 적용하지 않았다. 특히 좌석과 재고는 동시성 제어와 데이터 정합성이 중요하므로 DB의 최신 상태를 기준으로 판단해야 한다.
+
+### 선택한 캐시 방식
+
+- 적용 방식: Spring Cache + Caffeine 로컬 캐시
+- 만료 전략: write 후 10분 만료
+- 크기 제한: 최대 500개 엔트리
+- 무효화 전략: 관리자 생성/삭제 API가 호출되면 관련 캐시 전체 삭제
+
+Redis 같은 분산 캐시는 멀티 서버 환경에서 캐시 일관성을 맞추기 좋지만, 현재 프로젝트는 Render 기반 단일 애플리케이션 인스턴스 실습 환경에 가깝다. 따라서 별도 인프라를 추가하지 않고도 효과를 확인할 수 있는 Caffeine 로컬 캐시를 먼저 적용했다.
+
+강의록에 소개된 방식 중에는 Look-Aside (=Lazy Loading)에 가깝다.
+
+흐름은
+1. 조회 요청이 들어온다.
+2. Spring Cache가 먼저 Caffeine 캐시에 값이 있는지 확인한다.
+3. 캐시에 있으면 DB를 조회하지 않고 캐시 값을 반환한다.
+4. 캐시에 없으면 Service 메서드가 실행되어 DB를 조회한다.
+5. 조회 결과를 캐시에 저장한다.
+6. 이후 같은 요청은 캐시에서 반환된다.
+
+쓰기 쪽은 Write Around에 가까운 방식이다. 관리자 API로 영화, 영화관, 상품, 이벤트 등을 생성하거나 삭제할 때:
+DB에 먼저 반영 후 관련 캐시 무효화, 다음 조회 떄 DB에서 다시 읽고 캐시 재적재 과정을 거친다.
+
+### 캐시 적용 이유
+
+- 영화, 영화관, 매점 상품, 이벤트는 사용자가 반복적으로 조회할 가능성이 높다.
+- 해당 데이터는 관리자 API를 통해 드물게 변경된다.
+- DB 조회를 줄여 단순 조회 API의 응답 시간을 안정화할 수 있다.
+- 캐시 무효화 지점이 명확해 과도한 복잡도 없이 적용할 수 있다.
+
+### 적용한 코드
+
+- `CacheConfig`: Caffeine 기반 `CacheManager` 구성
+- `CacheNames`: 캐시 이름 상수화
+- `MovieService`: 영화 목록/상세 조회 캐싱, 영화 생성/삭제 시 캐시 무효화
+- `CinemaService`: 영화관 목록/상세 조회 캐싱, 영화관 생성 시 캐시 무효화
+- `ConcessionService`: 매점 상품 목록 캐싱, 상품 생성 시 캐시 무효화
+- `EventService`: 이벤트 목록/영화별 이벤트 캐싱, 이벤트 생성/연결 시 캐시 무효화
+
+## 2. 로그 리팩토링
+
+### 개선 방향
+
+기존 로그는 예외 처리나 결제 보상 실패처럼 일부 지점에만 남아 있었다. 이번에는 요청 단위 흐름을 추적할 수 있도록 공통 요청 로그를 추가했다.
+
+### 적용 방식
+
+- `RequestLoggingFilter`를 추가해 모든 HTTP 요청 종료 시 로그를 남긴다.
+- 요청마다 `requestId`를 생성하거나, 클라이언트가 보낸 `X-Request-Id`를 재사용한다.
+- 응답 헤더에도 `X-Request-Id`를 내려주어 클라이언트와 서버 로그를 연결할 수 있게 했다.
+- MDC에 `requestId`를 넣고 `logback-spring.xml` 패턴에 출력하도록 했다.
+- 로그 파일은 `logs/application.log`에 저장하고, 날짜/크기 기준으로 롤링한다.
+
+### 로그 형식
+
+```text
+http_request method=GET uri=/api/v1/movies status=200 durationMs=12 requestId=...
+```
+
+### 유용한 관찰 지표
+
+Grafana/Loki로 로그를 수집한다면 다음 지표를 대시보드에 둘 수 있다.
+
+- 요청 수: `http_request` 로그 발생량
+- 에러 응답 수: `status=4xx`, `status=5xx` 필터링
+- 느린 요청: `durationMs`가 큰 요청 확인
+- 결제 보상 실패: `외부 결제 취소 보상 처리에 실패` 로그 확인
+- 특정 요청 추적: `requestId`로 요청 흐름 검색
+
+### Grafana/Loki 연결 방법
+
+처음 Grafana Explore에서 `No logs found`가 나온 이유는 Spring Boot가 `logs/application.log`에는 로그를 쓰고 있었지만, 해당 파일을 Loki로 보내는 수집기가 없었기 때문이다. 이를 해결하기 위해 `monitoring` 디렉터리에 Loki, Alloy, Grafana 구성을 추가했다.
+
+```text
+Spring Boot -> logs/application.log -> Alloy -> Loki -> Grafana
+```
+
+실행 방법:
+
+```bash
+cd monitoring
+docker compose up -d
+```
+
+상태 확인:
+
+```bash
+curl http://localhost:3101/ready
+docker compose ps
+```
+
+Grafana 접속:
+
+```text
+http://localhost:3001
+admin / admin
+```
+
+### Grafana 대시보드 구성 결과
+
+로컬 Spring Boot 로그를 Loki로 수집하고 Grafana에서 다음 패널을 구성했다.
+
+- Total Requests:
+   - 전체 HTTP 요청 수를 확인한다.
+   - Query: `sum(count_over_time({app="spring-cgv"} |= "http_request" [1m]))`
+![img_2.png](img_2.png)
+
+
+- 5xx Server Errors:
+   - 서버 내부 오류 발생 여부를 확인한다.
+   - Query: `sum(count_over_time({app="spring-cgv"} |= "http_request" |= "status=5" [5m]))`
+![img_6.png](img_6.png)
+
+
+- Requests by Status:
+   - 2xx, 4xx, 5xx 요청 흐름을 구분해 확인한다.
+   - 상태 코드는 로그 본문에 포함되므로 LogQL에서는 상태별 문자열 필터를 사용했다.
+![img_4.png](img_4.png)
+![img_7.png](img_7.png)
+![img_8.png](img_8.png)
+
+
+- Payment Compensation Failures:
+   - 외부 결제 성공 후 내부 처리 실패 시 보상 취소 실패 로그를 추적한다.
+   - Query: `{app="spring-cgv"} |= "보상 처리에 실패"`
+![img_9.png](img_9.png)
+
+
+- Request Logs:
+   - 실제 요청 로그를 직접 확인한다.
+   - Query: `{app="spring-cgv"} |= "http_request"`
+![img_10.png](img_10.png)
+
+
+이번 모니터링에서는 `http_request` 로그가 Loki에 정상 수집되는 것을 확인했고, Grafana에서 요청 수와 5xx 오류를 시각화했다. 보상 처리 실패 패널은 현재 해당 오류가 발생하지 않아 `No data`로 표시되며, 이는 정상 상태로 판단했다.
+
+
+## 3. Redis / Memcached / 로컬 캐시 비교
+
+### Redis
+
+- 장점: 분산 환경에서 여러 서버가 같은 캐시를 공유할 수 있고, TTL, 자료구조, pub/sub 등을 지원한다.
+- 단점: 별도 서버 운영이 필요하고 네트워크 왕복 비용이 있다.
+- 적합한 상황: 멀티 서버, 세션 공유, 랭킹, 분산 락, 캐시 일관성이 중요한 서비스
+
+### Memcached
+
+- 장점: 단순 key-value 캐시에 빠르고 가볍다.
+- 단점: Redis보다 자료구조와 기능이 제한적이다.
+- 적합한 상황: 단순 조회 결과를 빠르게 저장하고 꺼내는 대규모 캐시
+
+### Caffeine
+
+- 장점: 애플리케이션 내부 메모리를 사용해 빠르고, 별도 인프라가 필요 없다.
+- 단점: 서버가 여러 대면 인스턴스마다 캐시가 분리되어 일관성 관리가 어렵다.
+- 적합한 상황: 단일 서버, 실습 환경, 변경 빈도가 낮은 기준 데이터 캐싱
+
+## 4. 한계와 보완점
+
+- 현재 캐시는 로컬 메모리 기반이므로 서버가 여러 대로 늘어나면 인스턴스별 캐시 불일치가 생길 수 있다.
+- 조회 결과를 Entity 형태로 캐시하고 있어, 규모가 커지면 DTO 캐싱 또는 전용 조회 모델 캐싱을 검토할 수 있다.
+- 운영 환경에서는 Actuator/Micrometer와 연동해 캐시 hit/miss, 요청 latency, 에러율을 함께 관찰하는 것이 좋다.
+- 감사 로그가 필요한 결제/주문/예매 취소 이벤트는 별도 audit log 저장소로 분리할 수 있다.
+
+## 5. 검증 내용
+
+- 실행 명령: `./gradlew test --no-daemon`
+- 결과: `BUILD SUCCESSFUL`
+- 캐시 설정, 요청 로그 필터, 기존 서비스 테스트가 함께 컴파일되고 테스트를 통과하는 것을 확인했다.
+
+### 캐시 성능 측정
+
+`CachePerformanceTest`에서 H2 테스트 DB에 영화 30건을 저장한 뒤 `MovieService.getAllMovies()`를 반복 호출해 측정했다.
+
+- 측정 명령: `./gradlew test --tests com.ceos23.cgv.global.cache.CachePerformanceTest --no-daemon --info`
+- Cold 조회 평균: `7.870ms`
+- Warm 캐시 조회 평균: `0.017ms`
+- 응답 시간 개선율: 약 `99.78%`
+- Cache hit count: `100`
+- Cache miss count: `2`
+- Cache hit rate: `98.04%`
+
+측정값은 로컬 H2 기반 서비스 계층 반복 호출 결과이므로 운영 DB와 실제 HTTP 네트워크 비용을 포함한 수치는 아니다. 다만 동일 조회가 반복될 때 DB 접근을 캐시 접근으로 대체해 응답 시간이 크게 줄어드는 효과와 캐시 적중 동작은 확인할 수 있었다.
+
+</details>
+
+<details>
 <summary>5주차 배포 미션 정리</summary>
 
 ## 1. 프로젝트 마무리 및 리팩토링
