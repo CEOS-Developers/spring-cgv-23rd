@@ -45,6 +45,7 @@ secrets.yml
 
 # Secret files
 application-secret.yaml
-
 .env
+.env.dev
+.env.prod
 *.env

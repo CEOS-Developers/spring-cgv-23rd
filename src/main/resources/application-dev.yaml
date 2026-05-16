@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/cgv_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+    show-sql: true
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+
+jwt:
+  secret: ${JWT_SECRET:dGVzdC1qd3Qtc2VjcmV0LWZvci1jaS1lbnZpcm9ubWVudC1vbmx5LW5vdC1wcm9kdWN0aW9u}
+
+payment:
+  secret-key: ${PAYMENT_SECRET_KEY:local-payment-secret}
