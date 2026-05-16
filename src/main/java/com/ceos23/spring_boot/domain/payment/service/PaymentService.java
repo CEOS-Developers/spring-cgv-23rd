@@ -41,10 +41,12 @@ public class PaymentService {
         try {
             response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
         } catch (Exception e) {
+            log.error("외부 결제 API 호출 실패 (paymentId={}): {}", paymentId, e.getMessage(), e);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
 
         if (!"PAID".equals(response.paymentStatus())) {
+            log.error("결제 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
             throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
 
@@ -54,8 +56,10 @@ public class PaymentService {
     public void cancelPayment(String paymentId) {
         PaymentData response = paymentClient.cancelPayment(paymentId);
 
-        if (!"CANCELLED".equals(response.paymentStatus()))
+        if (!"CANCELLED".equals(response.paymentStatus())) {
+            log.error("결제 취소 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
             throw new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED);
+        }
     }
 
     public PaymentDataInfo getPaymentDetails(String paymentId) {

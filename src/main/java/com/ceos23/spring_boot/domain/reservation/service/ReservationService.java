@@ -22,6 +22,7 @@ import com.ceos23.spring_boot.domain.user.repository.UserRepository;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -47,7 +49,6 @@ public class ReservationService {
     private final ReservedSeatRepository reservedSeatRepository;
     private final PaymentService paymentService;
 
-    // self-injection: cancelReservation을 REQUIRES_NEW로 프록시 통해 호출하기 위해 필요
     @Lazy
     @Autowired
     private ReservationService self;
@@ -62,6 +63,8 @@ public class ReservationService {
         reservation.validatePendingStatus();
 
         if (!reservation.getTotalPrice().equals(request.totalPayAmount())) {
+            log.warn("결제 금액 불일치 (paymentId={}, expected={}, actual={})",
+                    paymentId, reservation.getTotalPrice(), request.totalPayAmount());
             self.cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
         }
@@ -71,7 +74,8 @@ public class ReservationService {
         try {
             paymentDataInfo = paymentService.requestInstantPayment(paymentId, reservation.getOrderName(), reservation.getTotalPrice());
         } catch (Exception e) {
-            self.cancelReservation(paymentId); // 외부 결제 실패: 부모 tx 롤백과 독립적으로 예약 취소
+            log.error("결제 요청 실패, 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage());
+            self.cancelReservation(paymentId);
             throw e;
         }
 
@@ -79,6 +83,7 @@ public class ReservationService {
             confirmPayment(paymentId);
             return paymentDataInfo;
         } catch (Exception e) {
+            log.error("결제 확인 DB 반영 실패, 결제 취소 및 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage(), e);
             paymentService.cancelPayment(paymentId);
             self.cancelReservation(paymentId);
             throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
@@ -95,9 +100,12 @@ public class ReservationService {
 
         verifyCancelable(reservation, paymentId);
 
-        // PENDING 상태(결제 미처리)는 외부 결제 취소 API 호출 불필요
         if (reservation.getStatus() == ReservationStatus.PAID) {
-            paymentService.cancelPayment(paymentId);
+            try {
+                paymentService.cancelPayment(paymentId);
+            } catch (Exception e) {
+                log.error("외부 결제 취소 실패 (paymentId={}): {}", paymentId, e.getMessage());
+            }
         }
 
         self.cancelReservation(paymentId);
@@ -144,6 +152,7 @@ public class ReservationService {
         );
 
         if (isAlreadyOccupied) {
+            log.warn("좌석 선점 충돌 (scheduleId={}, seatIds={})", scheduleId, seatIds);
             throw new BusinessException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
     }
