@@ -46,6 +46,9 @@ class ReservationServiceTest {
     @Mock
     private PaymentGateway paymentGateway;
 
+    @Mock
+    private ReservationTransactionService reservationTransactionService;
+
     @Test
     void 예매_성공() {
         // given
@@ -67,7 +70,7 @@ class ReservationServiceTest {
         given(screeningRepository.findById(screeningId))
                 .willReturn(Optional.of(screening));
 
-        given(seatRepository.findById(seatId))
+        given(seatRepository.findWithLockById(seatId))
                 .willReturn(Optional.of(seat));
 
         given(reservationRepository.saveAndFlush(any(Reservation.class)))

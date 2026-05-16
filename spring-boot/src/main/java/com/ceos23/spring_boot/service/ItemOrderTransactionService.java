@@ -15,6 +15,7 @@ import com.ceos23.spring_boot.repository.ItemRepository;
 import com.ceos23.spring_boot.repository.TheaterItemStockRepository;
 import com.ceos23.spring_boot.repository.TheaterRepository;
 import com.ceos23.spring_boot.repository.UserRepository;
+import com.ceos23.spring_boot.dto.ItemOrderResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,6 +57,14 @@ public class ItemOrderTransactionService {
         ItemOrder itemOrder = loadOrder(orderId);
         itemOrder.markPaid(paymentId, paidAt);
         return itemOrder;
+    }
+
+    @Transactional
+    public ItemOrderResponse markPaidAndCreateResponse(Long orderId, String paymentId, LocalDateTime paidAt) {
+        ItemOrder itemOrder = loadOrder(orderId);
+        itemOrder.markPaid(paymentId, paidAt);
+
+        return ItemOrderResponse.from(itemOrder);
     }
 
     @Transactional

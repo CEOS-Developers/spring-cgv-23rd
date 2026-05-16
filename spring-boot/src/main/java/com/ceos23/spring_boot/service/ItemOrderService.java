@@ -37,21 +37,23 @@ public class ItemOrderService {
         ItemOrder savedOrder = itemOrderTransactionService.createOrderAndDecreaseStock(request);
         String paymentId = createPaymentId(savedOrder.getId());
 
+        PaymentData payment = requestPayment(savedOrder, paymentId);
+
+        return itemOrderTransactionService.markPaidAndCreateResponse(
+                savedOrder.getId(),
+                paymentId,
+                resolvePaidAt(payment)
+        );
+    }
+
+    private PaymentData requestPayment(ItemOrder savedOrder, String paymentId) {
         try {
-            PaymentData payment = paymentGateway.pay(
+            return paymentGateway.pay(
                     paymentId,
                     createOrderName(savedOrder),
                     savedOrder.getTotalPrice(),
                     createCustomData(savedOrder)
             );
-
-            ItemOrder paidOrder = itemOrderTransactionService.markPaid(
-                    savedOrder.getId(),
-                    paymentId,
-                    resolvePaidAt(payment)
-            );
-
-            return ItemOrderResponse.from(paidOrder);
 
         } catch (CustomException e) {
             itemOrderTransactionService.markPaymentFailedAndRestoreStock(savedOrder.getId(), paymentId);

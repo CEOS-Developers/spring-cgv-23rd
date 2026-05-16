@@ -94,8 +94,11 @@ class ItemOrderConcurrencyTest {
 
                     itemOrderService.orderItems(request);
                     successCount.incrementAndGet();
+
                 } catch (Exception e) {
+                    e.printStackTrace();
                     failCount.incrementAndGet();
+
                 } finally {
                     doneLatch.countDown();
                 }
@@ -111,8 +114,20 @@ class ItemOrderConcurrencyTest {
                 .findByTheaterIdAndItemId(theater.getId(), item.getId())
                 .orElseThrow();
 
-        assertThat(successCount.get()).isEqualTo(1);
-        assertThat(failCount.get()).isEqualTo(1);
-        assertThat(stock.getStock()).isEqualTo(0);
+        System.out.println("successCount = " + successCount.get());
+        System.out.println("failCount = " + failCount.get());
+        System.out.println("stock = " + stock.getStock());
+
+        assertThat(successCount.get())
+                .as("성공한 주문 수")
+                .isEqualTo(1);
+
+        assertThat(failCount.get())
+                .as("실패한 주문 수")
+                .isEqualTo(1);
+
+        assertThat(stock.getStock())
+                .as("최종 재고")
+                .isEqualTo(0);
     }
 }
