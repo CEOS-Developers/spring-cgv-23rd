@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,12 +28,18 @@ public class MovieController {
     @Operation(summary = "영화 목록 조회", description = "전체 영화 목록을 조회하거나 제목 등의 조건으로 필터링합니다.")
     @GetMapping("/api/movies")
     public ResponseEntity<List<MovieResponse>> findMovies(
-            // 스웨거에서 쿼리 파라미터로 예쁘게 보여주기 위한 마법의 어노테이션!
             @ParameterObject
             @ModelAttribute MovieSearchRequest request) {
 
-        List<MovieResponse> responses = movieService.findMovies(request.toCommand())
-                .stream()
+        List<MovieInfo> movieInfos;
+
+        if (StringUtils.hasText(request.title())) {
+            movieInfos = movieService.searchMovies(request.title());
+        } else {
+            movieInfos = movieService.findAllMovies();
+        }
+
+        List<MovieResponse> responses = movieInfos.stream()
                 .map(MovieResponse::from)
                 .toList();
 

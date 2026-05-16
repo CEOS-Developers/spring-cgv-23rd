@@ -2,16 +2,17 @@ package com.ceos23.spring_boot.domain.movie.service;
 
 import com.ceos23.spring_boot.domain.movie.dto.MovieCreateCommand;
 import com.ceos23.spring_boot.domain.movie.dto.MovieInfo;
-import com.ceos23.spring_boot.domain.movie.dto.MovieSearchCommand;
 import com.ceos23.spring_boot.domain.movie.dto.MovieUpdateCommand;
 import com.ceos23.spring_boot.domain.movie.entity.Movie;
 import com.ceos23.spring_boot.domain.movie.repository.MovieRepository;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,20 +23,22 @@ import java.util.Optional;
 public class MovieService {
     private final MovieRepository movieRepository;
 
-    public List<MovieInfo> findMovies(MovieSearchCommand command) {
-        List<Movie> movies;
-
-        if (StringUtils.hasText(command.title())) {
-            movies = movieRepository.findByTitleContainingAndDeletedAtIsNull(command.title());
-        } else {
-            movies = movieRepository.findAllByDeletedAtIsNull();
-        }
-
+    @Cacheable(value = "moviesAll", key = "'all'")
+    public List<MovieInfo> findAllMovies() {
+        List<Movie> movies = movieRepository.findAllByDeletedAtIsNull();
         return movies.stream()
                 .map(MovieInfo::from)
                 .toList();
     }
 
+    public List<MovieInfo> searchMovies(String title) {
+        List<Movie> movies = movieRepository.findByTitleContainingAndDeletedAtIsNull(title);
+        return movies.stream()
+                .map(MovieInfo::from)
+                .toList();
+    }
+
+    @Cacheable(value = "movies", key = "#id")
     public MovieInfo findMovie(Long id) {
         Movie movie = findMovieById(id);
 
@@ -43,6 +46,7 @@ public class MovieService {
     }
 
     @Transactional
+    @CacheEvict(value = "moviesAll", key = "'all'")
     public MovieInfo createMovie(MovieCreateCommand command) {
         if (movieRepository.existsByTitleAndReleaseDateAndDeletedAtIsNull(command.title(), command.releaseDate()))
             throw new BusinessException(ErrorCode.DUPLICATE_MOVIE);
@@ -83,6 +87,10 @@ public class MovieService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "movies", key = "#id"),
+            @CacheEvict(value = "moviesAll", key = "'all'")
+    })
     public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
         Movie movie = findMovieById(id);
 
@@ -104,6 +112,10 @@ public class MovieService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "movies", key = "#id"),
+            @CacheEvict(value = "moviesAll", key = "'all'")
+    })
     public void deleteMovie(Long id) {
         Movie movie = findMovieById(id);
 
