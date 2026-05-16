@@ -18,9 +18,12 @@ import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import tools.jackson.databind.JavaType;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 @Slf4j
 @Configuration
@@ -33,18 +36,15 @@ public class RedisCacheConfig implements CachingConfigurer {
 	}
 
 	@Bean
-	public RedisCacheConfiguration redisCacheConfiguration(
-		ObjectMapper cacheObjectMapper) {
+	public CacheConfigurationFactory cacheConfigurationFactory(ObjectMapper cacheObjectMapper) {
+		return new CacheConfigurationFactory(cacheObjectMapper);
+	}
 
-		return RedisCacheConfiguration.defaultCacheConfig()
-			.entryTtl(Duration.ofHours(1))
-			.disableCachingNullValues()
-			.serializeKeysWith(RedisSerializationContext.SerializationPair
-				.fromSerializer(new StringRedisSerializer()))
-			.serializeValuesWith(RedisSerializationContext.SerializationPair
-				.fromSerializer(new JacksonJsonRedisSerializer<>(
-					cacheObjectMapper,
-					cacheObjectMapper.getTypeFactory().constructType(Object.class))));
+	@Bean
+	public RedisCacheConfiguration redisCacheConfiguration(CacheConfigurationFactory factory) {
+		return factory.create(
+			Duration.ofHours(1),
+			factory.typeFactory().constructType(Object.class));
 	}
 
 	@Bean
@@ -86,5 +86,25 @@ public class RedisCacheConfig implements CachingConfigurer {
 			}
 		};
 
+	}
+
+	@RequiredArgsConstructor
+	public static class CacheConfigurationFactory {
+
+		private final ObjectMapper mapper;
+
+		public RedisCacheConfiguration create(Duration ttl, JavaType valueType) {
+			return RedisCacheConfiguration.defaultCacheConfig()
+				.entryTtl(ttl)
+				.disableCachingNullValues()
+				.serializeKeysWith(RedisSerializationContext.SerializationPair
+					.fromSerializer(new StringRedisSerializer()))
+				.serializeValuesWith(RedisSerializationContext.SerializationPair
+					.fromSerializer(new JacksonJsonRedisSerializer<>(mapper, valueType)));
+		}
+
+		public TypeFactory typeFactory() {
+			return mapper.getTypeFactory();
+		}
 	}
 }
