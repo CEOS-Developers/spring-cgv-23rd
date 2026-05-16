@@ -4,6 +4,7 @@ import com.cgv.spring_boot.global.common.code.BaseErrorCode;
 import com.cgv.spring_boot.global.common.response.ErrorResponse;
 import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -17,9 +18,10 @@ public class GlobalExceptionHandler {
      * 비즈니스 로직 중 발생하는 커스텀 예외 처리
      */
     @ExceptionHandler(BusinessException.class)
-    protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        log.error("BusinessException: {}", e.getErrorCode().getMessage());
+    protected ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e, HttpServletRequest request) {
         BaseErrorCode errorCode = e.getErrorCode();
+        log.warn("business exception handled. method={}, uri={}, status={}, message={}",
+                request.getMethod(), request.getRequestURI(), errorCode.getStatus(), errorCode.getMessage());
         ErrorResponse response = ErrorResponse.of(errorCode.getStatus(), errorCode.getMessage());
         return new ResponseEntity<>(response, org.springframework.http.HttpStatus.valueOf(errorCode.getStatus()));
     }
@@ -28,9 +30,10 @@ public class GlobalExceptionHandler {
      * 그 외 예상치 못한 모든 예외 처리 (500 Error)
      */
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ErrorResponse> handleException(Exception e) {
-        log.error("Exception: ", e);
+    protected ResponseEntity<ErrorResponse> handleException(Exception e, HttpServletRequest request) {
         GlobalErrorCode errorCode = GlobalErrorCode.INTERNAL_SERVER_ERROR;
+        log.error("unexpected exception handled. method={}, uri={}, status={}",
+                request.getMethod(), request.getRequestURI(), errorCode.getStatus(), e);
         ErrorResponse response = ErrorResponse.of(errorCode.getStatus(), errorCode.getMessage());
         return new ResponseEntity<>(response, org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
     }

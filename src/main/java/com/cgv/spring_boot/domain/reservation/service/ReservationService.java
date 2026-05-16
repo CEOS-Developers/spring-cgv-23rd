@@ -3,21 +3,22 @@ package com.cgv.spring_boot.domain.reservation.service;
 import com.cgv.spring_boot.domain.payment.dto.response.PaymentResponse;
 import com.cgv.spring_boot.domain.payment.service.PaymentService;
 import com.cgv.spring_boot.domain.reservation.dto.ReservationRequest;
+import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
 import com.cgv.spring_boot.domain.reservation.entity.Reservation;
 import com.cgv.spring_boot.domain.reservation.entity.ReservationStatus;
 import com.cgv.spring_boot.domain.reservation.entity.ReservedSeat;
 import com.cgv.spring_boot.domain.reservation.entity.SeatPosition;
 import com.cgv.spring_boot.domain.reservation.repository.ReservationRepository;
 import com.cgv.spring_boot.domain.reservation.repository.ReservedSeatRepository;
+import com.cgv.spring_boot.domain.schedule.exception.ScheduleErrorCode;
 import com.cgv.spring_boot.domain.schedule.entity.Schedule;
 import com.cgv.spring_boot.domain.schedule.repository.ScheduleRepository;
 import com.cgv.spring_boot.domain.user.entity.User;
-import com.cgv.spring_boot.domain.user.repository.UserRepository;
-import com.cgv.spring_boot.domain.reservation.exception.ReservationErrorCode;
-import com.cgv.spring_boot.domain.schedule.exception.ScheduleErrorCode;
 import com.cgv.spring_boot.domain.user.exception.UserErrorCode;
+import com.cgv.spring_boot.domain.user.repository.UserRepository;
 import com.cgv.spring_boot.global.error.code.GlobalErrorCode;
 import com.cgv.spring_boot.global.error.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
@@ -73,9 +75,13 @@ public class ReservationService {
         try {
             reservedSeatRepository.saveAllAndFlush(reservedSeats);
         } catch (DataIntegrityViolationException e) {
+            log.warn("reservation rejected. userId={}, scheduleId={}, reason=seat_conflict_on_flush",
+                    userId, schedule.getId());
             throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
 
+        log.info("AUDIT reservation created. userId={}, reservationId={}, scheduleId={}, seatCount={}",
+                userId, savedReservation.getId(), schedule.getId(), seatPositions.size());
         return savedReservation.getId();
     }
 
@@ -88,6 +94,7 @@ public class ReservationService {
     private void validateDuplicateSeatsInRequest(List<SeatPosition> seatPositions) {
         Set<SeatPosition> uniqueSeats = Set.copyOf(seatPositions);
         if (uniqueSeats.size() != seatPositions.size()) {
+            log.warn("reservation rejected. reason=duplicated_seats_in_request, seatCount={}", seatPositions.size());
             throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
     }
@@ -102,6 +109,7 @@ public class ReservationService {
                 );
 
         if (alreadyReserved) {
+            log.warn("reservation rejected. scheduleId={}, reason=already_reserved_seat", schedule.getId());
             throw new BusinessException(ReservationErrorCode.ALREADY_RESERVED_SEAT);
         }
     }
@@ -122,6 +130,8 @@ public class ReservationService {
 
         PaymentResponse response = paymentService.payReservation(reservation, totalAmount, orderName, customData);
         reservation.confirm();
+        log.info("AUDIT reservation paid. userId={}, reservationId={}, paymentId={}, totalAmount={}",
+                userId, reservationId, response.paymentId(), totalAmount);
         return response;
     }
 
@@ -130,10 +140,13 @@ public class ReservationService {
         if (reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
             reservation.expire();
             reservedSeatRepository.deleteByReservation(reservation);
+            log.warn("reservation payment rejected. reservationId={}, reason=expired", reservation.getId());
             throw new BusinessException(ReservationErrorCode.RESERVATION_EXPIRED);
         }
 
         if (reservation.getStatus() != ReservationStatus.PENDING_PAYMENT) {
+            log.warn("reservation payment rejected. reservationId={}, reason=invalid_status, status={}",
+                    reservation.getId(), reservation.getStatus());
             throw new BusinessException(ReservationErrorCode.INVALID_RESERVATION_STATUS);
         }
     }
@@ -148,6 +161,7 @@ public class ReservationService {
         paymentService.cancelReservationPayment(reservation);
 
         reservedSeatRepository.deleteByReservation(reservation);
+        log.info("AUDIT reservation cancelled. userId={}, reservationId={}", userId, reservationId);
     }
 
     /** 본인 예약 조회 */
@@ -156,6 +170,7 @@ public class ReservationService {
                 .orElseThrow(() -> new BusinessException(ReservationErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
+            log.warn("AUDIT reservation access denied. userId={}, reservationId={}", userId, reservationId);
             throw new BusinessException(GlobalErrorCode.FORBIDDEN_ACCESS);
         }
 

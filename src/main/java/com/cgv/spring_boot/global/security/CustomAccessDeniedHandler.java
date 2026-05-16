@@ -29,7 +29,8 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     ) throws IOException, ServletException {
         GlobalErrorCode errorCode = GlobalErrorCode.FORBIDDEN_ACCESS;
 
-        log.warn("Forbidden request: {} {}", request.getMethod(), request.getRequestURI());
+        log.warn("AUDIT access denied. method={}, uri={}, message={}",
+                request.getMethod(), request.getRequestURI(), accessDeniedException.getMessage());
 
         response.setStatus(errorCode.getStatus());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
