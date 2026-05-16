@@ -415,6 +415,19 @@ K6 대시보드
 - 다시 조회한 최신 결과를 캐시에 저장
 
 ### 2. 로그 리팩토링 하기
+GlobalExceptionHandler 로그 추가
 
+`CustomException`이 발생했을 때 `errorCode`와 `message`가 로그에 남도록 수정했다.
+- 기존: 에러 응답만 반환
+- 개선: 에러 응답 반환 + 서버 로그 기록
+
+#### Grafana 대시보드 지표
+- API 요청 수
+- API 평균 응답 시간
+- 4xx / 5xx 에러 수
+- ErrorCode별 발생 횟수
+- 매점 주문 성공 수
+- 결제 실패 수
+- 락 획득 실패 수
 
 </details>
