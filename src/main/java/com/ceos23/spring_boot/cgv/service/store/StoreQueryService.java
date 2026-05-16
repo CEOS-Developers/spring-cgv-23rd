@@ -2,6 +2,8 @@ package com.ceos23.spring_boot.cgv.service.store;
 
 import com.ceos23.spring_boot.cgv.domain.store.CinemaMenuStock;
 import com.ceos23.spring_boot.cgv.domain.store.StorePurchase;
+import com.ceos23.spring_boot.cgv.dto.store.StoreMenuResponse;
+import com.ceos23.spring_boot.cgv.global.cache.CacheNames;
 import com.ceos23.spring_boot.cgv.global.exception.ErrorCode;
 import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
 import com.ceos23.spring_boot.cgv.repository.cinema.CinemaRepository;
@@ -10,6 +12,7 @@ import com.ceos23.spring_boot.cgv.repository.store.StorePurchaseRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,9 +26,12 @@ public class StoreQueryService {
     private final StorePurchaseRepository storePurchaseRepository;
     private final UserRepository userRepository;
 
-    public List<CinemaMenuStock> getStoreMenus(Long cinemaId) {
+    @Cacheable(cacheNames = CacheNames.STORE_MENUS, key = "#cinemaId")
+    public List<StoreMenuResponse> getStoreMenus(Long cinemaId) {
         ensureCinemaExists(cinemaId);
-        return cinemaMenuStockRepository.findAllByCinemaIdOrderByStoreMenuNameAsc(cinemaId);
+        return cinemaMenuStockRepository.findAllByCinemaIdOrderByStoreMenuNameAsc(cinemaId).stream()
+                .map(StoreMenuResponse::from)
+                .toList();
     }
 
     public List<StorePurchase> getPurchaseHistory(Long userId) {
