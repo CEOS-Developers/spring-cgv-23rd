@@ -57,7 +57,7 @@ class ItemOrderConcurrencyTest {
     @DisplayName("재고가 1개일 때 동시에 2번 주문하면 1번만 성공한다")
     void orderItemConcurrencyTest() throws InterruptedException {
         PaymentData paymentData = mock(PaymentData.class);
-        when(paymentData.getPaidAt()).thenReturn(LocalDateTime.now());
+        when(paymentData.paidAt()).thenReturn(LocalDateTime.now());
 
         BDDMockito.given(paymentGateway.pay(anyString(), anyString(), anyInt(), anyString()))
                 .willReturn(paymentData);
