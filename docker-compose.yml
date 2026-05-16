@@ -6,8 +6,11 @@ services:
       - .env
     environment:
       - SPRING_PROFILES_ACTIVE=prod
+      - LOG_PATH=/app/logs
     ports:
       - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
     networks:
       - monitoring
     restart: unless-stopped
@@ -32,7 +35,7 @@ services:
       timeout: 3s
       retries: 3
 
-  
+
 networks:
   monitoring:
     name: monitoring
