@@ -849,6 +849,13 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
 ```
+결과
+```
+2026-05-16T22:07:54.749+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
+2026-05-16T22:07:54.750+09:00  INFO 60076 --- [nio-8080-exec-1] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=8
+2026-05-16T22:07:54.752+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
+2026-05-16T22:07:54.774+09:00  WARN 60076 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.cgv.spring_boot.global.error.exception.BusinessException: 이미 사용 중인 아이디입니다.]
+```
 
 운영 환경에서는 SQL 로그와 바인딩 로그를 끄고, 애플리케이션 로그는 `INFO` 중심으로 확인하도록 설정했습니다.
 
@@ -858,6 +865,12 @@ logging:
     com.cgv.spring_boot: INFO
     org.hibernate.SQL: OFF
     org.hibernate.orm.jdbc.bind: OFF
+```
+결과
+```
+2026-05-16T13:08:53.081Z  WARN 1 --- [nio-8080-exec-8] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
+2026-05-16T13:08:53.092Z  INFO 1 --- [nio-8080-exec-8] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=52
+2026-05-16T13:08:53.097Z  WARN 1 --- [nio-8080-exec-8] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
 ```
 
 ---
@@ -946,20 +959,4 @@ AUDIT payment succeeded. reservationId=3, paymentId=pay_123, provider=PORTONE
 
 ---
 
-### 8. 로깅 결과
-
-로컬 환경
-```
-2026-05-16T22:07:54.749+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
-2026-05-16T22:07:54.750+09:00  INFO 60076 --- [nio-8080-exec-1] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=8
-2026-05-16T22:07:54.752+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
-2026-05-16T22:07:54.774+09:00  WARN 60076 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.cgv.spring_boot.global.error.exception.BusinessException: 이미 사용 중인 아이디입니다.]
-```
-
-배포 환경
-```
-2026-05-16T13:08:53.081Z  WARN 1 --- [nio-8080-exec-8] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
-2026-05-16T13:08:53.092Z  INFO 1 --- [nio-8080-exec-8] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=52
-2026-05-16T13:08:53.097Z  WARN 1 --- [nio-8080-exec-8] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
-```
 </details>
