@@ -19,6 +19,7 @@
 - 장애 발생 시 `requestId` 하나로 인증 → 서비스 → 예외 흐름을 연결해서 추적 가능
 - 결제 실패를 `errorCode`, `paymentId`, `orderId`, `reservationId` 기준으로 바로 필터링 가능
 - 일반 운영 로그와 돈이 관련된 감사 로그를 분리해서 보관 정책과 접근 제어를 다르게 가져갈 수 있음
+<img width="2848" height="4464" alt="image" src="https://github.com/user-attachments/assets/e7ce532a-89f0-430d-a9b2-c272dd86fc14" />
 
 ## 캐싱과 로깅
 
