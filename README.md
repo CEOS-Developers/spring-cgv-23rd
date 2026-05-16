@@ -2297,4 +2297,88 @@ public class MovieService {    // TheaterService에 대해서도 동일 적용
         - 관리자가 수정, 삭제한 영화와 극장 정보가 캐시로 계속 조회되는 문제 차단
     - 캐시 삭제가 아닌, 업데이트시 **Race Condition** 발생 가능
         - 캐시에 변경되기 전의 데이터가 유지 될 수도..
+---
+# 로그 리팩토링
 
+### 1. 외부 결제 API 호출 실패
+
+```java
+// PaymentService
+try {
+		response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
+} catch (Exception e) {
+		log.error("외부 결제 API 호출 실패 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+}
+```
+
+- 실제 외부 API에서 어떤 오류가 발생했는지 결제 ID와 실패 메시지 로깅
+
+### 2. 결제 상태값 불일치
+
+```java
+// PaymentService
+if (!"PAID".equals(response.paymentStatus())) {
+	log.error("결제 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
+	throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+}
+```
+
+- 외부 결제 API가 "PAID" 외의 값을 반환할 때 어떤 값이 왔는지 기록
+
+### 3. 결제 취소 상태값 불일치
+
+```java
+// ReservationService
+if (!"CANCELLED".equals(response.paymentStatus())) {
+		log.error("결제 취소 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
+		throw new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED);
+}
+```
+
+- 결제 취소가 실패하면 수동 정산 처리 필요
+    - 어떤 paymentId에서 어떤 상태가 왔는지 기록
+
+### 4. 결제 금액 불일치
+
+```java
+// ReservationService
+if (!reservation.getTotalPrice().equals(request.totalPayAmount())) {
+		log.warn("결제 금액 불일치 (paymentId={}, expected={}, actual={})",
+		paymentId, reservation.getTotalPrice(), request.totalPayAmount());
+		self.cancelReservation(paymentId);
+		throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+}
+```
+
+- DB에 저장된 금액과 프론트에서 넘어온 금액이 다른 상황 추적
+    - 버그 or 금액 위변조 시도
+
+### 5. 결제 요청 실패 / 결제 확인 DB 반영 실패
+
+```java
+// ReservationService
+try {
+		paymentDataInfo = paymentService.requestInstantPayment(...);
+} catch (Exception e) {
+		log.error("결제 요청 실패, 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		self.cancelReservation(paymentId);
+		throw e;
+}
+```
+
+- 외부 결제 요청 자체가 실패한 건 추적
+
+```java
+try {
+		confirmPayment(paymentId);
+		return paymentDataInfo;
+} catch (Exception e) {
+		log.error("결제 확인 DB 반영 실패, 결제 취소 및 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		paymentService.cancelPayment(paymentId);
+		self.cancelReservation(paymentId);
+		throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+}
+```
+
+- 외부 결제는 완료됐는데 DB 반영 실패한 건 추적
