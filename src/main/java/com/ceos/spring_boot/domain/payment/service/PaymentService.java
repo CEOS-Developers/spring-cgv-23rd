@@ -57,6 +57,10 @@ public class PaymentService {
 
         boolean isPaymentProcessed = false; // 외부 결제 API 호출 성공 여부 확인용
 
+        // 결제 시도 시작 기록
+        log.info("[Payment Attempt] 결제 API 호출 시작 - paymentId: {}, userId: {}, amount: {}",
+                paymentId, userId, request.totalPayAmount());
+
         try {
             // 외부 결제 API 호출
             PaymentResponse response = paymentClient.requestPayment(paymentId, request);
@@ -71,10 +75,16 @@ public class PaymentService {
 
                 p.markAsPaid();
             });
+
+            log.info("[AUDIT - Payment Success] 결제 및 DB 반영 완료 - paymentId: {}, userId: {}, amount: {}",
+                    paymentId, userId, request.totalPayAmount());
+
             return response;
 
         } catch (Exception e) {
-            log.error("[Payment Failed] 보상 트랜잭션 진행 - ID: {}, 원인: {}", paymentId, e.getMessage(), e);
+            // 에러 발생 시 userId를 추가하여 누구의 결제가 터졌는지 추적
+            log.warn("[Payment Failed] 결제 실패로 인한 보상 트랜잭션 진행 - paymentId: {}, userId: {}, 원인: {}",
+                    paymentId, userId, e.getMessage());
 
             transactionTemplate.executeWithoutResult(status -> {
                 Payment p = paymentRepository.findByPaymentId(paymentId).orElse(null);
@@ -106,6 +116,9 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.PAYMENT_NOT_CANCELLABLE);
         }
 
+        // 결제 취소 시도 기록
+        log.info("[Cancel Attempt] 결제 취소 API 호출 시작 - paymentId: {}", paymentId);
+
         // 외부 API 취소 요청
         PaymentResponse response = paymentClient.cancelPayment(paymentId);
 
@@ -123,6 +136,8 @@ public class PaymentService {
 
                 strategy.cancel(p.getTargetId());
             });
+            // 환불 완료 기록
+            log.info("[AUDIT - Cancel Success] 결제 취소 및 DB 반영 완료 - paymentId: {}", paymentId);
         } catch (Exception e) {
             log.error("[CRITICAL] 결제 취소 API는 성공했으나 DB 반영에 실패했습니다. 결제 ID: {}, 원인: {}",
                     paymentId, e.getMessage(), e);

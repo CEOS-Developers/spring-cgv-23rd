@@ -16,6 +16,7 @@ import com.ceos.spring_boot.domain.user.repository.UserRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
 import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StoreService {
@@ -58,6 +60,7 @@ public class StoreService {
             // 락 획득 시도 (최대 5초 대기, 3초 유지)
             boolean isLocked = multiLock.tryLock(5, TimeUnit.SECONDS);
             if (!isLocked) {
+                log.warn("[StoreOrder] 매점 상품 락 획득 실패 - userId: {}, cinemaId: {}", userId, request.cinemaId());
                 throw new BusinessException(ErrorCode.CONFLICT_ERROR); // 또는 적절한 에러코드
             }
 
@@ -96,6 +99,8 @@ public class StoreService {
                     }
 
                     if (stock.getQuantity() < itemRequest.count()) {
+                        log.warn("[StoreOrder] 재고 부족 - userId: {}, productId: {}, 요청수량: {}, 남은수량: {}",
+                                userId, product.getId(), itemRequest.count(), stock.getQuantity());
                         throw new BusinessException(ErrorCode.OUT_OF_STOCK_ERROR);
                     }
                     stock.decreaseQuantity(itemRequest.count());
@@ -106,14 +111,20 @@ public class StoreService {
                 }
 
                 order.updateTotalPrice(totalPrice);
-                return OrderResponse.from(orderRepository.save(order));
+
+                Order savedOrder = orderRepository.save(order);
+
+                log.info("[StoreOrder Created] 매점 주문 생성 완료 - orderId: {}, userId: {}, totalPrice: {}",
+                        savedOrder.getId(), userId, totalPrice);
+
+                return OrderResponse.from(savedOrder);
             });
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         } finally {
-            // 5. 트랜잭션 종료 후 안전하게 락 해제
+            // 트랜잭션 종료 후 안전하게 락 해제
             if (multiLock.isHeldByCurrentThread()) {
                 multiLock.unlock();
             }

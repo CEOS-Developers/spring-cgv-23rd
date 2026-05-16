@@ -56,6 +56,8 @@ public class ReservationService {
             // 분산 락 획득 시도
             boolean isLocked = multiLock.tryLock(5, TimeUnit.SECONDS);
             if (!isLocked) {
+                // 트래픽 병목 파악
+                log.warn("[Reservation] 좌석 선점 락 획득 실패 - userId: {}, scheduleId: {}", userId, request.scheduleId());
                 throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
             }
 
@@ -98,14 +100,19 @@ public class ReservationService {
                     // DB 제약 조건 즉시 확인
                     reservationSeatRepository.flush();
 
+                    log.info("[Reservation Created] 예매 성공 - reservationId: {}, userId: {}, scheduleId: {}, seats: {}",
+                            reservation.getId(), userId, schedule.getId(), seatIdentifiers);
+
                     return ReservationResponse.from(reservation);
 
                 } catch (DataIntegrityViolationException e) {
+                    log.warn("[Reservation] 동시성 충돌로 인한 예매 실패 - userId: {}, scheduleId: {}", userId, request.scheduleId());
                     throw new BusinessException(ErrorCode.ALREADY_RESERVED_SEAT_ERROR);
                 }
             });
 
         } catch (InterruptedException e) {
+            log.error("[Reservation Error] 분산 락 처리 중 인터럽트 발생 - userId: {}", userId, e);
             Thread.currentThread().interrupt();
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
         } finally {

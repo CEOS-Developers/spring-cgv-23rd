@@ -414,3 +414,103 @@
 병목 지점: 분산 락 경합 및 Redis 부하 (Spring Boot ↔ Redis), 외부 API 대기 시간의 전파 (Spring Boot → External Payment API)
 분석 결과 정리
 > 유저 수나 요청 횟수에 상관없이, 시스템은 정확히 좌석 수만큼만 예약을 허용하고 나머지는 모두 안전하게 거절(409)
+
+# 캐싱
+정의: 데이터베이스처럼 접근 비용이 비싸거나 계산 시간이 오래 걸리는 데이터를 속도가 빠른 임시 저장소에 두고, 동일한 요청이 올 때 DB까지 가지 않고 임시 저장소에서 빠르게 반환하여 시스템의 전반적인 성능을 끌어올리는 기술
+
+프로젝트 내 사용한 캐시 전략: **Look-Aside (Read-Aside)**
+- **Cache Hit:** 애플리케이션이 Redis에서 데이터를 먼저 찾음 → 있으면 바로 반환
+- **Cache Miss:** Redis에 없으면 DB에서 조회 → 결과를 Redis에 저장 후 반환
+- 장점: Redis가 잠시 다운되더라도 서비스가 완전히 마비되지 않고 DB를 통해 정상 작동 유지 가능
+
+### Spring Boot에서의 캐시 사용법
+- `build.gradle`에 의존성 추가
+    - implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    - implementation 'org.springframework.boot:spring-boot-starter-cache’
+- `Application.java`에 `@EnableCaching` 어노테이션 추가
+- @Cacheable : 조회 캐싱
+- @CacheEvict : 캐시 삭제
+- @CachePut : 캐시 갱신
+
+### CGV 프로젝트 내 도입 및 적용 내용
+캐싱 대상 선정: 영화 목록 조회 (MovieService.findAllMovies)
+
+선정 이유: 영화 정보는 한 번 등록되면 변경 빈도가 매우 낮은 반면, 메인 페이지 및 예매 페이지 진입 시 모든 사용자가 반복적으로 조회하는 핵심 API이기 때문. 
+
+* `CacheConfig.java` 작성
+* @Cacheable를 find 메서드에 적용
+* @CacheEvict를 create와 delete 메서드에 적용하여 데이터가 변경될 때마다 캐시를 최신화 하도록 설계
+### 트러블슈팅 경험
+* record 사용에 따른 역직렬화 실패
+  * 문제 상황: 첫 조회(Cache Miss) 시에는 성공적으로 데이터가 들어가지만, 두 번째 조회(Cache Hit) 시 Redis에서 데이터를 꺼내올 때 클래스 타입 정보를 인식하지 못해 역직렬화 에러가 발생
+  * 해결 방법: 설정을 DefaultTyping.EVERYTHING으로 격상하여 final 클래스인 자바 record를 정확하게 타입을 추적하고 역직렬화할 수 있도록 Config 수정
+### 캐싱 결과
+<img width="2030" height="332" alt="Image" src="https://github.com/user-attachments/assets/ee4a9c78-24ee-46b7-bebc-f795baa6a294" />
+
+* 첫 번째 조회 시도 → Cache Miss 로그 출력 → 두 번째 조회부터는 로그 출력 X → 캐싱이 잘 되고있음
+
+# 로깅
+- **`@Slf4j` 어노테이션:** Lombok에서 제공하는 어노테이션을 사용하여 각 클래스 상단에 선언, 간편하게 Logger 객체(`log`)를 주입받아 사용
+- **로그 레벨 분리:**
+    - `log.info()`: 정상적인 비즈니스 흐름 (예매 완료, 결제 성공 등)
+    - `log.warn()`: 시스템 장애는 아니지만, 비즈니스 로직상 실패 (재고 부족, 로그인 실패 등)
+    - `log.error()`: 즉각적인 조치가 필요한 시스템 에러 (DB 통신 에러, 결제 취소 실패 등)
+
+### ① 운영 로그 (Ops Log)
+
+- **목적:** 서비스 운영 상태 파악 및 장애 발생 시 빠른 원인 추적
+- **형식:** `[도메인명/상태]` + `식별자(userId 등)` + `메시지`
+- **예시:** `[Payment Attempt] 결제 API 호출 시작 - paymentId: 1234, userId: 1`
+- **적용 포인트:** 외부 API 통신 전후, 전역 예외 처리기(`GlobalExceptionHandler`)
+
+### ② 감사 로그 (Audit Log)
+
+- **목적:** 돈이 오가는 이벤트나 중요 정보의 위변조 방지 및 책임 추적 (장기 보관용)
+- **형식:** `[AUDIT - 이벤트명]` + `핵심 데이터`
+- **예시:** `[AUDIT - Payment Success] 결제 및 DB 반영 완료 - paymentId: 1234, amount: 15000`
+- **적용 포인트:** 결제 성공/취소 완료, 신규 회원 가입, JWT 발급 완료
+
+### ③ 보안 로그 (Security Log)
+
+- **목적:** 악의적인 공격(Brute-force 등) 시도 탐지 및 차단
+- **형식:** `[SECURITY - 이벤트명]` + `시도 이메일/IP`
+- **예시:** `[SECURITY - Login Failed] 잘못된 비밀번호 입력 - email: test@ceos.com`
+- **적용 포인트:** 존재하지 않는 계정 로그인 시도, 비밀번호 연속 오입력
+
+### ④ 크리티컬 로그 (Critical Log)
+
+- **목적:** 고객의 금전적 피해가 발생할 수 있는 치명적 장애 (즉각적인 알림 연동용)
+- **형식:** `[CRITICAL - 이벤트명]` + `에러 스택 트레이스`
+- **예시:** `[CRITICAL - Cancel Failed] 결제 취소 API는 성공했으나 DB 반영에 실패했습니다.`
+
+## 주요 도메인 적용
+
+### 1. 인증/인가 도메인 (`AuthService`)
+
+- **목표:** 비정상적 접근 시도와 정상 로그인을 명확히 구분
+
+    ```json
+    // [정상 로그인 흐름 - Audit]
+    log.info("[AUDIT - Login Success] 로그인 성공 및 JWT 발급 완료 - userId: {}, email: {}", user.getId(), user.getEmail())
+    
+    // [비정상 로그인 시도 - Security]
+    log.warn("[SECURITY - Login Failed] 잘못된 비밀번호 입력 - email: {}", request.email())
+
+### 2. 결제 도메인 (`PaymentService`)
+
+- **목표:** 결제 실패 시 보상 트랜잭션 흐름 추적 및 중요 매출 데이터 기록
+
+    ```json
+    // [결제 성공 - Audit]
+    log.info("[AUDIT - Payment Success] 결제 승인 완료 - paymentId: {}, userId: {}, amount: {}", paymentId, userId, amount)
+    
+    // [결제 취소 DB 반영 실패 - Critical]
+    log.error("[CRITICAL - Cancel Failed] 결제 취소 API 성공 후 DB 반영 실패! 수동 복구 필요 - paymentId: {}", paymentId, e)
+
+### 3. 예외 처리 (`GlobalExceptionHandler`)
+
+- **목표:** 단순 에러 메시지(`e.getMessage()`)뿐만 아니라, HTTP Status와 ErrorCode를 명시하여 에러 통계 추출 용이성 확보
+
+    ```json
+    log.warn("[Business Exception] code: {}, status: {}, message: {}", 
+              errorCode.name(), errorCode.getStatusCode(), e.getMessage())
