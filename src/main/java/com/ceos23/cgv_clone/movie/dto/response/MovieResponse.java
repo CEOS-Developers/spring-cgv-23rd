@@ -1,5 +1,7 @@
 package com.ceos23.cgv_clone.movie.dto.response;
 
+import java.io.Serializable;
+
 import com.ceos23.cgv_clone.movie.entity.Movie;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,7 +12,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class MovieResponse {
+public class MovieResponse implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
     private Long id;
     private String name;
     private int runningTime;

@@ -4,6 +4,14 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  cache:
+    type: redis
+
   sql:
     init:
       mode: always
@@ -19,7 +27,7 @@ logging:
     org.hibernate.SQL: debug
 
 jwt:
-  secret: ${JWT_SECRET:dGVzdC1qd3Qtc2VjcmV0LWZvci1jaS1lbnZpcm9ubWVudC1vbmx5LW5vdC1wcm9kdWN0aW9u}
+  secret: ${JWT_SECRET}
 
 payment:
-  secret-key: ${PAYMENT_SECRET_KEY:local-payment-secret}
+  secret-key: ${PAYMENT_SECRET_KEY}

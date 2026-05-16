@@ -1,5 +1,7 @@
 package com.ceos23.cgv_clone.theater.dto.response;
 
+import java.io.Serializable;
+
 import com.ceos23.cgv_clone.theater.entity.Theater;
 import lombok.*;
 
@@ -7,7 +9,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class TheaterResponse {
+public class TheaterResponse implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
     private Long id;
     private String name;
     private String region;
