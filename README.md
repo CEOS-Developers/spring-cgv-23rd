@@ -1326,3 +1326,63 @@ Mac은 Apple Silicon 환경이라 기본적으로 `arm64` 이미지가 빌드될
   - 핫 schedule이 아닌 일반 흐름은 충돌률 낮음 → 비관적 락보다 throughput 유리
   
 </details>
+
+<details>
+<summary> <h2> Redis 캐시 도입 및 로그 리팩토링 </h2> </summary>
+
+## 1. 캐시 도입 배경
+
+영화, 극장, 상영 시간표 조회 API는 로그인 여부와 관계없이 반복 호출될 가능성이 높고, 데이터 변경 빈도는 예매나 결제에 비해 낮다.
+
+반대로 예매, 주문, 결제, 재고는 변경이 잦고 정합성이 중요하기 때문에 캐시 대상에서 제외했다.
+
+따라서 캐시 대상은 아래 조회 API로 한정했다.
+
+| 캐시 이름 | 적용 대상 | TTL | 선정 이유 |
+| --- | --- | --- | --- |
+| `movieDetail` | 영화 상세 조회 | 10분 | 영화 기본 정보와 통계는 반복 조회가 많고 변경 빈도가 낮음 |
+| `theaterDetail` | 극장 상세 조회 | 30분 | 극장 이름, 주소, 지역 정보는 거의 변하지 않음 |
+| `theatersByRegion` | 지역별 극장 목록 조회 | 30분 | 지역별 목록은 사용자 탐색 과정에서 반복 호출 가능 |
+| `schedules` | 영화/극장별 상영 시간표 조회 | 5분 | 반복 조회가 많지만 상영 정보 변경 가능성을 고려해 짧은 TTL 적용 |
+
+## 2. 캐싱 전략
+
+캐싱 전략은 `look-aside` 방식을 사용했다.
+
+1. 클라이언트가 조회 API를 호출한다.
+2. Spring Cache가 Redis에 캐시 key가 있는지 확인한다.
+3. 캐시가 있으면 DB를 조회하지 않고 Redis 값을 반환한다.
+4. 캐시가 없으면 Service 메서드가 실행되어 DB를 조회한다.
+5. 조회 결과를 Redis에 저장하고 응답한다.
+6. TTL이 지나면 Redis 값이 만료되고 다음 요청에서 다시 DB를 조회한다.
+
+## 3. 캐시 동작 확인
+
+영화 상세 조회를 두 번 호출한 뒤 Redis key를 확인했다.
+
+![movie cache](image/img_24.png)
+
+`/api/movies/1` 호출 후 Redis에 `movieDetail::1` key가 생성된 것을 확인했다.
+
+극장 상세 조회도 동일하게 확인했다.
+
+![theater cache](image/img_23.png)
+
+여러 극장 상세 조회 호출 후 Redis에 `theaterDetail::*` 형태의 key가 생성되었다.
+
+캐시가 비어 있는 첫 요청에서는 Hibernate SQL이 출력되고 Redis에 key가 생성된다. 이후 같은 key로 다시 요청하면 Service 메서드가 실행되지 않아 DB 조회 SQL이 줄어드는 방식으로 캐시 hit을 확인했다.
+
+## 4. 로그 리팩토링
+
+기존 로그는 결제 API 호출 실패 원인을 추적하기 어렵고, 인증/결제처럼 나중에 추적해야 하는 이벤트와 일반 애플리케이션 로그가 분리되어 있지 않았다.
+
+이를 개선하기 위해 `logback-spring.xml`에서 로그를 두 종류로 분리했다.
+
+| 로그 파일 | 목적 |
+| --- | --- |
+| `logs/application.log` | 일반 애플리케이션 로그, SQL, 예외 stack trace, 외부 API 실패 원인 |
+| `logs/audit.log` | 로그인, 회원가입, 토큰 재발급, 로그아웃, 결제 등 추적이 필요한 이벤트 |
+
+결제 API 실패 시 stack trace는 `application.log`에만 남기고, `audit.log`에는 요약 이벤트만 남기도록 분리했다.
+
+</details>
