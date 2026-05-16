@@ -16,7 +16,7 @@ public record SeatAvailabilityResponse(
 ) {
     public static SeatAvailabilityResponse of(
             Screening screening,
-            List<SeatTemplate> seatTemplates,
+            List<SeatTemplateSnapshot> seatTemplates,
             Set<Long> reservedSeatTemplateIds
     ) {
         SeatLayout seatLayout = screening.getScreen().getSeatLayout();
@@ -30,10 +30,26 @@ public record SeatAvailabilityResponse(
                 seatTemplates.stream()
                         .map(seatTemplate -> SeatStatusResponse.of(
                                 seatTemplate,
-                                reservedSeatTemplateIds.contains(seatTemplate.getId())
+                                reservedSeatTemplateIds.contains(seatTemplate.seatTemplateId())
                         ))
                         .toList()
         );
+    }
+
+    public record SeatTemplateSnapshot(
+            Long seatTemplateId,
+            String rowName,
+            Integer colNumber,
+            String seatNumber
+    ) {
+        public static SeatTemplateSnapshot from(SeatTemplate seatTemplate) {
+            return new SeatTemplateSnapshot(
+                    seatTemplate.getId(),
+                    seatTemplate.getRowName(),
+                    seatTemplate.getColNumber(),
+                    seatTemplate.getSeatNumber()
+            );
+        }
     }
 
     public record SeatStatusResponse(
@@ -43,12 +59,12 @@ public record SeatAvailabilityResponse(
             String seatNumber,
             boolean reserved
     ) {
-        public static SeatStatusResponse of(SeatTemplate seatTemplate, boolean reserved) {
+        public static SeatStatusResponse of(SeatTemplateSnapshot seatTemplate, boolean reserved) {
             return new SeatStatusResponse(
-                    seatTemplate.getId(),
-                    seatTemplate.getRowName(),
-                    seatTemplate.getColNumber(),
-                    seatTemplate.getSeatNumber(),
+                    seatTemplate.seatTemplateId(),
+                    seatTemplate.rowName(),
+                    seatTemplate.colNumber(),
+                    seatTemplate.seatNumber(),
                     reserved
             );
         }
