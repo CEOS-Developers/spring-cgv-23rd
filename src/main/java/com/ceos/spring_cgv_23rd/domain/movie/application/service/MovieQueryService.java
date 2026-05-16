@@ -2,6 +2,7 @@ package com.ceos.spring_cgv_23rd.domain.movie.application.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	private final MoviePersistencePort moviePersistencePort;
 
 	@Override
+	@Cacheable(value = "movie:chart", key = "'all'")
 	public List<MovieResult> getMovieChart() {
 		return moviePersistencePort.findMoviesWithStatisticByStatusIn(
 				List.of(MovieStatus.RUNNING, MovieStatus.UPCOMING))
@@ -35,6 +37,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	}
 
 	@Override
+	@Cacheable(value = "movie:running", key = "'all'")
 	public List<MovieResult> getRunningMovies() {
 		return moviePersistencePort.findMoviesWithStatisticByStatus(MovieStatus.RUNNING)
 			.stream()
@@ -43,6 +46,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	}
 
 	@Override
+	@Cacheable(value = "movie:upcoming", key = "'all'")
 	public List<MovieResult> getUpcomingMovies() {
 		return moviePersistencePort.findMoviesWithStatisticByStatus(MovieStatus.UPCOMING)
 			.stream()
@@ -51,6 +55,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	}
 
 	@Override
+	@Cacheable(value = "movie:detail", key = "#movieId")
 	public MovieDetailResult getMovieDetail(long movieId) {
 		return moviePersistencePort.findMovieById(movieId)
 			.map(MovieDetailResult::from)
@@ -58,6 +63,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	}
 
 	@Override
+	@Cacheable(value = "movie:credits", key = "#movieId")
 	public List<MovieCreditResult> getMovieCredits(long movieId) {
 		if (!moviePersistencePort.existsMovieById(movieId)) {
 			throw new GeneralException(MovieErrorCode.MOVIE_NOT_FOUND);
@@ -70,6 +76,7 @@ public class MovieQueryService implements GetMovieChartUseCase, GetMovieDetailUs
 	}
 
 	@Override
+	@Cacheable(value = "movie:medias", key = "#movieId")
 	public List<MovieMediaResult> getMovieMedia(long movieId) {
 		if (!moviePersistencePort.existsMovieById(movieId)) {
 			throw new GeneralException(MovieErrorCode.MOVIE_NOT_FOUND);
