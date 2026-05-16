@@ -55,17 +55,20 @@ public class ItemOrderService {
 
         } catch (CustomException e) {
             itemOrderTransactionService.markPaymentFailedAndRestoreStock(savedOrder.getId(), paymentId);
-            handlePaymentException(e);
-            throw e;
+            throw convertPaymentException(e);
+
+        } catch (RuntimeException e) {
+            itemOrderTransactionService.markPaymentFailedAndRestoreStock(savedOrder.getId(), paymentId);
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
         }
     }
 
-    private void handlePaymentException(CustomException e) {
+    private CustomException convertPaymentException(CustomException e) {
         if (e.getErrorCode() == ErrorCode.PAYMENT_SERVER_ERROR) {
-            throw new CustomException(ErrorCode.PAYMENT_RETRY_FAILED);
+            return new CustomException(ErrorCode.PAYMENT_RETRY_FAILED);
         }
 
-        throw e;
+        return e;
     }
 
     @Transactional(readOnly = true)

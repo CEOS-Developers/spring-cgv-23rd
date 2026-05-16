@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 @Component
 public class PaymentRestClient {
@@ -25,13 +26,19 @@ public class PaymentRestClient {
     }
 
     public PaymentApiResponse<PaymentAuthData> getApiSecret(String githubId) {
-        return restClient.get()
-                .uri("/auth/{githubId}", githubId)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (request, response) -> {
-                    throwPaymentException(response.getStatusCode());
-                })
-                .body(new ParameterizedTypeReference<>() {});
+        try {
+            return restClient.get()
+                    .uri("/auth/{githubId}", githubId)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        throwPaymentException(response.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (CustomException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
+        }
     }
 
     public PaymentApiResponse<PaymentData> instantPayment(
@@ -39,37 +46,55 @@ public class PaymentRestClient {
             String paymentId,
             PaymentInstantRequest request
     ) {
-        return restClient.post()
-                .uri("/payments/{paymentId}/instant", paymentId)
-                .header("Authorization", authorization)
-                .body(request)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
-                    throwPaymentException(response.getStatusCode());
-                })
-                .body(new ParameterizedTypeReference<>() {});
+        try {
+            return restClient.post()
+                    .uri("/payments/{paymentId}/instant", paymentId)
+                    .header("Authorization", authorization)
+                    .body(request)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
+                        throwPaymentException(response.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (CustomException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
+        }
     }
 
     public PaymentApiResponse<PaymentData> cancelPayment(String authorization, String paymentId) {
-        return restClient.post()
-                .uri("/payments/{paymentId}/cancel", paymentId)
-                .header("Authorization", authorization)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
-                    throwPaymentException(response.getStatusCode());
-                })
-                .body(new ParameterizedTypeReference<>() {});
+        try {
+            return restClient.post()
+                    .uri("/payments/{paymentId}/cancel", paymentId)
+                    .header("Authorization", authorization)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
+                        throwPaymentException(response.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (CustomException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
+        }
     }
 
     public PaymentApiResponse<PaymentData> getPayment(String authorization, String paymentId) {
-        return restClient.get()
-                .uri("/payments/{paymentId}", paymentId)
-                .header("Authorization", authorization)
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
-                    throwPaymentException(response.getStatusCode());
-                })
-                .body(new ParameterizedTypeReference<>() {});
+        try {
+            return restClient.get()
+                    .uri("/payments/{paymentId}", paymentId)
+                    .header("Authorization", authorization)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (httpRequest, response) -> {
+                        throwPaymentException(response.getStatusCode());
+                    })
+                    .body(new ParameterizedTypeReference<>() {});
+        } catch (CustomException e) {
+            throw e;
+        } catch (RestClientException e) {
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
+        }
     }
 
     private void throwPaymentException(HttpStatusCode statusCode) {
