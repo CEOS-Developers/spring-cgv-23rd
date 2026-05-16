@@ -28,6 +28,7 @@ public class MovieService {
     private final MovieRepository movieRepository;
 
     // 영화 생성
+    @Transactional
     @CacheEvict(value = "movies_v3", key = "'all'")
     public MovieResponse createMovie(MovieCreateRequest request) {
         Movie movie = Movie.create(
@@ -56,6 +57,7 @@ public class MovieService {
     }
 
     // 영화 삭제
+    @Transactional
     @CacheEvict(value = "movies_v3", allEntries = true)
     public void deleteMovie(Long id) {
         movieRepository.delete(findEntityById(id));
