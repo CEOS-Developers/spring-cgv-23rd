@@ -1,0 +1,11 @@
+2026-05-16 16:28:46.595 INFO  AUDIT - 결제 요청 시작 paymentId=20260516_735d7016, totalAmount=15000
+2026-05-16 16:28:46.671 ERROR AUDIT - 결제 API 호출 실패 paymentId=20260516_735d7016, totalAmount=15000, elapsedMs=74
+2026-05-16 16:28:46.671 INFO  AUDIT - 결제 조회 요청 시작 paymentId=20260516_735d7016
+2026-05-16 16:28:46.700 ERROR AUDIT - 결제 조회 API 호출 실패 paymentId=20260516_735d7016, elapsedMs=28
+2026-05-16 16:29:11.695 INFO  AUDIT - 결제 요청 시작 paymentId=20260516_735d7016, totalAmount=15000
+2026-05-16 16:29:11.732 ERROR AUDIT - 결제 API 호출 실패 paymentId=20260516_735d7016, totalAmount=15000, elapsedMs=36
+2026-05-16 16:29:11.732 INFO  AUDIT - 결제 조회 요청 시작 paymentId=20260516_735d7016
+2026-05-16 16:29:11.766 ERROR AUDIT - 결제 조회 API 호출 실패 paymentId=20260516_735d7016, elapsedMs=33
+2026-05-16 16:37:09.332 INFO  AUDIT - 로그인 성공 user_id=8
+2026-05-16 16:37:32.154 INFO  AUDIT - 결제 요청 시작 paymentId=20260516_a6034b79, totalAmount=15000
+2026-05-16 16:37:32.298 INFO  AUDIT - 결제 성공 paymentId=20260516_a6034b79, status=PAID, elapsedMs=144
