@@ -6,7 +6,10 @@ import com.ceos23.cgv.domain.movie.enums.MovieRating;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
+import com.ceos23.cgv.global.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ public class MovieService {
     /**
      * 1. 무비차트 전체 (예매율 순)
      */
+    @Cacheable(cacheNames = CacheNames.MOVIES, key = "'salesRate'")
     public List<Movie> getMoviesBySalesRate() {
         return movieRepository.findAllByOrderBySalesRateDesc();
     }
@@ -30,6 +34,7 @@ public class MovieService {
     /**
      * 2. 현재 상영작 탭 (이미 개봉한 영화들을 예매율 순으로 정렬)
      */
+    @Cacheable(cacheNames = CacheNames.MOVIES, key = "'current:' + T(java.time.LocalDate).now()")
     public List<Movie> getCurrentlyScreeningMovies() {
         // 오늘 날짜를 기준으로 오늘 이전(오늘 포함)에 개봉한 영화들만 조회
         LocalDate today = LocalDate.now();
@@ -39,6 +44,7 @@ public class MovieService {
     /**
      * 3. 상영 예정작 탭 (아직 개봉하지 않은 영화들을 예매율 순으로 정렬)
      */
+    @Cacheable(cacheNames = CacheNames.MOVIES, key = "'upcoming:' + T(java.time.LocalDate).now()")
     public List<Movie> getUpcomingMovies() {
         // 오늘 날짜를 기준으로 내일 이후에 개봉할 영화들만 조회
         LocalDate today = LocalDate.now();
@@ -48,6 +54,7 @@ public class MovieService {
     /**
      * 4. 특정 영화 상세 정보 조회
      */
+    @Cacheable(cacheNames = CacheNames.MOVIE_DETAILS, key = "#movieId")
     public Movie getMovieDetails(Long movieId) {
         return findMovie(movieId);
     }
@@ -56,6 +63,7 @@ public class MovieService {
      * [POST] 새로운 영화 생성
      */
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.MOVIES, CacheNames.MOVIE_DETAILS}, allEntries = true)
     public Movie createMovie(String title, int runningTime, LocalDate releaseDate,
                              MovieRating movieRating, Genre genre, String prologue) {
         Movie newMovie = Movie.create(title, runningTime, releaseDate, movieRating, genre, prologue);
@@ -65,6 +73,7 @@ public class MovieService {
     /**
      * [GET] 모든 영화 데이터 가져오기
      */
+    @Cacheable(cacheNames = CacheNames.MOVIES, key = "'all'")
     public List<Movie> getAllMovies() {
         return movieRepository.findAll();
     }
@@ -73,6 +82,7 @@ public class MovieService {
      * [DELETE] 특정 영화 삭제
      */
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.MOVIES, CacheNames.MOVIE_DETAILS}, allEntries = true)
     public void deleteMovie(Long movieId) {
         Movie movie = findMovie(movieId);
         movieRepository.delete(movie);

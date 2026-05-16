@@ -44,3 +44,4 @@ secrets.yml
 .idea
 .env
 *.env
+logs/

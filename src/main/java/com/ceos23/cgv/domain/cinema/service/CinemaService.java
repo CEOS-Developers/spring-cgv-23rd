@@ -6,9 +6,12 @@ import com.ceos23.cgv.domain.cinema.entity.Theater;
 import com.ceos23.cgv.domain.cinema.enums.Region;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.cinema.repository.TheaterRepository;
+import com.ceos23.cgv.global.cache.CacheNames;
 import com.ceos23.cgv.global.exception.CustomException;
 import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +28,7 @@ public class CinemaService {
     /**
      * 전체 영화관(지점) 목록 조회
      */
+    @Cacheable(cacheNames = CacheNames.CINEMAS, key = "'all'")
     public List<Cinema> getAllCinema() {
         return cinemaRepository.findAll();
     }
@@ -32,6 +36,7 @@ public class CinemaService {
     /**
      * 단일 영화관(지점) 상세 조회
      */
+    @Cacheable(cacheNames = CacheNames.CINEMA_DETAILS, key = "#cinemaId")
     public Cinema getCinemaDetails(Long cinemaId) {
         return cinemaRepository.findById(cinemaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
@@ -52,6 +57,7 @@ public class CinemaService {
      * [POST] 새로운 영화관(지점) 생성
      */
     @Transactional
+    @CacheEvict(cacheNames = {CacheNames.CINEMAS, CacheNames.CINEMA_DETAILS}, allEntries = true)
     public Cinema createCinema(String name, Region region) {
         Cinema cinema = Cinema.create(name, region);
         return cinemaRepository.save(cinema);
