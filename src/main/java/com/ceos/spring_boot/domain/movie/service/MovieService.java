@@ -12,11 +12,15 @@ import com.ceos.spring_boot.domain.movie.repository.MovieRepository;
 import com.ceos.spring_boot.global.codes.ErrorCode;
 import com.ceos.spring_boot.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -25,6 +29,7 @@ public class MovieService {
 
     // 영화 생성
     @Transactional
+    @CacheEvict(value = "movies_v3", key = "'all'")
     public MovieResponse createMovie(MovieCreateRequest request) {
         Movie movie = Movie.create(
                 request.title(),
@@ -38,7 +43,9 @@ public class MovieService {
     }
 
     // 모든 영화 조회
+    @Cacheable(value = "movies_v3", key = "'all'", cacheManager = "cacheManager")
     public MovieListResponse findAllMovies() {
+        log.info("[Cache Miss] DB에서 영화 목록을 조회합니다.");
         return MovieListResponse.from(
                 movieRepository.findAll().stream().map(MovieResponse::from).toList()
         );
@@ -51,6 +58,7 @@ public class MovieService {
 
     // 영화 삭제
     @Transactional
+    @CacheEvict(value = "movies_v3", allEntries = true)
     public void deleteMovie(Long id) {
         movieRepository.delete(findEntityById(id));
     }
