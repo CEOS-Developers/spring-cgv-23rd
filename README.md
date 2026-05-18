@@ -1,84 +1,120 @@
-## 아키텍처 구조도
+# Cache
 
-![architecture-diagram.png](docs/images/architecture-diagram.png)
+## 📌 캐시 도입 위치
 
-## 부하테스트 결과
+| 도메인     | 캐시 키             | TTL | 데이터 특성   |
+|:--------|:-----------------|:----|:---------|
+| Movie   | `movie:chart`    | 10분 | 전체 영화 차트 |
+| Movie   | `movie:running`  | 10분 | 현재 상영작   |
+| Movie   | `movie:upcoming` | 10분 | 상영 예정작   |
+| Movie   | `movie:detail`   | 10분 | 영화 상세    |
+| Movie   | `movie:credits`  | 6시간 | 영화 출연진   |
+| Movie   | `movie:medias`   | 6시간 | 영화 미디어   |
+| Theater | `theater:list`   | 6시간 | 영화관 목록   |
+| Theater | `theater:detail` | 6시간 | 영화관 상세   |
 
-### 📌 payment
+## 📌 캐시 전략
 
-![paymentLoad.png](docs/images/paymentLoad.png)
+### ✅ Look-Aside + Write Around
 
-### 📌 movie
+| 구분      | 동작                                               |
+|:--------|:-------------------------------------------------|
+| `Read`  | Application → Redis 조회 → miss 시 DB 조회 후 Redis 적재 |
+| `Write` | DB만 갱신 (캐시는 TTL 만료로 자연 무효화)                      | 
 
-![movieLoad.png](docs/images/movieLoad.png)
+**선정 근거**
 
-![movieGrafana.png](docs/images/movieGrafana.png)
+- 캐시 장애 시에도 DB로 fallback 가능
+- 영화/극장 admin이 없는 현재 구조에서 명시적 `@CacheEvict`보다 TTL 정책이 단순
+- Write Through/Back은 거의 안 읽힐 데이터까지 캐시하므로 과한 정책
 
-```
- HTTP
-    http_req_duration..............: avg=11.36s min=1.05s med=11.53s max=30.05s p(90)=20.01s p(95)=20.82s
-      { expected_response:true }...: avg=11.32s min=1.05s med=11.49s max=27.69s p(90)=19.97s p(95)=20.77s
-      { group:::1. 영화 차트 조회 }......: avg=10.95s min=1.08s med=10.93s max=22.01s p(90)=19.5s  p(95)=20.39s
-      { group:::2. 현재 상영작 조회 }.....: avg=11.49s min=1.08s med=11.56s max=30.05s p(90)=20.09s p(95)=20.89s
-      { group:::3. 영화 상세 조회 }......: avg=11.48s min=1.05s med=11.67s max=30.01s p(90)=20.1s  p(95)=20.88s
-      { group:::4. 영화 출연진 조회 }.....: avg=11.62s min=1.25s med=11.86s max=21.79s p(90)=20.11s p(95)=21.04s
-    http_req_failed................: 0.21%  5 out of 2311
-    http_reqs......................: 2311   8.522719/s
-```
+## ❓ 트러블슈팅
 
-### 📌 theater
+### Jackson3
 
-![theaterLoad.png](docs/images/theaterLoad.png)
+Spring Boot 4부터는 공식 문서에서 Jackson3의 사용을 권장함에 따라, Jackson3 기반으로 직렬화/역직렬화를 구현했는데 자료가 많이 없어서 애를 먹었다.
 
-![theaterGrafana.png](docs/images/theaterGrafana.png)
+`List<Result>` 직렬화/역직렬화 실패
 
-```
-    HTTP
-    http_req_duration..............: avg=10.81s min=1.07s med=10.98s max=30.01s p(90)=19s    p(95)=20.01s
-      { expected_response:true }...: avg=10.8s  min=1.07s med=10.97s max=25.75s p(90)=18.98s p(95)=19.99s
-      { group:::1. 극장 목록 조회 }......: avg=10.56s min=1.07s med=10.65s max=21.05s p(90)=18.83s p(95)=19.98s
-      { group:::2. 극장 상세 조회 }......: avg=11.07s min=1.07s med=11.43s max=30.01s p(90)=19.18s p(95)=20.06s
-    http_req_failed................: 0.08%  2 out of 2377
-    http_reqs......................: 2377   8.766126/s
-```
+처음 GenericJacksonJsonRedisSerializer + default typing 조합으로 시도했으나, List<MovieResult> 같은 최상위 컬렉션의 polymorphism 처리에서
+write/read 형식 불일치가 발생했다.
 
-### 📌 screening
-
-![screeningLoad.png](docs/images/screeningLoad.png)
-
-![screeningGrafana.png](docs/images/screeningGrafana.png)
-
-```
-    HTTP
-    http_req_duration................: avg=15.26s min=1.13s med=15.24s max=30.14s p(90)=27.06s p(95)=28.45s
-      { expected_response:true }.....: avg=15.23s min=1.13s med=15.22s max=30.14s p(90)=27.04s p(95)=28.4s 
-      { group:::1. 극장별 상영 스케줄 조회 }...: avg=15.11s min=1.42s med=15.16s max=30.01s p(90)=26.96s p(95)=28.3s 
-      { group:::2. 영화별 상영 스케줄 조회 }...: avg=15.44s min=1.61s med=15.51s max=30.14s p(90)=27.27s p(95)=28.55s
-    http_req_failed..................: 0.17%  3 out of 1688
-    http_reqs........................: 1688   6.225172/s
+```bash
+Write: [{"@class":"MovieResult",...}, ...]             ← 외곽 wrapper 없음
+Read:  ["typeId", [...]] 형식 기대                       ← 불일치 -> 에러
 ```
 
-## 📢 정리
+`DefaultTyping`을 `NON_FINAL`, `NON_FINAL_AND_RECORDS` 등으로 바꿔봤으나 모두 같은 패턴으로 실패.
+`GenericJacksonJsonRedisSerializer`의 내부 `TypeResolverBuilder`가 표준 Jackson 동작과 미묘하게 다른 게 원인으로 보였다.
 
-위의 movie, theater, screening의 부하테스트 결과를 보면 `Request Failed`는 모두 1% 내외로 설정한 값인 5% 안으로 들어와 비교적 낮은 것처럼 보인다.   
-다만, 여기서 주목해야 할 점은 3개의 테스트 모두 `request Duartion p(95)`가 지속적으로 증가해 20s가 넘는 구간이 존재한다는 것이다.    
-즉, 사용자가 한 번의 요청에 20초 이상 응답을 기다려야 한다는 의미이다.
+이는 명시적으로 타입을 지정해서 해결했다.
 
-이 병목의 원인은 각 테스트의 Grafana 차트를 보면 알 수 있다.  
-세 테스트 모두 HikariCP의 Active Connection이 최대치인 **10개에 지속적으로 도달해 풀이 완전히 포화 상태**임을 확인할 수 있고, 동시에 커넥션을 기다리며 대기 중인 Pending 요청이
-평균 60~80개, 최대 **180개 정도까지 쌓여 있다.**  
-이로 인해 일부 요청은 정해진 시간 안에 커넥션을 받지 못하고 **Connection Timeout이 발생하며, 결국 응답 지연과 일부 요청 실패로 이어지고 있다.**
+`JacksonJsonRedisSerializer<T>` + 캐시별 `JavaType` 명시 방식으로 전환
 
-현재 시스템에서 응답 시간이 늘어나는 직접적인 원인은 DB 자체의 성능이나 특정 API의 로직 문제가 아니라, **애플리케이션이 보유한 DB 커넥션 풀(HikariCP, 기본값 10)이 부하 대비 부족한
-것**이다.  
-사용 가능한 커넥션 수보다 많은 요청이 동시에 들어오면서 대다수의 요청이 큐에서 대기하게 되고, 이 대기 시간이 누적되어 응답 시간이 20초 수준까지 늘어난 것으로 분석된다.
+```bash
+// CacheConfigurationFactory 
+public RedisCacheConfiguration create(Duration ttl, JavaType valueType) {
+    return RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(ttl)
+            .disableCachingNullValues()
+            .serializeKeysWith(...)
+            .serializeValuesWith(...
+                .fromSerializer(new JacksonJsonRedisSerializer<>(mapper, valueType)));
+}
 
-## ✅ 해결 방법
 
-- **DB Connection 풀 크기 증가**
-    - HikariCP `maximum-pool-size`: 10 → 30
-- **캐싱 적용**
-    - Redis 캐시 적용 (영화/극장 목록 등)
-- **쿼리 최적화**
-    - N+1 쿼리 점검
-- **읽기 전용 replica 추가**
+// MovieCacheCustomizer 
+JavaType movieListType = typeFactory.constructCollectionType(List.class, MovieResult.class);
+
+builder
+  .withCacheConfiguration("movie:chart", configFactory.create(Duration.ofMinutes(10), movieListType))
+
+```
+
+결과 :
+
+```bash
+[{"id":1,"title":"인터스텔라",...}, {"id":2,...}]
+```
+
+<details>
+  <summary>참고 자료</summary>
+
+- [Jackson 3 Migration Guide](https://github.com/FasterXML/jackson/blob/main/jackson3/MIGRATING_TO_JACKSON_3.md)
+- [Spring Blog — Jackson 3 Support](https://spring.io/blog/2025/10/07/introducing-jackson-3-support-in-spring)
+- [Spring Data Redis Jackson Serializer 문서](https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/serializer/Jackson2JsonRedisSerializer.html)
+
+</details>
+
+### TTL 정책
+
+`movie:chart`, `movie:running`, `movie:upcoming`, `movie:detail`을 모두 10분으로 통일했다.
+
+이유: `MovieResult`와 `MovieDetailResult`에 `reservationRank`(예매율 순위) 등 통계 필드가 포함되어 있다.  
+만약 각 캐시의 TTL이 다르면 영화 차트(`moive:chart`)의 순위와 영화 상세 정보(`move:detail`)의 순위가 다를 수 있다.
+
+원래는 순위(통계) 데이터만 짧은 TTL로 분리하는 게 이상적이지만, 현 시점에서는 다음 이유로 보류:
+
+- MovieStatistic을 별도 캐시로 분리하려면 도메인 모델, Result DTO, Service, Controller, Mapper, Response 등 전반적인 리팩토링 필요
+- 현재 단계에서는 오버엔지니어링으로 판단
+- 동일 TTL 통일만으로도 일관성 보장 가능
+
+# Logging
+
+## 📌 MDC
+
+| MDC 키     | 설정 위치                   | 범위         |
+|:----------|:------------------------|:-----------|
+| traceId   | `RequestLoggingFilter`  | HTTP 요청 전체 |
+| paymentId | `PaymentCommandService` | 결제 처리 흐름   |
+
+-> 모든 로그에 traceId가 자동 부착되고, 결제 영역에서는 paymentId까지 추가된다.
+
+```bash
+{traceId=abc12345} Request received. method=POST, uri=/api/v1/payments/order_123/instant
+{traceId=abc12345, paymentId=order_123} Payment started. orderName=노트북외 1건, amount=15000
+{traceId=abc12345, paymentId=order_123} Calling PG pay API. amount=15000
+{traceId=abc12345, paymentId=order_123} Payment marked PAID in DB. pgProvider=KAKAO_PAY
+{traceId=abc12345, paymentId=order_123} Payment completed
+{traceId=abc12345} Request completed. status=200, durationMs=234
+```

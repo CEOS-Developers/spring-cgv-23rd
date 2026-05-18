@@ -1,14 +1,14 @@
 package com.ceos.spring_cgv_23rd.domain.movie.application.port.in;
 
-import com.ceos.spring_cgv_23rd.domain.movie.domain.Movie;
-
 import java.util.List;
+
+import com.ceos.spring_cgv_23rd.domain.movie.application.dto.result.MovieResult;
 
 public interface GetMovieChartUseCase {
 
-    List<Movie> getMovieChart();
+	List<MovieResult> getMovieChart();
 
-    List<Movie> getRunningMovies();
+	List<MovieResult> getRunningMovies();
 
-    List<Movie> getUpcomingMovies();
+	List<MovieResult> getUpcomingMovies();
 }
