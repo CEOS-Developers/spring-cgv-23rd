@@ -2115,7 +2115,270 @@ cancel 17회 실패
 - DB 커넥션 풀을 디폴트 10개에서 증가시켜야함!
 
 ---
+# 캐시 도입하기
 
+## Redis 설정
 
+```java
+command: redis-server 
+	  --maxmemory 1gb 
+	  --maxmemory-policy allkeys-lru 
+	  --save "" 
+	  --activedefrag yes
+```
 
+### **1. `-maxmemory 1gb`**
 
+- Redis에 저장되는 영화 및 극장 정보, Api Secret Key, 분산락 키, Refresh Token는 모두 텍스트 데이터
+    - 메모리 많이 차지 X
+
+### **2. `-maxmemory-policy allkeys-lru`**
+
+- 사용자가 몰려 1GB가 다 차더라도, Redis가 알아서 가장 오랫동안 사용 안한 데이터부터 삭제
+    - 서버가 OOM으로 다운되는 것 방지
+- 지워진 영화, 극장, API key는 다시 채워지므로 안전
+
+### **3. `-appendonly yes`**
+
+- 모든 쓰기 명령 기록
+    - 서버가 꺼졌다가 켜져도 사용자의 Refresh Token 모두 복구 가능
+
+### **4. `-activedefrag yes`**
+
+- 영화, 극장이 수정, 삭제될 때 `@CacheEvict`를 통해 캐시 계속 지움
+    - Redis에서 데이터를 지우고 쓰는 작업 자주 발생 
+    → 메모리 단편화 발생해 실제 데이터 양보다 메모리를 더 많이 사용
+- Redis가 백그라운드에서 메모리를 알아서 모으게 해, 메모리 누수 최소화
+
+## `RedisTemplate`
+
+```java
+private String getSecretKey(String githubId) {
+        String redisKey = SECRET_KEY_PREFIX + githubId;
+
+        try {
+            String cachedKey = redisTemplate.opsForValue().get(redisKey);
+
+            if (cachedKey != null)
+                return cachedKey;
+        } catch (Exception e) {
+            log.error("Redis와 통신 오류 발생 (API 호출로 우회)", e);
+        }
+
+        String newKey = getApiSecretKey(githubId);
+
+        try {
+            redisTemplate.opsForValue().set(
+                    redisKey,
+                    newKey,
+                    Duration.ofHours(24)
+            );
+        } catch (Exception e) {
+            log.error("Redis에 Secret Key 저장 실패", e);
+        }
+
+        return newKey;
+    }
+```
+
+### **1. 캐시 도입 지점**
+
+- **API Secret Key 조회**
+    - 사용자의 `githubId`를 기반으로 외부 API로 Secret Key를 발급받는 로직에 캐시 도입
+    - API Key는 한 번 발급되면 자주 변하지 X
+        - 유효기간동안 유지
+    - 사용자 요청이 있을 때마다, **매번 검증해야 하므로 조회 빈도 매우 빈번**
+        - 그때마다 별도의 외부 API로 Key 가져오면 응답 지연 및 호출 회수 초과 가능
+
+### **2. 캐시 전략**
+
+### `RedisTemplate` 사용
+
+- **폴백 전략**
+    - **`@Cacheable`**
+        - Redis 서버와의 연결이 끊어졌을 때, 프로그램 전체가 에러를 던지며 멈춤
+        - 캐시가 안 될 뿐인데, 서비스 전체가 마비
+            - 별도의 에러 핸들러 설정해야함
+    - `try-catch` **수동 구현**
+        - Redis와 연결 안되면, API 호출로 우회
+        - `log.error()` 로깅 가능
+- **Self-Invocation 문제 해결**
+    - **`@Cacheable`**
+        - 프록시 기반 동작
+            - **같은 클래스 내부의 메서드가 `getSecretKey()` 호출하면 `@Cacheable` 적용 X**
+    - **`RedisTemplate` 수동 구현**
+        - 직접 `RedisTemplate`을 호출해 어느 상황에서도 캐시 로직 정상 동작
+
+### **Look-Aside 패턴**
+
+- `@Cacheable` 대신 `RedisTemplate`을 사용
+    - 수동으로 Look-Aside 패턴 구현
+
+## `@Cacheable`
+
+```java
+@Service
+@Transactional(readOnly = true)
+@RequiredArgsConstructor
+public class MovieService {    // TheaterService에 대해서도 동일 적용
+    private final MovieRepository movieRepository;
+
+    @Cacheable(value = "moviesAll", key = "'all'")
+    public List<MovieInfo> findAllMovies() {
+        ...
+    }
+
+    @Cacheable(value = "movies", key = "#id")
+    public MovieInfo findMovie(Long id) {
+        ...
+    }
+
+    @Transactional
+    @CacheEvict(value = "moviesAll", key = "'all'")
+    public MovieInfo createMovie(MovieCreateCommand command) {
+        ...
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "movies", key = "#id"),
+            @CacheEvict(value = "moviesAll", key = "'all'")
+    })
+    public MovieInfo updateMovie(Long id, MovieUpdateCommand command) {
+        ...
+    }
+
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "movies", key = "#id"),
+            @CacheEvict(value = "moviesAll", key = "'all'")
+    })
+    public void deleteMovie(Long id) {
+        ...
+    }
+
+    ...
+}
+```
+
+### **1. 캐시 도입 지점**
+
+- 영화, 극장 도메인
+    - 조회는 빈번 & 수정, 삭제는 드묾
+- **조회 지점**
+    - `findAllMovies()`: **전체 영화 목록 조회**
+        - 모든 사용자가 공통으로 보는 데이터를 `moviesAll::all` 하나의 키로 묶어 캐싱
+    - `findMovie(Long id)`: **영화 상세 조회**
+        - 영화 상세 페이지 진입 시, 영화 ID를 키로 `movies::1`로 캐싱
+- **변경 지점**
+    - `createMovie()`: **영화 등록**
+        - 다음 조회 시 신규 영화가 최신 리스트에 반영되도록, 
+        전체 목록 캐시(`moviesAll::all`) 삭제
+    - `updateMovie()`, `deleteMovie()`: **영화 수정 및 삭제**
+        - 위와 동일한 이유로 **해당 영화의 단건 캐시**와 **전체 목록 캐시** 동시에 삭제
+
+### **2. 캐시 전략**
+
+### **Look-Aside 패턴**
+
+`@Cacheable` 기본 작동 방식 & `RedisTemplate`을 통한 수동 구현 방식
+
+- **작동 방식**
+    - 데이터를 조회할 때 먼저 Redis 조회해 **Cache Hit**하면 바로 반환
+    - **Cache Miss**면 DB에 조회해오고, 캐시에 저장하고 반환
+- **장점**
+    - 캐시 서버 다운되도, DB를 통해 서비스 안정적으로 동작
+
+### 업데이트시 캐시 삭제
+
+- **생성/수정/삭제** 이벤트 발생할 때마다, `@CacheEvict`를 통해 즉시 기존 캐시를 폐기
+- **장점**
+    - 데이터 정합성 유지 가능
+        - 관리자가 수정, 삭제한 영화와 극장 정보가 캐시로 계속 조회되는 문제 차단
+    - 캐시 삭제가 아닌, 업데이트시 **Race Condition** 발생 가능
+        - 캐시에 변경되기 전의 데이터가 유지 될 수도..
+---
+# 로그 리팩토링
+
+### 1. 외부 결제 API 호출 실패
+
+```java
+// PaymentService
+try {
+		response = paymentClient.requestInstantPayment(paymentId, paymentRequest);
+} catch (Exception e) {
+		log.error("외부 결제 API 호출 실패 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+}
+```
+
+- 실제 외부 API에서 어떤 오류가 발생했는지 결제 ID와 실패 메시지 로깅
+
+### 2. 결제 상태값 불일치
+
+```java
+// PaymentService
+if (!"PAID".equals(response.paymentStatus())) {
+	log.error("결제 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
+	throw new BusinessException(ErrorCode.INVALID_RESERVATION_STATUS);
+}
+```
+
+- 외부 결제 API가 "PAID" 외의 값을 반환할 때 어떤 값이 왔는지 기록
+
+### 3. 결제 취소 상태값 불일치
+
+```java
+// ReservationService
+if (!"CANCELLED".equals(response.paymentStatus())) {
+		log.error("결제 취소 상태 불일치 (paymentId={}, status={})", paymentId, response.paymentStatus());
+		throw new BusinessException(ErrorCode.PAYMENT_CANCEL_FAILED);
+}
+```
+
+- 결제 취소가 실패하면 수동 정산 처리 필요
+    - 어떤 paymentId에서 어떤 상태가 왔는지 기록
+
+### 4. 결제 금액 불일치
+
+```java
+// ReservationService
+if (!reservation.getTotalPrice().equals(request.totalPayAmount())) {
+		log.warn("결제 금액 불일치 (paymentId={}, expected={}, actual={})",
+		paymentId, reservation.getTotalPrice(), request.totalPayAmount());
+		self.cancelReservation(paymentId);
+		throw new BusinessException(ErrorCode.INVALID_PAYMENT_AMOUNT);
+}
+```
+
+- DB에 저장된 금액과 프론트에서 넘어온 금액이 다른 상황 추적
+    - 버그 or 금액 위변조 시도
+
+### 5. 결제 요청 실패 / 결제 확인 DB 반영 실패
+
+```java
+// ReservationService
+try {
+		paymentDataInfo = paymentService.requestInstantPayment(...);
+} catch (Exception e) {
+		log.error("결제 요청 실패, 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		self.cancelReservation(paymentId);
+		throw e;
+}
+```
+
+- 외부 결제 요청 자체가 실패한 건 추적
+
+```java
+try {
+		confirmPayment(paymentId);
+		return paymentDataInfo;
+} catch (Exception e) {
+		log.error("결제 확인 DB 반영 실패, 결제 취소 및 예약 취소 진행 (paymentId={}): {}", paymentId, e.getMessage(), e);
+		paymentService.cancelPayment(paymentId);
+		self.cancelReservation(paymentId);
+		throw new BusinessException(ErrorCode.PAYMENT_CONFIRM_FAILED);
+}
+```
+
+- 외부 결제는 완료됐는데 DB 반영 실패한 건 추적

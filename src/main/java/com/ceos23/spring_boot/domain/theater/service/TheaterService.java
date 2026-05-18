@@ -2,18 +2,18 @@ package com.ceos23.spring_boot.domain.theater.service;
 
 import com.ceos23.spring_boot.domain.theater.dto.TheaterCreateCommand;
 import com.ceos23.spring_boot.domain.theater.dto.TheaterInfo;
-import com.ceos23.spring_boot.domain.theater.dto.TheaterSearchCommand;
 import com.ceos23.spring_boot.domain.theater.dto.TheaterUpdateCommand;
 import com.ceos23.spring_boot.domain.theater.entity.Theater;
 import com.ceos23.spring_boot.domain.theater.repository.TheaterRepository;
 import com.ceos23.spring_boot.global.exception.BusinessException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,20 +23,22 @@ import java.util.Optional;
 public class TheaterService {
     private final TheaterRepository theaterRepository;
 
-    public List<TheaterInfo> findTheaters(TheaterSearchCommand command) {
-        List<Theater> theaters;
-
-        if (StringUtils.hasText(command.location()))
-            theaters = theaterRepository.findByLocationAndDeletedAtIsNull(command.location());
-        else
-            theaters = theaterRepository.findAllByDeletedAtIsNull();
-
-        return theaters
-                .stream()
+    @Cacheable(value = "theatersAll", key = "'all'")
+    public List<TheaterInfo> findAllTheaters() {
+        List<Theater> theaters = theaterRepository.findAllByDeletedAtIsNull();
+        return theaters.stream()
                 .map(TheaterInfo::from)
                 .toList();
     }
 
+    public List<TheaterInfo> searchTheaters(String location) {
+        List<Theater> theaters = theaterRepository.findByLocationAndDeletedAtIsNull(location);
+        return theaters.stream()
+                .map(TheaterInfo::from)
+                .toList();
+    }
+
+    @Cacheable(value = "theaters", key = "#id")
     public TheaterInfo findTheater(Long id) {
         Theater theater = findTheaterById(id);
 
@@ -49,6 +51,7 @@ public class TheaterService {
     }
 
     @Transactional
+    @CacheEvict(value = "theatersAll", key = "'all'")
     public TheaterInfo createTheater(TheaterCreateCommand command) {
         if (theaterRepository.existsByNameAndDeletedAtIsNull(command.name()))
             throw new BusinessException(ErrorCode.DUPLICATE_THEATER_NAME);
@@ -77,6 +80,10 @@ public class TheaterService {
 
 
     @Transactional
+    @Caching(evict = {
+        @CacheEvict(value = "theaters", key = "#id"),
+        @CacheEvict(value = "theatersAll", key = "'all'")
+    })
     public TheaterInfo updateTheater(Long id, TheaterUpdateCommand command) {
         Theater theater = findTheaterById(id);
 
@@ -93,6 +100,10 @@ public class TheaterService {
     }
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "theaters", key = "#id"),
+            @CacheEvict(value = "theatersAll", key = "'all'")
+    })
     public void deleteTheater(Long id) {
         Theater theater = findTheaterById(id);
 
