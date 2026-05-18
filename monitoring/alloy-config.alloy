@@ -1,0 +1,40 @@
+loki.process "spring_boot" {
+  forward_to = [loki.write.default.receiver]
+
+  stage.regex {
+    expression = "^(?P<timestamp>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3})"
+  }
+
+  stage.regex {
+    expression = "\\[.*?\\]\\s+(?P<level>(TRACE|DEBUG|INFO|WARN|ERROR))"
+  }
+
+  stage.labels {
+    values = {
+      level = null,
+    }
+  }
+
+  stage.timestamp {
+    source   = "timestamp"
+    format   = "2006-01-02 15:04:05.000"
+    location = "Asia/Seoul"
+  }
+}
+
+loki.source.file "spring_boot" {
+  targets = [{
+    __address__ = "localhost",
+    __path__    = "/var/log/spring-boot/application.log",
+    app         = "spring-cgv",
+    job         = "spring-boot",
+  }]
+
+  forward_to = [loki.process.spring_boot.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
