@@ -11,10 +11,14 @@ import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
@@ -24,6 +28,13 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
     public void handle(@Nonnull HttpServletRequest request,
                        @Nonnull HttpServletResponse response,
                        @Nonnull AccessDeniedException accessDeniedException) throws IOException {
+        log.warn("access denied",
+                kv("event", "access_denied"),
+                kv("errorCode", GeneralErrorCode.FORBIDDEN.getCode()),
+                kv("uri", request.getRequestURI()),
+                kv("method", request.getMethod()),
+                kv("message", accessDeniedException.getMessage()));
+
         response.setContentType("application/json;charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 
@@ -37,4 +48,3 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
     }
 }
-

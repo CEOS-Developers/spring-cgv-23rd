@@ -1,3 +1,45 @@
+## 운영 로깅 개선
+
+### 이번 리팩토링에서 적용한 내용
+
+- 요청 단위 추적을 위해 `RequestContextLoggingFilter`를 추가하고 모든 요청에 `requestId`, `method`, `uri`, `clientIp`를 MDC에 저장
+- JWT 인증 성공 시 `userId`, `userEmail`을 MDC에 추가해서 이후 서비스/예외 로그에서 같은 요청 흐름을 함께 추적 가능하게 구성
+- `logback-spring.xml`을 JSON 구조화 로그 기반으로 변경하고 운영 로그 `application.log`, 감사 로그 `logs/audit/audit.log`를 분리
+- 결제/예매/매점 결제 흐름 로그를 `event` 중심으로 통일해서 Loki/Grafana에서 `event`, `errorCode`, `requestId` 기준 검색이 가능하도록 정리
+- `ExceptionAdvice`, 인증 실패, 인가 실패 로그에도 `event`, `uri`, `method`, `errorCode`를 담아 장애 분석 시 HTTP 요청 문맥이 남도록 개선
+- `alloy-config.alloy`를 JSON 로그 파싱 방식으로 변경해서 `level`, `event`, `errorCode`, `logType`를 Loki label로 활용할 수 있게 구성
+
+### 주요 로그 이벤트
+
+- 운영 로그: `request_completed`, `jwt_authenticated`, `business_exception`, `validation_failed`, `payment_instant_requested`, `payment_instant_completed`, `food_payment_failed`, `reservation_payment_completed`
+- 감사 로그: `food_payment_completed`, `food_payment_cancelled`, `reservation_payment_completed`, `reservation_payment_cancelled`
+
+### 기대 효과
+
+- 장애 발생 시 `requestId` 하나로 인증 → 서비스 → 예외 흐름을 연결해서 추적 가능
+- 결제 실패를 `errorCode`, `paymentId`, `orderId`, `reservationId` 기준으로 바로 필터링 가능
+- 일반 운영 로그와 돈이 관련된 감사 로그를 분리해서 보관 정책과 접근 제어를 다르게 가져갈 수 있음
+<img width="2848" height="4464" alt="image" src="https://github.com/user-attachments/assets/e7ce532a-89f0-430d-a9b2-c272dd86fc14" />
+
+## 캐싱과 로깅
+
+### Redis Cache 적용 내역
+
+- `MovieQueryService#getMovieList()`: 현재 상영 중 영화 목록은 메인 화면에서 반복 조회될 가능성이 높아서 `movieList` 캐시 적용
+- `MovieQueryService#getMovieDetail()`: 영화 상세 정보는 이미지와 통계 정보를 함께 조회하므로 `movieDetail` 캐시 적용
+- `MovieQueryService#getMovieActors()`: 출연진 정보는 자주 바뀌지 않는 조회 데이터라서 `movieActors` 캐시 적용
+- `TheaterQueryService#getTheatersByRegion()`: 지역별 극장 목록은 같은 조건으로 재조회될 가능성이 높아 `theatersByRegion` 캐시 적용
+- `TheaterQueryService#getTheaterDetail()`: 극장 상세는 상대적으로 변경이 적은 조회라 `theaterDetail` 캐시 적용
+- `ScheduleQueryService#getSchedules()`: 극장과 날짜 기준 시간표 조회는 호출 빈도가 높고 조건이 명확해서 `schedules` 캐시 적용
+- `ReviewQueryService#getMovieReviews()`: 리뷰 목록은 반복 조회가 많아 `movieReviews` 캐시를 적용했고, 최신성을 위해 TTL을 짧게 적용
+
+### Redis Cache 무효화 내역
+
+- `AdminMovieService#createMovie()`: 영화 생성 후 현재 상영작 목록이 바뀔 수 있어서 `movieList` 캐시 무효화
+- `AdminMovieService#createTheater()`: 극장 생성 후 해당 지역 목록이 달라지므로 `theatersByRegion` 캐시 무효화
+- `AdminMovieService#createSchedule()`: 시간표 등록 후 같은 극장/날짜 조회 결과가 달라지므로 해당 `schedules` 캐시 무효화
+- `ReviewService#createReview()`: 리뷰 작성 후 리뷰 목록과 영화 평점 정보가 달라질 수 있어서 `movieReviews`, `movieDetail` 캐시 무효화
+
 <details>
 <summary><h1>❓</h1></summary>
   
@@ -167,8 +209,6 @@ JOIN m.team t  -- Member 엔티티 내부의 team 필드(연관관계) 기준
     
     2. 가장 권장되는 방법은 하나만 페치 조인하고 나머지는 **`Batch Size`** 설정을 통해 여러 번의 쿼리로 나누어 가져오는 것
 </details>
-
-
 
 
 
@@ -1742,7 +1782,8 @@ a4936b9a9daf   mysql:8.0.46   "docker-entrypoint.s…"   2 minutes ago   Up 2 mi
   <img width="1257" height="694" alt="image" src="https://github.com/user-attachments/assets/783cbb0b-1780-470e-944e-1488ca5e0b5e" />
 
 - ec2로 전송 및 받기
-```docker push shinae1023/ceos-app:latest
+```bash
+docker push shinae1023/ceos-app:latest
 The push refers to repository [docker.io/shinae1023/ceos-app]
 0d3dcfe2168e: Pushed 
 8127c8426a01: Pushed 
@@ -2131,6 +2172,8 @@ VPC(Virtual Private Cloud)라는 커다란 네트워크를 다시 여러 개의 
 
 
 </details>
+
+<details><summary><h1>부하테스트 및 모니터링</h1></summary>
 
 ### 아키텍처 구조도
 <img width="2624" height="1816" alt="image" src="https://github.com/user-attachments/assets/d8867f58-83c3-40b3-9c1b-9e4fd492b6b2" />
@@ -2657,6 +2700,7 @@ full_payment 부하테스트 결과, 주문 생성 API는 정상 동작했지만
 running (4m04.5s), 000/200 VUs, 11719 complete and 0 interrupted iterations
 default ✓ [======================================] 000/200 VUs  4m0s
 ```
+
 process_food_payment p95 = 1.08s
 process_food_payment 실패율 = 10.40%
 create_food_order 실패율 = 0.20%
@@ -2666,3 +2710,5 @@ create_food_order 실패율 = 0.20%
 주문 생성은 거의 다 성공 -> 결제 요청까지도 정상 진입 -> 외부 결제 instant API에서 일부 500
 -> 그 결과 FoodPaymentFacade가 PAYMENT_FAILED로 종료
 따라서 현재 병목은 내부 DB 조회보다는 외부 결제 연동 안정성에 더 가까움
+
+</details>

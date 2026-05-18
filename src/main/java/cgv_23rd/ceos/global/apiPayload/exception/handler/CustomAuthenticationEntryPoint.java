@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
 @Slf4j(topic = "AuthenticationEntryPoint")
 @Component
 @RequiredArgsConstructor
@@ -28,7 +30,11 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     public void commence(@NonNull HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException, ServletException {
 
-        log.error("인증되지 않은 사용자 접근: {}", authException.getMessage());
+        log.warn("authentication required",
+                kv("event", "authentication_required"),
+                kv("uri", request.getRequestURI()),
+                kv("method", request.getMethod()),
+                kv("message", authException.getMessage()));
 
         GeneralErrorCode errorCode = GeneralErrorCode.MISSING_AUTH_INFO;
 

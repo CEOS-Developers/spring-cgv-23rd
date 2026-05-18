@@ -4,6 +4,7 @@ import cgv_23rd.ceos.global.apiPayload.exception.handler.CustomAccessDeniedHandl
 import cgv_23rd.ceos.global.apiPayload.exception.handler.CustomAuthenticationEntryPoint;
 import cgv_23rd.ceos.global.jwt.JwtAuthenticationFilter;
 import cgv_23rd.ceos.global.jwt.JwtUtil;
+import cgv_23rd.ceos.global.logging.RequestContextLoggingFilter;
 import cgv_23rd.ceos.global.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +29,7 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final RequestContextLoggingFilter requestContextLoggingFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -74,6 +76,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
         );
 
+        http.addFilterBefore(requestContextLoggingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // 인증 예외 처리 설정에 커스텀 핸들러 추가

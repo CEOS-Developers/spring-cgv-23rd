@@ -5,6 +5,7 @@ import cgv_23rd.ceos.mapper.ReviewMapper;
 import cgv_23rd.ceos.repository.ReviewRepository;
 import cgv_23rd.ceos.service.MovieService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class ReviewQueryService {
     private final ReviewMapper reviewMapper;
     private final MovieService movieService;
 
+    @Cacheable(value = "movieReviews", key = "#movieId")
     public List<ReviewResponseDto> getMovieReviews(Long movieId) {
         movieService.getMovie(movieId);
 

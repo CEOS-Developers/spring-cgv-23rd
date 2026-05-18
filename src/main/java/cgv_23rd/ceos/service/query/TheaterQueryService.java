@@ -9,6 +9,7 @@ import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.mapper.TheaterMapper;
 import cgv_23rd.ceos.repository.theater.TheaterRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +23,14 @@ public class TheaterQueryService {
     private final TheaterRepository theaterRepository;
     private final TheaterMapper theaterMapper;
 
+    @Cacheable(value = "theatersByRegion", key = "#region")
     public List<TheaterResponseDto> getTheatersByRegion(Region region) {
         return theaterRepository.findAllByRegion(region).stream()
                 .map(theaterMapper::toResponse)
                 .toList();
     }
 
+    @Cacheable(value = "theaterDetail", key = "#theaterId")
     public TheaterDetailResponseDto getTheaterDetail(Long theaterId) {
         Theater theater = theaterRepository.findById(theaterId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.THEATER_NOT_FOUND, "극장 조회 불가"));

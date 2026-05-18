@@ -11,6 +11,7 @@ import cgv_23rd.ceos.mapper.MovieMapper;
 import cgv_23rd.ceos.repository.movie.MovieActorRepository;
 import cgv_23rd.ceos.repository.movie.MovieRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,18 +26,21 @@ public class MovieQueryService {
     private final MovieActorRepository movieActorRepository;
     private final MovieMapper movieMapper;
 
+    @Cacheable(value = "movieList", key = "'nowPlaying'")
     public List<MovieResponseDto> getMovieList() {
         return movieRepository.findAllByStatusOrderByReservationRateDesc(MovieStatus.상영중).stream()
                 .map(movieMapper::toResponse)
                 .toList();
     }
 
+    @Cacheable(value = "movieDetail", key = "#movieId")
     public MovieDetailResponseDto getMovieDetail(Long movieId) {
         Movie movie = movieRepository.findDetailById(movieId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));
         return movieMapper.toDetailResponse(movie);
     }
 
+    @Cacheable(value = "movieActors", key = "#movieId")
     public List<ActorResponseDto> getMovieActors(Long movieId) {
         Movie movie = movieRepository.findById(movieId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MOVIE_NOT_FOUND));

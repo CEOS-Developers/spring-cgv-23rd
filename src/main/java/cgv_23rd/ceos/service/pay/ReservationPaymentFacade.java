@@ -9,13 +9,21 @@ import cgv_23rd.ceos.global.apiPayload.code.GeneralErrorCode;
 import cgv_23rd.ceos.global.apiPayload.exception.GeneralException;
 import cgv_23rd.ceos.service.ReservationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
+import static net.logstash.logback.argument.StructuredArguments.kv;
+
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ReservationPaymentFacade {
+
+    private static final Logger auditLogger = LoggerFactory.getLogger("AUDIT_LOGGER");
 
     private final ReservationService reservationService;
     private final PaymentService paymentService;
@@ -23,6 +31,13 @@ public class ReservationPaymentFacade {
 
     public PaymentResultDto processPayment(Long userId, Long reservationId) {
         Reservation reservation = reservationService.getOwnedReservation(userId, reservationId);
+        long startedAt = System.currentTimeMillis();
+
+        log.info("reservation payment processing started",
+                kv("event", "reservation_payment_started"),
+                kv("userId", userId),
+                kv("reservationId", reservationId),
+                kv("totalPrice", reservation.getTotalPrice()));
 
         if (reservation.getStatus() == ReservationStatus.완료) {
             throw new GeneralException(GeneralErrorCode.PAYMENT_ALREADY_PROCESSED);
@@ -45,6 +60,18 @@ public class ReservationPaymentFacade {
 
             try {
                 reservationService.confirmReservation(userId, reservationId);
+                log.info("reservation payment processing completed",
+                        kv("event", "reservation_payment_completed"),
+                        kv("userId", userId),
+                        kv("reservationId", reservationId),
+                        kv("paymentId", paymentId),
+                        kv("durationMs", System.currentTimeMillis() - startedAt));
+                auditLogger.info("reservation payment completed",
+                        kv("event", "reservation_payment_completed"),
+                        kv("userId", userId),
+                        kv("reservationId", reservationId),
+                        kv("paymentId", paymentId),
+                        kv("amount", reservation.getTotalPrice()));
                 return new PaymentResultDto(true, "결제가 완료되었습니다.");
             } catch (RuntimeException e) {
                 compensateFailedReservation(userId, reservationId, paymentId);
@@ -52,9 +79,23 @@ public class ReservationPaymentFacade {
             }
         } catch (GeneralException e) {
             updatePaymentStatusOnFailure(userId, reservationId, e);
+            log.warn("reservation payment processing failed",
+                    kv("event", "reservation_payment_failed"),
+                    kv("userId", userId),
+                    kv("reservationId", reservationId),
+                    kv("paymentId", paymentId),
+                    kv("errorCode", e.getCode().getCode()),
+                    kv("durationMs", System.currentTimeMillis() - startedAt));
             throw e;
         } catch (Exception e) {
             reservationService.markPaymentUnknown(userId, reservationId);
+            log.error("reservation payment processing unexpected error",
+                    kv("event", "reservation_payment_error"),
+                    kv("userId", userId),
+                    kv("reservationId", reservationId),
+                    kv("paymentId", paymentId),
+                    kv("durationMs", System.currentTimeMillis() - startedAt),
+                    kv("message", e.getMessage()), e);
             throw new GeneralException(GeneralErrorCode.PAYMENT_FAILED, "결제 처리 중 알 수 없는 오류가 발생했습니다.");
         }
     }
@@ -69,6 +110,11 @@ public class ReservationPaymentFacade {
             }
 
             reservationService.cancelPaidReservation(userId, reservationId, reservation.getPaymentId());
+            auditLogger.info("reservation payment cancelled",
+                    kv("event", "reservation_payment_cancelled"),
+                    kv("userId", userId),
+                    kv("reservationId", reservationId),
+                    kv("paymentId", reservation.getPaymentId()));
             return;
         }
 

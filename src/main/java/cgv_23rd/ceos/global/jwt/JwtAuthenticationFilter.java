@@ -1,6 +1,7 @@
 package cgv_23rd.ceos.global.jwt;
 
 import cgv_23rd.ceos.global.security.UserDetailsServiceImpl;
+import cgv_23rd.ceos.global.security.UserDetailsImpl;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,8 +16,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.MDC;
 
 import java.io.IOException;
+
+import static net.logstash.logback.argument.StructuredArguments.kv;
 
 // OncePerRequestFilter
 @Slf4j(topic = "JWT 검증 및 인가")
@@ -47,6 +51,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // b. email로 UserDetails 객체를 조회
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                if (userDetails instanceof UserDetailsImpl userDetailsImpl) {
+                    MDC.put("userId", String.valueOf(userDetailsImpl.getUser().getId()));
+                }
+                MDC.put("userEmail", email);
 
                 // c. userId 대신 UserDetails 객체로 인증 토큰을 생성 (권한 정보 포함)
                 Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
@@ -56,7 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 context.setAuthentication(authentication);
                 SecurityContextHolder.setContext(context);
 
-                log.info("사용자 인증 성공: email = {}", email);
+                log.info("jwt authentication succeeded",
+                        kv("event", "jwt_authenticated"),
+                        kv("email", email));
             }
         }
 
