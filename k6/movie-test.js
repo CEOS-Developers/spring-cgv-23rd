@@ -12,8 +12,12 @@ export const options = {
     ],
 };
 
-const BASE_URL = 'http://3.26.53.80';
+const BASE_URL = __ENV.BASE_URL;
 const TOKEN = __ENV.TOKEN;
+
+if (!BASE_URL) {
+    throw new Error('BASE_URL 환경변수가 필요합니다. 예: k6 run -e BASE_URL=http://서버주소 k6/movie-test.js');
+}
 
 export default function () {
     const res = http.get(`${BASE_URL}/api/movies`, {

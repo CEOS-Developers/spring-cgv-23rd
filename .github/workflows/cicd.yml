@@ -30,6 +30,10 @@ jobs:
         working-directory: ./spring-boot
         run: chmod +x ./gradlew
 
+      - name: Run tests
+        working-directory: ./spring-boot
+        run: ./gradlew test --no-daemon
+
       - name: Build Spring Boot jar
         working-directory: ./spring-boot
         run: ./gradlew clean bootJar --no-daemon

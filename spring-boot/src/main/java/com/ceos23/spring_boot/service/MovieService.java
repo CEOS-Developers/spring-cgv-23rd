@@ -5,6 +5,8 @@ import com.ceos23.spring_boot.exception.CustomException;
 import com.ceos23.spring_boot.global.exception.ErrorCode;
 import com.ceos23.spring_boot.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,16 +18,19 @@ public class MovieService {
     private final MovieRepository movieRepository;
 
     // 영화 생성
+    @CacheEvict(value = "movies", allEntries = true)
     public Movie create(String title, String director) {
         return movieRepository.save(new Movie(title, director));
     }
 
     // 전체 조회
+    @Cacheable(value = "movies", key = "'all'")
     public List<Movie> findAll() {
         return movieRepository.findAll();
     }
 
     // 단건 조회
+    @Cacheable(value = "movies", key = "#id")
     public Movie findById(Long id) {
         return movieRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));

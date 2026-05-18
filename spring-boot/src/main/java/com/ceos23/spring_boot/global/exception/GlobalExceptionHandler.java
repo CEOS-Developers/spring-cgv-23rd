@@ -17,6 +17,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleCustomException(CustomException e) {
         ErrorCode errorCode = e.getErrorCode();
 
+        log.warn("business_error errorCode={} message={}",
+                errorCode.getCode(),
+                errorCode.getMessage()
+        );
+
         ErrorResponse response = ErrorResponse.builder()
                 .status(errorCode.getStatus())
                 .code(errorCode.getCode())
@@ -32,7 +37,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePessimisticLockingFailureException(
             PessimisticLockingFailureException e
     ) {
-        log.warn("락 획득 실패", e);
+        log.warn("lock_failed errorCode={} message={}",
+                ErrorCode.LOCK_ACQUISITION_FAILED.getCode(),
+                ErrorCode.LOCK_ACQUISITION_FAILED.getMessage()
+        );
 
         ErrorResponse response = ErrorResponse.builder()
                 .status(ErrorCode.LOCK_ACQUISITION_FAILED.getStatus())
@@ -47,7 +55,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<ErrorResponse> handleDataAccessException(DataAccessException e) {
-        log.error("데이터베이스 예외 발생", e);
+        log.error("database_error errorCode={} message={}",
+                ErrorCode.DATABASE_ERROR.getCode(),
+                ErrorCode.DATABASE_ERROR.getMessage(),
+                e
+        );
 
         ErrorResponse response = ErrorResponse.builder()
                 .status(ErrorCode.DATABASE_ERROR.getStatus())
@@ -62,6 +74,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("bad_request errorCode={} message={}",
+                ErrorCode.BAD_REQUEST.getCode(),
+                e.getMessage()
+        );
+
         ErrorResponse response = ErrorResponse.builder()
                 .status(ErrorCode.BAD_REQUEST.getStatus())
                 .code(ErrorCode.BAD_REQUEST.getCode())
@@ -75,7 +92,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
-        log.error("예상하지 못한 예외 발생", e);
+        log.error("internal_server_error errorCode={} message={}",
+                ErrorCode.INTERNAL_ERROR.getCode(),
+                ErrorCode.INTERNAL_ERROR.getMessage(),
+                e
+        );
 
         ErrorResponse response = ErrorResponse.builder()
                 .status(ErrorCode.INTERNAL_ERROR.getStatus())

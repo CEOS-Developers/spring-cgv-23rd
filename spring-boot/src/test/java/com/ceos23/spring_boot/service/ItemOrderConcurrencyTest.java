@@ -57,7 +57,7 @@ class ItemOrderConcurrencyTest {
     @DisplayName("재고가 1개일 때 동시에 2번 주문하면 1번만 성공한다")
     void orderItemConcurrencyTest() throws InterruptedException {
         PaymentData paymentData = mock(PaymentData.class);
-        when(paymentData.getPaidAt()).thenReturn(LocalDateTime.now());
+        when(paymentData.paidAt()).thenReturn(LocalDateTime.now());
 
         BDDMockito.given(paymentGateway.pay(anyString(), anyString(), anyInt(), anyString()))
                 .willReturn(paymentData);
@@ -94,8 +94,11 @@ class ItemOrderConcurrencyTest {
 
                     itemOrderService.orderItems(request);
                     successCount.incrementAndGet();
+
                 } catch (Exception e) {
+                    e.printStackTrace();
                     failCount.incrementAndGet();
+
                 } finally {
                     doneLatch.countDown();
                 }
@@ -111,8 +114,20 @@ class ItemOrderConcurrencyTest {
                 .findByTheaterIdAndItemId(theater.getId(), item.getId())
                 .orElseThrow();
 
-        assertThat(successCount.get()).isEqualTo(1);
-        assertThat(failCount.get()).isEqualTo(1);
-        assertThat(stock.getStock()).isEqualTo(0);
+        System.out.println("successCount = " + successCount.get());
+        System.out.println("failCount = " + failCount.get());
+        System.out.println("stock = " + stock.getStock());
+
+        assertThat(successCount.get())
+                .as("성공한 주문 수")
+                .isEqualTo(1);
+
+        assertThat(failCount.get())
+                .as("실패한 주문 수")
+                .isEqualTo(1);
+
+        assertThat(stock.getStock())
+                .as("최종 재고")
+                .isEqualTo(0);
     }
 }

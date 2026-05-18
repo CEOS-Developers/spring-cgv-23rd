@@ -12,6 +12,7 @@ import com.ceos23.spring_boot.infra.payment.dto.PaymentData;
 import com.ceos23.spring_boot.repository.ItemOrderRepository;
 import com.ceos23.spring_boot.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ItemOrderService {
@@ -34,38 +36,69 @@ public class ItemOrderService {
     public ItemOrderResponse orderItems(ItemOrderRequest request) {
         validateRequest(request);
 
+        log.info("item_order_start userId={} theaterId={} itemCount={}",
+                request.getUserId(),
+                request.getTheaterId(),
+                request.getItems().size()
+        );
+
         ItemOrder savedOrder = itemOrderTransactionService.createOrderAndDecreaseStock(request);
         String paymentId = createPaymentId(savedOrder.getId());
 
+        PaymentData payment = requestPayment(savedOrder, paymentId);
+
+        ItemOrderResponse response = itemOrderTransactionService.markPaidAndCreateResponse(
+                savedOrder.getId(),
+                paymentId,
+                resolvePaidAt(payment)
+        );
+
+        log.info("item_order_success orderId={} paymentId={} totalPrice={}",
+                savedOrder.getId(),
+                paymentId,
+                savedOrder.getTotalPrice()
+        );
+
+        return response;
+    }
+
+    private PaymentData requestPayment(ItemOrder savedOrder, String paymentId) {
         try {
-            PaymentData payment = paymentGateway.pay(
+            return paymentGateway.pay(
                     paymentId,
                     createOrderName(savedOrder),
                     savedOrder.getTotalPrice(),
                     createCustomData(savedOrder)
             );
 
-            ItemOrder paidOrder = itemOrderTransactionService.markPaid(
+        } catch (CustomException e) {
+            log.warn("item_order_payment_failed orderId={} paymentId={} errorCode={}",
                     savedOrder.getId(),
                     paymentId,
-                    resolvePaidAt(payment)
+                    e.getErrorCode().getCode()
             );
 
-            return ItemOrderResponse.from(paidOrder);
-
-        } catch (CustomException e) {
             itemOrderTransactionService.markPaymentFailedAndRestoreStock(savedOrder.getId(), paymentId);
-            handlePaymentException(e);
-            throw e;
+            throw convertPaymentException(e);
+
+        } catch (RuntimeException e) {
+            log.error("item_order_payment_error orderId={} paymentId={}",
+                    savedOrder.getId(),
+                    paymentId,
+                    e
+            );
+
+            itemOrderTransactionService.markPaymentFailedAndRestoreStock(savedOrder.getId(), paymentId);
+            throw new CustomException(ErrorCode.PAYMENT_SERVER_ERROR);
         }
     }
 
-    private void handlePaymentException(CustomException e) {
+    private CustomException convertPaymentException(CustomException e) {
         if (e.getErrorCode() == ErrorCode.PAYMENT_SERVER_ERROR) {
-            throw new CustomException(ErrorCode.PAYMENT_RETRY_FAILED);
+            return new CustomException(ErrorCode.PAYMENT_RETRY_FAILED);
         }
 
-        throw e;
+        return e;
     }
 
     @Transactional(readOnly = true)
