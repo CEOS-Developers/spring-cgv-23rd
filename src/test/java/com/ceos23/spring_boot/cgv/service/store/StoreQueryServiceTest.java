@@ -8,7 +8,9 @@ import com.ceos23.spring_boot.cgv.domain.store.StoreMenu;
 import com.ceos23.spring_boot.cgv.domain.store.StorePurchase;
 import com.ceos23.spring_boot.cgv.domain.user.User;
 import com.ceos23.spring_boot.cgv.domain.user.UserRole;
+import com.ceos23.spring_boot.cgv.dto.store.StoreMenuResponse;
 import com.ceos23.spring_boot.cgv.dto.store.StorePurchaseRequest;
+import com.ceos23.spring_boot.cgv.global.cache.CacheNames;
 import com.ceos23.spring_boot.cgv.repository.cinema.CinemaRepository;
 import com.ceos23.spring_boot.cgv.repository.store.CinemaMenuStockRepository;
 import com.ceos23.spring_boot.cgv.repository.store.StoreMenuRepository;
@@ -18,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.cache.CacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -45,8 +48,12 @@ class StoreQueryServiceTest {
     @Autowired
     private StorePurchaseRepository storePurchaseRepository;
 
+    @Autowired
+    private CacheManager cacheManager;
+
     @AfterEach
     void tearDown() {
+        clearCache(CacheNames.STORE_MENUS);
         storePurchaseRepository.deleteAllInBatch();
         cinemaMenuStockRepository.deleteAllInBatch();
         storeMenuRepository.deleteAllInBatch();
@@ -59,11 +66,13 @@ class StoreQueryServiceTest {
     void getStoreMenus_returnsCinemaStock() {
         StoreFixture fixture = createFixture();
 
-        List<CinemaMenuStock> storeMenus = storeQueryService.getStoreMenus(fixture.cinema.getId());
+        List<StoreMenuResponse> storeMenus = storeQueryService.getStoreMenus(fixture.cinema.getId());
 
         assertThat(storeMenus)
-                .extracting(stock -> stock.getStoreMenu().getName())
+                .extracting(StoreMenuResponse::menuName)
                 .containsExactly("Cola", "Popcorn");
+        assertThat(cacheManager.getCache(CacheNames.STORE_MENUS).get(fixture.cinema.getId()))
+                .isNotNull();
     }
 
     @Test
@@ -82,6 +91,30 @@ class StoreQueryServiceTest {
         assertThat(purchaseHistory.getFirst().getTotalPrice()).isEqualTo(12_000);
         assertThat(purchaseHistory.getFirst().getCinemaMenuStock().getStoreMenu().getName())
                 .isEqualTo("Popcorn");
+    }
+
+    @Test
+    @DisplayName("store menu cache is evicted after a purchase updates stock")
+    void purchase_evictsStoreMenuCache() {
+        StoreFixture fixture = createFixture();
+
+        storeQueryService.getStoreMenus(fixture.cinema.getId());
+        assertThat(cacheManager.getCache(CacheNames.STORE_MENUS).get(fixture.cinema.getId()))
+                .isNotNull();
+
+        storePurchaseService.purchase(
+                fixture.user.getId(),
+                new StorePurchaseRequest(fixture.cinema.getId(), fixture.popcorn.getId(), 1)
+        );
+
+        assertThat(cacheManager.getCache(CacheNames.STORE_MENUS).get(fixture.cinema.getId()))
+                .isNull();
+    }
+
+    private void clearCache(String cacheName) {
+        if (cacheManager.getCache(cacheName) != null) {
+            cacheManager.getCache(cacheName).clear();
+        }
     }
 
     private StoreFixture createFixture() {

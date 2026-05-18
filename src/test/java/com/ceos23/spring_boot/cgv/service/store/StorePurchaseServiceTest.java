@@ -15,6 +15,8 @@ import com.ceos23.spring_boot.cgv.domain.user.UserRole;
 import com.ceos23.spring_boot.cgv.dto.store.StorePurchaseRequest;
 import com.ceos23.spring_boot.cgv.global.exception.BadRequestException;
 import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
+import com.ceos23.spring_boot.cgv.global.logging.AuditLogService;
+import com.ceos23.spring_boot.cgv.global.logging.BusinessMetricRecorder;
 import com.ceos23.spring_boot.cgv.repository.store.CinemaMenuStockRepository;
 import com.ceos23.spring_boot.cgv.repository.store.StorePurchaseRepository;
 import com.ceos23.spring_boot.cgv.repository.user.UserRepository;
@@ -38,6 +40,12 @@ class StorePurchaseServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private BusinessMetricRecorder businessMetricRecorder;
 
     @InjectMocks
     private StorePurchaseService storePurchaseService;

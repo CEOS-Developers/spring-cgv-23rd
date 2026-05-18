@@ -29,11 +29,7 @@ public class StorePurchaseController {
 
     @GetMapping("/menus")
     public ResponseEntity<List<StoreMenuResponse>> getStoreMenus(@RequestParam Long cinemaId) {
-        List<StoreMenuResponse> responses = storeQueryService.getStoreMenus(cinemaId).stream()
-                .map(StoreMenuResponse::from)
-                .toList();
-
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(storeQueryService.getStoreMenus(cinemaId));
     }
 
     @PostMapping("/purchases")

@@ -23,9 +23,7 @@ public class ScreeningController {
             @RequestParam(required = false) Long movieId,
             @RequestParam(required = false) Long cinemaId
     ) {
-        return screeningQueryService.getScreenings(movieId, cinemaId).stream()
-                .map(ScreeningResponse::from)
-                .toList();
+        return screeningQueryService.getScreenings(movieId, cinemaId);
     }
 
     @GetMapping("/{screeningId}/seats")

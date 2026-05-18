@@ -25,6 +25,8 @@ import com.ceos23.spring_boot.cgv.domain.user.UserRole;
 import com.ceos23.spring_boot.cgv.global.exception.BadRequestException;
 import com.ceos23.spring_boot.cgv.global.exception.ConflictException;
 import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
+import com.ceos23.spring_boot.cgv.global.logging.AuditLogService;
+import com.ceos23.spring_boot.cgv.global.logging.BusinessMetricRecorder;
 import com.ceos23.spring_boot.cgv.repository.cinema.SeatTemplateRepository;
 import com.ceos23.spring_boot.cgv.repository.movie.ScreeningRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
@@ -66,6 +68,12 @@ class ReservationServiceTest {
 
     @Mock
     private PaymentService paymentService;
+
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private BusinessMetricRecorder businessMetricRecorder;
 
     @InjectMocks
     private ReservationService reservationService;

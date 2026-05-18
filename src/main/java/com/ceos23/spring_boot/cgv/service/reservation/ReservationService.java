@@ -10,6 +10,8 @@ import com.ceos23.spring_boot.cgv.global.exception.BadRequestException;
 import com.ceos23.spring_boot.cgv.global.exception.ConflictException;
 import com.ceos23.spring_boot.cgv.global.exception.ErrorCode;
 import com.ceos23.spring_boot.cgv.global.exception.NotFoundException;
+import com.ceos23.spring_boot.cgv.global.logging.AuditLogService;
+import com.ceos23.spring_boot.cgv.global.logging.BusinessMetricRecorder;
 import com.ceos23.spring_boot.cgv.repository.cinema.SeatTemplateRepository;
 import com.ceos23.spring_boot.cgv.repository.movie.ScreeningRepository;
 import com.ceos23.spring_boot.cgv.repository.reservation.ReservationRepository;
@@ -20,6 +22,7 @@ import com.ceos23.spring_boot.cgv.service.payment.PaymentService;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -42,6 +45,8 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationSeatRepository reservationSeatRepository;
     private final PaymentService paymentService;
+    private final AuditLogService auditLogService;
+    private final BusinessMetricRecorder businessMetricRecorder;
 
     @Transactional
     public Reservation createReservation(
@@ -49,25 +54,43 @@ public class ReservationService {
             Long screeningId,
             List<Long> seatTemplateIds
     ) {
-        expireOverdueReservations();
-        validateSeatRequest(seatTemplateIds);
+        long startTime = System.currentTimeMillis();
 
-        LocalDateTime now = LocalDateTime.now();
-        User user = findUserById(userId);
-        Screening screening = findScreeningByIdWithLock(screeningId);
-        List<SeatTemplate> seatTemplates = findSeatTemplatesByIds(seatTemplateIds);
+        try {
+            expireOverdueReservations();
+            validateSeatRequest(seatTemplateIds);
 
-        validateSeatBelongsToScreening(screening, seatTemplates);
-        validateAlreadyReserved(screening, seatTemplates, now);
+            LocalDateTime now = LocalDateTime.now();
+            User user = findUserById(userId);
+            Screening screening = findScreeningByIdWithLock(screeningId);
+            List<SeatTemplate> seatTemplates = findSeatTemplatesByIds(seatTemplateIds);
 
-        String paymentId = generatePaymentId();
-        Reservation reservation = reservationRepository.save(
-                new Reservation(user, screening, paymentId, now.plusMinutes(PAYMENT_HOLD_MINUTES))
-        );
-        saveReservationSeats(reservation, screening, seatTemplates);
-        paymentService.startPayment(createPaymentCommand(paymentId, screening, seatTemplates));
+            validateSeatBelongsToScreening(screening, seatTemplates);
+            validateAlreadyReserved(screening, seatTemplates, now);
 
-        return reservation;
+            String paymentId = generatePaymentId();
+            Reservation reservation = reservationRepository.save(
+                    new Reservation(user, screening, paymentId, now.plusMinutes(PAYMENT_HOLD_MINUTES))
+            );
+            saveReservationSeats(reservation, screening, seatTemplates);
+            paymentService.startPayment(createPaymentCommand(paymentId, screening, seatTemplates));
+
+            auditLogService.info(
+                    "reservation_created",
+                    Map.of(
+                            "userId", userId,
+                            "screeningId", screeningId,
+                            "reservationId", safeId(reservation.getId()),
+                            "paymentId", paymentId,
+                            "seatCount", seatTemplateIds.size()
+                    )
+            );
+            businessMetricRecorder.recordReservationEvent("create", "success", System.currentTimeMillis() - startTime);
+            return reservation;
+        } catch (RuntimeException exception) {
+            recordReservationFailure("reservation_create_failed", "create", userId, screeningId, seatTemplateIds, startTime, exception);
+            throw exception;
+        }
     }
 
     @Transactional
@@ -85,20 +108,70 @@ public class ReservationService {
 
     @Transactional
     public void cancelReservation(Long reservationId, Long userId) {
-        expireOverdueReservations();
-        Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
-        reservation.cancel(LocalDateTime.now());
-        paymentService.cancelPayment(reservation.getPaymentId());
-        releaseReservationSeats(reservation);
+        long startTime = System.currentTimeMillis();
+
+        try {
+            expireOverdueReservations();
+            Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
+            reservation.cancel(LocalDateTime.now());
+            paymentService.cancelPayment(reservation.getPaymentId());
+            releaseReservationSeats(reservation);
+
+            auditLogService.info(
+                    "reservation_cancelled",
+                    Map.of(
+                            "userId", userId,
+                            "reservationId", reservationId,
+                            "paymentId", reservation.getPaymentId()
+                    )
+            );
+            businessMetricRecorder.recordReservationEvent("cancel", "success", System.currentTimeMillis() - startTime);
+        } catch (RuntimeException exception) {
+            recordReservationFailure(
+                    "reservation_cancel_failed",
+                    "cancel",
+                    userId,
+                    null,
+                    List.of(),
+                    startTime,
+                    exception
+            );
+            throw exception;
+        }
     }
 
     @Transactional
     public Reservation confirmPayment(Long reservationId, Long userId) {
-        expireOverdueReservations();
-        Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
-        reservation.confirmPayment(LocalDateTime.now());
-        paymentService.completePayment(reservation.getPaymentId());
-        return reservation;
+        long startTime = System.currentTimeMillis();
+
+        try {
+            expireOverdueReservations();
+            Reservation reservation = findReservationByIdAndUserId(reservationId, userId);
+            reservation.confirmPayment(LocalDateTime.now());
+            paymentService.completePayment(reservation.getPaymentId());
+
+            auditLogService.info(
+                    "reservation_payment_confirmed",
+                    Map.of(
+                            "userId", userId,
+                            "reservationId", reservationId,
+                            "paymentId", reservation.getPaymentId()
+                    )
+            );
+            businessMetricRecorder.recordReservationEvent("confirm", "success", System.currentTimeMillis() - startTime);
+            return reservation;
+        } catch (RuntimeException exception) {
+            recordReservationFailure(
+                    "reservation_confirm_failed",
+                    "confirm",
+                    userId,
+                    null,
+                    List.of(),
+                    startTime,
+                    exception
+            );
+            throw exception;
+        }
     }
 
     public List<ReservationSeat> getReservationSeats(Reservation reservation) {
@@ -113,11 +186,20 @@ public class ReservationService {
                 now
         );
 
+        int expiredCount = 0;
+
         for (Reservation reservation : overdueReservations) {
             if (reservation.expire(now)) {
                 paymentService.expirePayment(reservation.getPaymentId());
                 releaseReservationSeats(reservation);
+                expiredCount++;
             }
+        }
+
+        if (expiredCount > 0) {
+            auditLogService.info("reservation_expired_batch", Map.of("count", expiredCount));
+            businessMetricRecorder.recordExpiredReservations(expiredCount);
+            businessMetricRecorder.recordReservationEvent("expire", "success", 0L);
         }
     }
 
@@ -243,5 +325,38 @@ public class ReservationService {
     private void releaseReservationSeats(Reservation reservation) {
         reservationSeatRepository.deleteAllByReservation(reservation);
         reservationSeatRepository.flush();
+    }
+
+    private void recordReservationFailure(
+            String eventName,
+            String action,
+            Long userId,
+            Long screeningId,
+            List<Long> seatTemplateIds,
+            long startTime,
+            RuntimeException exception
+    ) {
+        String errorCode = exception instanceof BadRequestException badRequestException
+                ? badRequestException.getErrorCode().getCode()
+                : exception instanceof ConflictException conflictException
+                ? conflictException.getErrorCode().getCode()
+                : exception instanceof NotFoundException notFoundException
+                ? notFoundException.getErrorCode().getCode()
+                : ErrorCode.INTERNAL_SERVER_ERROR.getCode();
+
+        auditLogService.warn(
+                eventName,
+                Map.of(
+                        "userId", userId == null ? -1L : userId,
+                        "screeningId", screeningId == null ? -1L : screeningId,
+                        "seatCount", seatTemplateIds == null ? 0 : seatTemplateIds.size(),
+                        "reason", errorCode
+                )
+        );
+        businessMetricRecorder.recordReservationEvent(action, "failure", System.currentTimeMillis() - startTime);
+    }
+
+    private Long safeId(Long id) {
+        return id == null ? -1L : id;
     }
 }

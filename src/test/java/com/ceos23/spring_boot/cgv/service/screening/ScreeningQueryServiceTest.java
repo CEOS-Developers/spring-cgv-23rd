@@ -11,7 +11,10 @@ import com.ceos23.spring_boot.cgv.domain.movie.Movie;
 import com.ceos23.spring_boot.cgv.domain.movie.Screening;
 import com.ceos23.spring_boot.cgv.domain.user.User;
 import com.ceos23.spring_boot.cgv.domain.user.UserRole;
+import com.ceos23.spring_boot.cgv.dto.screening.ScreeningResponse;
 import com.ceos23.spring_boot.cgv.dto.screening.SeatAvailabilityResponse;
+import com.ceos23.spring_boot.cgv.global.cache.CacheKeyFactory;
+import com.ceos23.spring_boot.cgv.global.cache.CacheNames;
 import com.ceos23.spring_boot.cgv.repository.cinema.CinemaRepository;
 import com.ceos23.spring_boot.cgv.repository.cinema.ScreenRepository;
 import com.ceos23.spring_boot.cgv.repository.cinema.SeatLayoutRepository;
@@ -28,6 +31,7 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.cache.CacheManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -70,8 +74,13 @@ class ScreeningQueryServiceTest {
     @Autowired
     private PaymentLogRepository paymentLogRepository;
 
+    @Autowired
+    private CacheManager cacheManager;
+
     @AfterEach
     void tearDown() {
+        clearCache(CacheNames.SCREENINGS);
+        clearCache(CacheNames.SEAT_TEMPLATES);
         reservationSeatRepository.deleteAllInBatch();
         reservationRepository.deleteAllInBatch();
         paymentLogRepository.deleteAllInBatch();
@@ -89,18 +98,21 @@ class ScreeningQueryServiceTest {
     void getScreenings_filtersByMovieAndCinema() {
         ScreeningFixture fixture = createFixture();
 
-        List<Screening> movieScreenings = screeningQueryService.getScreenings(fixture.movie1.getId(), null);
-        List<Screening> filteredScreenings = screeningQueryService.getScreenings(
+        List<ScreeningResponse> movieScreenings = screeningQueryService.getScreenings(fixture.movie1.getId(), null);
+        List<ScreeningResponse> filteredScreenings = screeningQueryService.getScreenings(
                 fixture.movie1.getId(),
                 fixture.cinema1.getId()
         );
 
         assertThat(movieScreenings)
-                .extracting(Screening::getId)
+                .extracting(ScreeningResponse::screeningId)
                 .containsExactly(fixture.screening1.getId(), fixture.screening2.getId());
         assertThat(filteredScreenings)
-                .extracting(Screening::getId)
+                .extracting(ScreeningResponse::screeningId)
                 .containsExactly(fixture.screening1.getId());
+        assertThat(cacheManager.getCache(CacheNames.SCREENINGS)
+                .get(CacheKeyFactory.screenings(fixture.movie1.getId(), fixture.cinema1.getId())))
+                .isNotNull();
     }
 
     @Test
@@ -126,6 +138,14 @@ class ScreeningQueryServiceTest {
                 .filteredOn(seat -> !seat.reserved())
                 .extracting(SeatAvailabilityResponse.SeatStatusResponse::seatTemplateId)
                 .containsExactly(fixture.seatA2.getId());
+        assertThat(cacheManager.getCache(CacheNames.SEAT_TEMPLATES).get(fixture.seatLayoutId))
+                .isNotNull();
+    }
+
+    private void clearCache(String cacheName) {
+        if (cacheManager.getCache(cacheName) != null) {
+            cacheManager.getCache(cacheName).clear();
+        }
     }
 
     private ScreeningFixture createFixture() {
@@ -158,7 +178,16 @@ class ScreeningQueryServiceTest {
         SeatTemplate seatA1 = seatTemplateRepository.save(new SeatTemplate("A", 1, seatLayout));
         SeatTemplate seatA2 = seatTemplateRepository.save(new SeatTemplate("A", 2, seatLayout));
 
-        return new ScreeningFixture(user, cinema1, movie1, screening1, screening2, seatA1, seatA2);
+        return new ScreeningFixture(
+                user,
+                cinema1,
+                movie1,
+                screening1,
+                screening2,
+                seatLayout.getId(),
+                seatA1,
+                seatA2
+        );
     }
 
     private record ScreeningFixture(
@@ -167,6 +196,7 @@ class ScreeningQueryServiceTest {
             Movie movie1,
             Screening screening1,
             Screening screening2,
+            Long seatLayoutId,
             SeatTemplate seatA1,
             SeatTemplate seatA2
     ) {

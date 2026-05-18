@@ -54,6 +54,8 @@ out/
 .project
 .recommenders
 .settings
+.gradle-user-home/
+logs/
 .springBeans
 .vscode
 /code
