@@ -14,6 +14,12 @@ spring:
         format_sql: true
         use_sql_comments: true
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 3600000
@@ -21,3 +27,9 @@ jwt:
 payment:
   base-url: ${PAYMENT_BASE_URL:https://ceos.diggindie.com}
   store-id: ${PAYMENT_STORE_ID}
+
+logging:
+  level:
+    com.cgv.spring_boot: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

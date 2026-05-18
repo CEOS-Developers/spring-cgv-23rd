@@ -29,7 +29,8 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
     ) throws IOException, ServletException {
         GlobalErrorCode errorCode = GlobalErrorCode.UNAUTHORIZED;
 
-        log.warn("Unauthorized request: {} {}", request.getMethod(), request.getRequestURI());
+        log.warn("AUDIT authentication failed. method={}, uri={}, message={}",
+                request.getMethod(), request.getRequestURI(), authException.getMessage());
 
         response.setStatus(errorCode.getStatus());
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());

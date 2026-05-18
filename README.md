@@ -239,6 +239,7 @@
 
 </details>
 
+---
 <details>
 <summary><strong>3주차 미션 관련 내용 정리</strong></summary>
 
@@ -626,5 +627,336 @@ k6를 사용해 두 가지 부하테스트를 진행했습니다.
 ### 3. 결제 처리 구간
 
 결제 API 부하테스트에서 일부 결제 요청이 실패했습니다. 응답 시간이 느려진 것이 아니라 결제 요청 자체가 `500` 에러로 실패했기 때문에, 병목 지점은 EC2/RDS의 처리 성능보다는 외부 결제 API 연동 또는 결제 처리 로직에 있을 가능성이 높다고 보았습니다.
+
+</details>
+
+
+---
+
+<details>
+<summary><strong>7주차 미션 관련 내용 정리</strong></summary>
+
+<br />
+
+## 1. Redis 캐싱 적용
+
+### 1. 적용 내용
+
+영화/극장 조회 API는 반복 호출될 가능성이 높고, 데이터 변경 빈도는 상대적으로 낮다고 판단했습니다.  
+특히 전체 목록 조회와 상세 조회는 같은 요청이 여러 번 들어올 수 있기 때문에, 매번 DB를 조회하는 대신 Redis 캐시를 두는 것이 더 효율적이라고 보았습니다.
+
+이번 프로젝트에서는 다음 조회 기능에 캐싱을 적용했습니다.
+
+- 영화 전체 조회
+- 영화 상세 조회
+- 극장 전체 조회
+- 극장 상세 조회
+
+```java
+@Cacheable(cacheNames = "movies", key = "'all'")
+public List<MovieResponse> findAllMovies() {
+    return movieRepository.findAll().stream()
+            .map(MovieResponse::from)
+            .toList();
+}
+
+@Cacheable(cacheNames = "movie", key = "#id")
+public MovieResponse findMovieById(Long id) {
+    Movie movie = movieRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
+    return MovieResponse.from(movie);
+}
+```
+
+---
+
+### 2. 캐싱 전략
+
+캐싱 전략은 `Look-aside(Cache-aside)` 방식을 기준으로 적용했습니다.
+
+이 방식은 애플리케이션이 먼저 캐시를 확인하고, 캐시에 값이 없을 때만 DB를 조회한 뒤 결과를 캐시에 저장하는 구조입니다.  
+이번 프로젝트에서는 Spring Cache의 `@Cacheable`을 사용해, Redis 조회/저장 로직을 직접 작성하지 않고 Spring의 캐시 추상화를 활용했습니다.
+
+영화 상세 조회 기준 흐름은 다음과 같습니다.
+
+1. 클라이언트가 영화 상세 조회 요청
+2. Spring Cache가 Redis에서 `movie::{id}` 조회
+3. 캐시에 값이 있으면 Redis 데이터 반환
+4. 캐시에 값이 없으면 DB 조회
+5. 조회 결과를 Redis에 저장
+6. 응답 반환
+
+---
+
+### 3. Cache Key 설계
+
+전체 조회와 상세 조회는 성격이 다르기 때문에 cache name을 분리했습니다.
+
+| 대상 | Cache Name | Key | Redis Key 예시 |
+|------|------|------|------|
+| 영화 전체 조회 | `movies` | `'all'` | `movies::all` |
+| 영화 상세 조회 | `movie` | `#id` | `movie::1` |
+| 극장 전체 조회 | `theaters` | `'all'` | `theaters::all` |
+| 극장 상세 조회 | `theater` | `#id` | `theater::1` |
+
+전체 조회는 별도 조건 없이 목록 전체를 가져오기 때문에 key를 `'all'`로 고정했고, 상세 조회는 리소스 ID별로 결과가 달라지므로 `#id`를 사용했습니다.
+
+---
+
+### 4. TTL 설정
+
+캐시를 너무 오래 유지하면 DB와 Redis의 데이터가 달라질 수 있기 때문에 TTL을 함께 설정했습니다.
+
+```java
+Map<String, RedisCacheConfiguration> cacheConfigurations = Map.of(
+        "movies", defaultConfig.entryTtl(Duration.ofMinutes(5)),
+        "movie", defaultConfig.entryTtl(Duration.ofMinutes(10)),
+        "theaters", defaultConfig.entryTtl(Duration.ofMinutes(5)),
+        "theater", defaultConfig.entryTtl(Duration.ofMinutes(10))
+);
+```
+
+| Cache Name | TTL | 설정 이유 |
+|------|------|------|
+| `movies` | 5분 | 전체 목록은 추가/삭제의 영향을 받기 때문에 비교적 짧게 설정 |
+| `movie` | 10분 | 상세 정보는 목록보다 변경 빈도가 낮다고 판단 |
+| `theaters` | 5분 | 극장 목록도 변경 가능성을 고려해 짧게 설정 |
+| `theater` | 10분 | 극장 상세 정보는 상대적으로 변경 빈도가 낮다고 판단 |
+
+과제 목적상 TTL을 너무 길게 두기보다, 캐시 동작을 직접 확인하기 쉬운 수준으로 설정했습니다.
+
+---
+
+### 5. 캐시 무효화
+
+조회 결과가 변경될 수 있는 작업에서는 기존 캐시를 제거하도록 구성했습니다.
+
+영화 생성 시에는 전체 목록 캐시를 삭제합니다.
+
+```java
+@Transactional
+@CacheEvict(cacheNames = "movies", allEntries = true)
+public Long saveMovie(MovieCreateRequest request) {
+    Movie movie = request.toEntity();
+    return movieRepository.save(movie).getId();
+}
+```
+
+영화 삭제 시에는 전체 목록 캐시와 상세 캐시를 함께 삭제합니다.
+
+```java
+@Transactional
+@Caching(evict = {
+        @CacheEvict(cacheNames = "movies", allEntries = true),
+        @CacheEvict(cacheNames = "movie", key = "#id")
+})
+public void deleteMovieById(Long id) {
+    Movie movie = movieRepository.findById(id)
+            .orElseThrow(() -> new BusinessException(MovieErrorCode.MOVIE_NOT_FOUND));
+    movieRepository.delete(movie);
+}
+```
+
+| 작업 | 무효화 대상 |
+|------|------|
+| 영화 생성 | `movies` |
+| 영화 삭제 | `movies`, `movie::{id}` |
+
+극장 도메인은 이번 과제 범위에서 생성/삭제 기능을 구현하지 않았기 때문에, 조회 캐시만 적용했습니다.
+
+---
+
+### 6. 직렬화 설정 관련 트러블슈팅
+
+캐싱 적용 과정에서 `MovieResponse`와 같은 DTO가 Java `record` 타입이라는 점 때문에 Redis 역직렬화 문제가 발생했습니다.
+
+```java
+public record MovieResponse(
+        Long id,
+        String title,
+        int runningTime,
+        Genre genre,
+        LocalDate releaseDate
+) { }
+```
+
+타입 정보가 충분히 포함되지 않아 캐시 hit 시 Redis 값을 다시 DTO로 복원하는 과정에서 문제가 발생했습니다.  
+이를 해결하기 위해 `ObjectMapper`에 타입 정보를 포함하도록 설정했고, `JavaTimeModule`도 함께 등록해 `LocalDate`와 같은 시간 타입까지 안정적으로 처리하도록 구성했습니다.
+
+```java
+objectMapper.registerModule(new JavaTimeModule());
+objectMapper.activateDefaultTyping(
+        BasicPolymorphicTypeValidator.builder()
+                .allowIfSubType(Object.class)
+                .build(),
+        ObjectMapper.DefaultTyping.EVERYTHING,
+        JsonTypeInfo.As.PROPERTY
+);
+```
+
+---
+
+### 7. 캐싱 결과 확인
+
+캐싱 적용 여부는 `redis-cli monitor`로 확인했습니다.
+
+```bash
+docker exec -it spring-redis redis-cli monitor
+```
+<img width="737" height="245" alt="Image" src="https://github.com/user-attachments/assets/ac8efff8-9d4b-4fb9-9073-7ff759fde1ba" />
+
+영화 상세 조회 API를 처음 호출했을 때는 `GET` 후 `SET`이 발생했고, 같은 API를 다시 호출했을 때는 `GET`만 발생했습니다.  
+즉 첫 번째 요청에서는 DB 조회 후 Redis에 캐시가 저장되었고, 두 번째 요청부터는 Redis 캐시를 사용한다는 것을 확인할 수 있었습니다.
+
+---
+
+## 2. 로깅 적용
+
+### 1. 적용 내용
+
+API가 실패했을 때 단순히 에러 응답만 보는 것으로는 원인을 파악하기 어려웠기 때문에, 요청 흐름과 비즈니스 이벤트, 예외를 구분해서 확인할 수 있도록 로깅을 적용했습니다.
+
+다음 항목 위주로 로그를 작성했습니다.
+
+- 주요 서비스 메서드의 비즈니스 로그
+- 공통 예외 로그
+- 로그인/예매/결제/권한 실패에 대한 감사 로그
+- AOP 기반 API 실행 시간 로그
+
+---
+
+### 2. 로그 레벨 전략
+
+| 로그 레벨 | 사용 목적 | 예시 |
+|------|------|------|
+| `DEBUG` | 개발 중 상세 흐름 확인 | SQL 확인, 캐시 동작 확인 |
+| `INFO` | 정상적인 주요 이벤트 기록 | API 실행, 영화 생성, 예매 완료, 결제 성공 |
+| `WARN` | 비정상 요청 또는 주의 상황 | 중복 회원가입, 좌석 중복 예매 시도, 권한 실패 |
+| `ERROR` | 시스템 장애 또는 예상하지 못한 예외 | 서버 내부 오류, 외부 연동 실패 |
+
+운영 환경에서는 과도한 로그를 줄이기 위해 `DEBUG`와 SQL 로그를 최소화하고, 주요 비즈니스 이벤트 중심으로 `INFO` 이상 로그를 남기도록 구성했습니다.
+
+---
+
+### 3. 개발/운영 환경 로그 설정
+
+개발 환경에서는 애플리케이션 로그를 `DEBUG`로 두고 SQL 로그도 확인할 수 있도록 했습니다.
+
+```yaml
+logging:
+  level:
+    com.cgv.spring_boot: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+```
+결과
+```
+2026-05-16T22:07:54.749+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
+2026-05-16T22:07:54.750+09:00  INFO 60076 --- [nio-8080-exec-1] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=8
+2026-05-16T22:07:54.752+09:00  WARN 60076 --- [nio-8080-exec-1] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
+2026-05-16T22:07:54.774+09:00  WARN 60076 --- [nio-8080-exec-1] .m.m.a.ExceptionHandlerExceptionResolver : Resolved [com.cgv.spring_boot.global.error.exception.BusinessException: 이미 사용 중인 아이디입니다.]
+```
+
+운영 환경에서는 SQL 로그와 바인딩 로그를 끄고, 애플리케이션 로그는 `INFO` 중심으로 확인하도록 설정했습니다.
+
+```yaml
+logging:
+  level:
+    com.cgv.spring_boot: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+```
+결과
+```
+2026-05-16T13:08:53.081Z  WARN 1 --- [nio-8080-exec-8] c.c.s.domain.user.service.AuthService    : signup rejected. loginId=test
+2026-05-16T13:08:53.092Z  INFO 1 --- [nio-8080-exec-8] c.c.s.global.logging.ApiLoggingAspect    : api executed. method=POST, uri=/api/users/signup, handler=AuthController.signup(..), durationMs=52
+2026-05-16T13:08:53.097Z  WARN 1 --- [nio-8080-exec-8] c.c.s.g.error.GlobalExceptionHandler     : business exception handled. method=POST, uri=/api/users/signup, status=400, message=이미 사용 중인 아이디입니다.
+```
+
+---
+
+### 4. AOP 기반 API 실행 시간 로깅
+
+Controller마다 실행 시간 측정 코드를 넣으면 중복이 많아지기 때문에, Spring AOP를 사용해 Controller 계층의 public 메서드 실행 시간을 공통적으로 기록하도록 구성했습니다.
+
+```java
+@Slf4j
+@Aspect
+@Component
+public class ApiLoggingAspect {
+
+    @Around("execution(public * com.cgv.spring_boot..controller..*(..))")
+    public Object logApiExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
+        long startTime = System.currentTimeMillis();
+        HttpServletRequest request = getCurrentRequest();
+
+        try {
+            return joinPoint.proceed();
+        } finally {
+            long duration = System.currentTimeMillis() - startTime;
+            String method = request != null ? request.getMethod() : "N/A";
+            String uri = request != null ? request.getRequestURI() : "N/A";
+
+            log.info("api executed. method={}, uri={}, handler={}, durationMs={}",
+                    method,
+                    uri,
+                    joinPoint.getSignature().toShortString(),
+                    duration);
+        }
+    }
+}
+```
+
+이 로그를 통해 어떤 API가 호출되었는지, 어떤 Controller 메서드가 실행되었는지, 처리 시간이 얼마나 걸렸는지를 공통 형식으로 확인할 수 있었습니다.
+
+---
+
+### 5. 서비스/감사 로그 적용
+
+서비스 계층에는 과제 범위에서 의미가 큰 이벤트 위주로 로그를 남겼습니다.
+
+- 영화 생성/삭제, 영화 조회 실패, 캐시 무효화
+- 회원가입, 로그인 성공/실패
+- 예매 생성/취소, 좌석 중복 예매 시도
+- 결제 요청/성공/실패
+
+특히 로그인 실패, 권한 실패, JWT 인증 실패, 예매/결제 이벤트는 `AUDIT` prefix를 붙여 감사 로그 성격이 드러나도록 정리했습니다.
+
+예를 들면 다음과 같은 형태입니다.
+
+```text
+AUDIT login success. userId=1, loginId=test
+AUDIT authentication failed. method=GET, uri=/api/movies/1
+AUDIT reservation created. userId=1, reservationId=3, scheduleId=1, seatCount=2
+AUDIT payment succeeded. reservationId=3, paymentId=pay_123, provider=PORTONE
+```
+
+---
+
+### 6. 예외 로그 전략
+
+예외는 `GlobalExceptionHandler`에서 공통 처리하도록 구성했고, 예외 성격에 따라 로그 레벨을 구분했습니다.
+
+- `BusinessException` → `WARN`
+- 예상하지 못한 `Exception` → `ERROR`
+
+예를 들어 중복 회원가입, 존재하지 않는 영화 조회, 권한 없는 접근처럼 예상 가능한 비즈니스 예외는 `WARN`으로 처리했고, 시스템 장애나 예상하지 못한 내부 오류는 `ERROR`로 구분했습니다.
+
+---
+
+### 7. 민감정보 로깅 방지
+
+로그에는 문제 추적에 필요한 정보만 남기고, 민감정보는 기록하지 않도록 했습니다.
+
+특히 다음 정보는 로그에 남기지 않도록 주의했습니다.
+
+- 비밀번호
+- JWT 토큰 원문
+- 결제 관련 민감정보
+- 개인정보 전체
+
+실제로 AOP 로그에는 request body나 token 값을 남기지 않고, `method`, `uri`, `handler`, `durationMs` 정도만 남기도록 구성했습니다.
+
+---
 
 </details>

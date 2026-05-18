@@ -13,5 +13,17 @@ spring:
         format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
 
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+      password: ${REDIS_PASSWORD:}
+
 jwt:
   secret: ${JWT_SECRET}
+
+logging:
+  level:
+    com.cgv.spring_boot: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
