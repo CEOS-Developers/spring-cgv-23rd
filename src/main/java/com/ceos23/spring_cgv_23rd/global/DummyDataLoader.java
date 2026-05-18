@@ -17,6 +17,7 @@ import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import net.datafaker.Faker;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -30,8 +31,8 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
-@Transactional
 @Profile("k6")
+@Transactional
 @RequiredArgsConstructor
 public class DummyDataLoader implements CommandLineRunner {
 
@@ -44,56 +45,74 @@ public class DummyDataLoader implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        String encodedPassword = passwordEncoder.encode("test123!!");
+
         Faker faker = new Faker(new Locale("ko"));
         List<Theater> theaters = new ArrayList<>();
         List<Screen> screens = new ArrayList<>();
         List<Screening> screenings = new ArrayList<>();
         List<Movie> movies = new ArrayList<>();
+        List<User> users = new ArrayList<>();
 
-        for (int i = 0; i < 10; i++){
-            Theater theater = Theater.create(
-                    faker.name().name(), Region.SEOUL.getRegionName()
-            );
-            theaters.add(theater);
-        }
-
-        for (int i = 0; i < 10; i++){
-            for (Theater th : theaters){
-                Screen screen = Screen.create(
-                    th, String.format("%d관-%s", i, th.getName()), CinemaType.NORMAL, 172
+        try {// create(String loginId, String username, String password, boolean men, int age)
+            for (int i = 0; i < 2; i++) {
+                User user = User.create(
+                        "user" + i, "테스트" + i, encodedPassword, true, 21
                 );
-                screens.add(screen);
+                users.add(user);
             }
-        }
 
-        for (int i = 0; i < 5; i++){
-            Movie movie = Movie.create(
-                    faker.book().title(), faker.date().birthdayLocalDate(), faker.lorem().characters(30),
-                    AccessibleAge.ALL, MovieType.FAMILY, 15000, faker.number().numberBetween(90,200)
-            );
-            movies.add(movie);
-        }
+            for (int i = 0; i < 2; i++) {
+                Theater theater = Theater.create(
+                        faker.name().name(), Region.SEOUL.getRegionName()
+                );
+                theaters.add(theater);
+            }
 
-        for (int i = 0; i < 5; i++){
-            for (Screen s : screens) {
-                for (Movie m : movies) {
-                    Screening screening = Screening.create(
-                            s, m, LocalDateTime.of(LocalDate.of(2026, 5, 28), LocalTime.of(7, 0).plusHours(4))
+
+            for (int i = 0; i < 2; i++) {
+                for (Theater th : theaters) {
+                    Screen screen = Screen.create(
+                            th, String.format("%d관-%s", i, th.getName()), CinemaType.NORMAL, 172
                     );
-
-                    screenings.add(screening);
+                    screens.add(screen);
                 }
             }
-        }
 
-        userRepository.save(
-                User.create(
-                        "ceos1234", "세오스", passwordEncoder.encode("ceos1234**"), true, 21
-                )
-        );
-        theaterRepository.saveAll(theaters);
-        screenRepository.saveAll(screens);
-        movieRepository.saveAll(movies);
-        screeningRepository.saveAll(screenings);
+
+            for (int i = 0; i < 10000; i++) {
+                Movie movie = Movie.create(
+                        faker.book().title(), faker.date().birthdayLocalDate(), faker.lorem().characters(30),
+                        AccessibleAge.ALL, MovieType.FAMILY, 15000, faker.number().numberBetween(90, 200)
+                );
+                movies.add(movie);
+            }
+
+            for (int i = 0; i < 2; i++) {
+                for (Screen s : screens) {
+                    for (Movie m : movies) {
+                        Screening screening = Screening.create(
+                                s, m, LocalDateTime.of(LocalDate.of(2026, 5, 28), LocalTime.of(7, 0).plusHours(4))
+                        );
+
+                        screenings.add(screening);
+                    }
+                }
+            }
+
+            userRepository.saveAll(users);
+
+            theaterRepository.saveAll(theaters);
+
+            movieRepository.saveAll(movies);
+
+            screenRepository.saveAll(screens);
+
+            screeningRepository.saveAll(screenings);
+        } catch (Exception e) {
+            System.out.println("더미데이터 추가 에러 >>> ");
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 }

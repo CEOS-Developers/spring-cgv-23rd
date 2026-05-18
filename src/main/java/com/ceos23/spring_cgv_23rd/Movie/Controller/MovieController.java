@@ -6,6 +6,7 @@ import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.MovieSearchAllResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.DTO.Response.MovieSearchResponseDTO;
 import com.ceos23.spring_cgv_23rd.Movie.Service.MovieService;
 import com.ceos23.spring_cgv_23rd.Theater.DTO.Response.CheckLikedMovieResponseDTO;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.User;
@@ -43,16 +44,22 @@ public class MovieController {
         return ResponseEntity.ok(movieService.theaterSearchService());
     }
 
+    @GetMapping("/{movieId}")
+    public ResponseEntity<MovieSearchResponseDTO> searchById(@PathVariable Long movieId){
+        return ResponseEntity.ok(movieService.movieSearchById(movieId));
+    }
+
     /**
      * 영화 좋아요
-     *
      * 이미 눌려져있는데 한 번 더 누르면 취소
      */
     @PostMapping("/likes")
     public ResponseEntity<LikedMovieResponseDTO> bookmarkMovie(
-            @RequestBody BookmarkMovieRequestDTO bmrDTO
+            @Valid @RequestBody BookmarkMovieRequestDTO bmrDTO,
+            @AuthenticationPrincipal User user
     ) {
-        return ResponseEntity.ok(movieService.movieLikService(bmrDTO));
+        System.out.println(">>>" + bmrDTO.movieId());
+        return ResponseEntity.ok(movieService.movieLikService(bmrDTO, user.getUsername()));
     }
 
     /**
@@ -64,5 +71,4 @@ public class MovieController {
             ){
         return ResponseEntity.ok(movieService.checkLikedMovieByUserId(user.getUsername()));
     }
-
 }

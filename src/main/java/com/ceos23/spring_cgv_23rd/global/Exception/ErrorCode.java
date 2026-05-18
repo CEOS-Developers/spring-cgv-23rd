@@ -15,7 +15,7 @@ public enum ErrorCode {
 
     //Global
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "G001", "서버에 장애가 발생했습니다."),
-    DATA_ACCESS_EXCEPTION(HttpStatus.CONFLICT, "G002", "이미 등록된 유일키입니다."),
+    DATA_ACCESS_EXCEPTION(HttpStatus.CONFLICT, "G002", "DB에서 에러가 발생했습니다."),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "G003", "권한이 없습니다."),
     UN_SATISFIED_PARAMETERS(HttpStatus.BAD_REQUEST, "G004", "파라미터가 부족합니다."),
     CONFLICT(HttpStatus.CONFLICT, "G005", "동시성 충돌이 발생했습니다."),

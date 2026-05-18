@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -20,6 +21,7 @@ import java.security.Key;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 public class TokenProvider implements InitializingBean {
     private Key key;
@@ -35,7 +37,6 @@ public class TokenProvider implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() {
-        System.out.println("key >>> " + jwtSecretKey);
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
@@ -45,12 +46,16 @@ public class TokenProvider implements InitializingBean {
     }
     
     public String getAccessToken(HttpServletRequest req) {
+        System.out.println(req.getHeader("Cookie"));
+        System.out.println(Arrays.toString(req.getCookies()));
+
         Cookie[] cookies = req.getCookies();
 
         if (cookies == null) return null;
 
         for (Cookie c : cookies) {
             if ("accessToken".equals(c.getName())) {
+                log.info("로그인: {}", c.getValue());
                 return c.getValue();
             }
         }

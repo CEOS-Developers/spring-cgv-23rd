@@ -2,7 +2,7 @@ services:
   app:
     image: kdhyun422/my-app:${IMAGE_TAG}
     ports:
-      - "80:8080"
+      - "8080:8080"
     restart: unless-stopped
 
     env_file:
@@ -23,10 +23,16 @@ services:
     command:
       - "--global-response-templating"
 
+  redis:
+    image: redis:7.2
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: 1234
       MYSQL_DATABASE: cgvdb
     ports:
       - "3306:3306"

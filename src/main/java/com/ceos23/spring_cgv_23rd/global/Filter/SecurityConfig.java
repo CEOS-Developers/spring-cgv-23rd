@@ -41,14 +41,19 @@ public class SecurityConfig {
                                 "/api/theater",
                                 "/api/movie",
                                 "/api/screen",
-                                "/health/**",
-                                "/api/login"
+                                "/api/login",
+                                "/api/movie/*"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/movie/likes"
+                        ).authenticated()
                         .requestMatchers(
                                 "/",
                                 "/css/**", "/images/**", "/favicon.ico/**",
                                 "/api/login/**",
-                                "/api/signup"
+                                "/api/signup",
+                                "/health/**",
+                                "/actuator/**"
                         ).permitAll()
                         .anyRequest().authenticated())
 /*

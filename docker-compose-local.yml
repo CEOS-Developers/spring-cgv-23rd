@@ -2,7 +2,7 @@ services:
   app:
     image: kdhyun422/my-app:latest
     ports:
-      - "80:8080"
+      - "8080:8080"
     restart: unless-stopped
 
     env_file:
@@ -26,7 +26,7 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: 1234
       MYSQL_DATABASE: cgvdb
     ports:
       - "3307:3306"
@@ -35,6 +35,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   loki:
     image: grafana/loki:2.9.0

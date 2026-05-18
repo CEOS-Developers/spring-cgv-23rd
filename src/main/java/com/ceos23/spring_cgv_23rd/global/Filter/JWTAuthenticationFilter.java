@@ -35,12 +35,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
             @NonNull HttpServletRequest req, @NonNull HttpServletResponse res, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
-        if (SecurityContextHolder.getContext().getAuthentication() != null){
-            log.info("로그인 요청 도착. 정보없음");
-            filterChain.doFilter(req, res);
-            return;
-        }
-
         String at = tokenProvider.getAccessToken(req);
 
         try {
@@ -52,6 +46,10 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails user = (UserDetails) au.getPrincipal();
                 log.debug("로그인 검증 성공, userId={}", user.getUsername());
+            } else {
+                log.info("로그인 요청 도착. 정보없음");
+                filterChain.doFilter(req, res);
+                return;
             }
         }
         catch (SignatureException sj){

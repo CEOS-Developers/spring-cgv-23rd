@@ -1,45 +1,62 @@
 server:
   address: 0.0.0.0
 
-spring:
-  profiles:
-    active: k6
 
+spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_TEST_URL}
+    username: root
+    password: ${DB_TEST_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
-        default_batch_fetch_size: 100
+        default_batch_fetch_size: 1000
+
+  data:
+    redis:
+      host: redis
+      port: 6379
 
 logging:
-  file:
-    name: logs/app.log
   level:
-    root: info
-    com.ceos23: debug
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql: trace
-    org.springframework.boot.context.config: debug
+    root: INFO
+    com.example.logdemo: info
+    org.springframework.web: info
+    org.springframework.cache: trace
 
+  file:
+    name: logs/application.log
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} [req:%X{requestId}] - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
+management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.9,0.95,0.99
+    enable:
+      cache: true
+
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+        exclude: env, heapdump, threaddump, configprops, quartz
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
 
 concurrency:
-  endpoint: "https://ceos.diggindie.com"
+  endpoint: "http://localhost:8089"
   storeId: ${CONCURRENCY_ID}
   secret-key: ${CONCURRENCY_SECRET_KEY}

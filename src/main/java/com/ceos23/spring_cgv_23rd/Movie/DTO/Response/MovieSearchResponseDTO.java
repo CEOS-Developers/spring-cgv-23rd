@@ -1,22 +1,24 @@
 package com.ceos23.spring_cgv_23rd.Movie.DTO.Response;
 
 import com.ceos23.spring_cgv_23rd.Movie.Domain.Movie;
-import lombok.Builder;
+import lombok.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
+@Getter
 @Builder
-public record MovieSearchResponseDTO(
-        List<MovieWrapperDTO> movie
-) {
-    public static List<MovieWrapperDTO> from(Movie movie){
-        return Collections.singletonList(MovieWrapperDTO.create(movie));
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+public class MovieSearchResponseDTO {
+    private List<MovieWrapperDTO> movie;
+
+    public static MovieSearchResponseDTO from(MovieWrapperDTO movie){
+        return MovieSearchResponseDTO.builder()
+                .movie(List.of(movie))
+                .build();
     }
 
     public static List<MovieWrapperDTO> from(List<Movie> movies){
-        List<MovieWrapperDTO> res = new ArrayList<>();
         return MovieWrapperDTO.create(movies);
     }
 }

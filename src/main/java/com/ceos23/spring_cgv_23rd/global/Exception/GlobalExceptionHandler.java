@@ -82,4 +82,9 @@ public class GlobalExceptionHandler {
                 .status(code.getStatus())
                 .body(ErrDTO.create(code));
     }
+
+    @ExceptionHandler(Exception.class)
+    public void handleException(Exception e){
+        e.printStackTrace();
+    }
 }

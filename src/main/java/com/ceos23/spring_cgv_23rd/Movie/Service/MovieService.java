@@ -14,25 +14,27 @@ import com.ceos23.spring_cgv_23rd.User.Domain.User;
 import com.ceos23.spring_cgv_23rd.User.Repository.UserRepository;
 import com.ceos23.spring_cgv_23rd.global.Exception.CustomException;
 import com.ceos23.spring_cgv_23rd.global.Exception.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MovieService {
     private final UserRepository userRepository;
     private final MovieRepository movieRepository;
     private final BookmarkedMovieRepository bookmarkedMovieRepository;
-
-    MovieService(MovieRepository movieRepository, UserRepository userRepository, BookmarkedMovieRepository bookmarkedMovieRepository){
-        this.movieRepository = movieRepository;
-        this.userRepository = userRepository;
-        this.bookmarkedMovieRepository = bookmarkedMovieRepository;
-    }
+    private final RedisTemplate<String, Object> redisTemplate;
+    private final MovieCacheService movieCacheService;
 
     /**
      * 검색어에 맞는 영화를 반환합니다.
@@ -59,19 +61,49 @@ public class MovieService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    //@Cacheable(value = "movies", key = "#id")
+    public MovieSearchResponseDTO movieSearchById(Long id) {
+        movieCacheService.incrementCount(id);
+
+        // 캐시 확인
+        String cacheKey = "movies::" + id;
+        MovieSearchResponseDTO cached = (MovieSearchResponseDTO) redisTemplate.opsForValue().get(cacheKey);
+        if (cached != null) return cached;
+
+        // DB 조회
+        Movie movie = movieRepository.findById(id).orElseThrow(
+                () -> new CustomException(ErrorCode.NOT_FOUND_MOVIE)
+        );
+
+        return MovieSearchResponseDTO.from(MovieWrapperDTO.create(movie));
+    }
+
+/*
+    @Transactional(readOnly = true)
+    @Cacheable(value = "movies", key = "#id")
+    public MovieSearchResponseDTO movieSearchById(Long id){
+        Movie searchedMovie = movieRepository.findById(id).orElseThrow(
+                () -> new CustomException(ErrorCode.NOT_FOUND_MOVIE)
+        );
+
+        return MovieSearchResponseDTO.from(MovieWrapperDTO.create(searchedMovie));
+    }
+ */
+
     /**
      * 영화 좋아요
      * 이미 눌려져있는데 한 번 더 누르면 취소
      */
-    public LikedMovieResponseDTO movieLikService(BookmarkMovieRequestDTO bmrDTO){
-        long userId = bmrDTO.userId();
+    @Transactional
+    public LikedMovieResponseDTO movieLikService(BookmarkMovieRequestDTO bmrDTO, String userLoginId){
         long movieId = bmrDTO.movieId();
 
         Movie movie = movieRepository.findById(movieId).orElseThrow(
                 () -> new CustomException(ErrorCode.NOT_FOUND_MOVIE)
         );
 
-        User user = userRepository.findById(userId).orElseThrow(
+        User user = userRepository.findByLoginId(userLoginId).orElseThrow(
                 () -> new CustomException(ErrorCode.NOT_FOUND_USER)
         );
 
@@ -98,6 +130,7 @@ public class MovieService {
     /**
      * 북마크한 영화 조회
      */
+    @Transactional(readOnly = true)
     public CheckLikedMovieResponseDTO checkLikedMovieByUserId(String loginId) {
         User user = userRepository.findByLoginId(loginId).orElseThrow(
                 () -> new CustomException(ErrorCode.NOT_FOUND_USER)

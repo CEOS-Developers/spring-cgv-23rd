@@ -1,50 +1,116 @@
-# docker-compose.yml
-
-networks:
-  monitoring_network: # 모니터링 전용 네트워크
-    driver: bridge
-
 services:
-  #Loki(로그 저장소) -log engine역할
+  app:
+    build:
+      context: .
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health/ready" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  wiremock:
+    image: wiremock/wiremock:latest
+    ports:
+      - "8089:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command:
+      - "--global-response-templating"
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 1234
+      MYSQL_DATABASE: cgvdb
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-proot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:2.9.0
+    container_name: loki
     ports:
       - "3100:3100"
-    command: --config.file=/etc/loki/loki-config.yml
+    environment:
+      - TZ=Asia/Seoul
     volumes:
-      - ./loki/loki-config.yml:/etc/loki/loki-config.yml # 설정 파일 마운트
-      - ./loki/data:/loki # 로그 데이터 저장
+      - ./loki-config.yml:/etc/loki/local-config.yaml #설정 파일을 컨테이너 내부로 주입
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - monitoring_network
+      - loki-network
 
-    #Prometheus(메트릭 저장소)
-    prometheus:
-      image: prom/prometheus:latest
-      restart: unless-stopped
-      ports:
-        - "9090:9090"
-      conmmand: --config.file=/etc/prometheus/prometheus.yml
-      volumes:
-        - ./prometheus/prometheus-config.yml:/etc/prometheus/prometheus-config.yml #설정 파일 마운드
-        - ./prometheus/data:/prometheus #메트릭 데이터 저장
-      networks:
-        - monitoring_network
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./alloy-config.yml:/etc/alloy/config.alloy # alloy 설정 파일 매핑
+      - ./logs:/var/log/spring-boot               # Spring 로그 파일 경로
+      - /var/run/docker.sock:/var/run/docker.sock # 도커 소켓 (필요 시)
+      - ./alloy-data:/tmp
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    depends_on:
+      - loki
+    networks:
+      - loki-network
 
-    #Grafana(시각화 대시보드)
-    grafana:
-      image: grafana/grafana:latest
-      ports:
-        - "3000:3000"
-      volumes:
-        - ./grafana:/var/lib/grafana
-      networks:
-        - loki
-        - prometheus
-      restarts: always
-      environment:
-        - GF_SECURITY_ADMIN_USER=admin
-        - GF_SECURITY_ADMIN_PASSWORD=admin
-        - GF_USERS_ALLOW_SIGN_UP=false
-      restart: unless-stopped
-      networks:
-        - monitoring_network
+  grafana:
+    image: grafana/grafana:10.1.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin #변경 가능합니당
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=Asia/Seoul
+    volumes:
+      - grafana-data:/var/lib/grafana #초기화되지 않게 저장
+    depends_on:
+      - loki
+    networks:
+      - loki-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-config.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - loki-network
+
+networks:
+  loki-network: #서비스 이름만으로 서로 통신 가능
+    driver: bridge
+
+volumes:
+  loki-data:
+  grafana-data:

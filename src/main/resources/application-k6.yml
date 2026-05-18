@@ -1,16 +1,17 @@
 server:
   address: 0.0.0.0
 
+
 spring:
   datasource:
     url: ${DB_TEST_URL}
-    username: ${DB_TEST_USERNAME}
+    username: root
     password: ${DB_TEST_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: create
     show-sql: true
     properties:
       hibernate:
@@ -18,10 +19,18 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         default_batch_fetch_size: 1000
 
+  data:
+    redis:
+      host: redis
+      port: 6379
+
 logging:
   level:
     root: INFO
-    com.example.logdemo: DEBUG
+    com.example.logdemo: info
+    org.springframework.web: info
+    org.springframework.cache: trace
+
   file:
     name: logs/application.log
   pattern:
@@ -29,6 +38,15 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 management:
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.9,0.95,0.99
+    enable:
+      cache: true
+
   endpoints:
     web:
       exposure:
