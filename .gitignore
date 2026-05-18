@@ -28,6 +28,8 @@ build
 !/**/src/**/bin
 !/**/src/**/build
 build.log
+*.log
+logs/
 dependency-reduced-pom.xml
 dump.rdb
 interpolated*.xml
@@ -45,6 +47,7 @@ secrets.yml
 
 # Secret files
 application-secret.yaml
-
 .env
+.env.dev
+.env.prod
 *.env

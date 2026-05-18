@@ -6,13 +6,17 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class ScheduleResponse {
+public class ScheduleResponse implements Serializable {
+
+	private static final long serialVersionUID = 1L;
+
     private Long id;
     private LocalDateTime startAt;
     private LocalDateTime endAt;

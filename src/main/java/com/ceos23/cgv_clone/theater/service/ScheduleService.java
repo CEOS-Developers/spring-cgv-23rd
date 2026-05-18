@@ -8,6 +8,8 @@ import com.ceos23.cgv_clone.theater.dto.response.ScheduleResponse;
 import com.ceos23.cgv_clone.theater.repository.ScheduleRepository;
 import com.ceos23.cgv_clone.theater.repository.TheaterRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class ScheduleService {
     private final TheaterRepository theaterRepository;
     private final ScheduleRepository scheduleRepository;
 
+	@Cacheable(value = "schedules", key = "#movieId + ':' + #theaterId")
     @Transactional(readOnly = true)
     public List<ScheduleResponse> getSchedule(Long movieId, Long theaterId) {
         validateMovieAndTheater(movieId, theaterId);
