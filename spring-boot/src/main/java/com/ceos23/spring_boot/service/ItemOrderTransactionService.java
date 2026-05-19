@@ -42,12 +42,13 @@ public class ItemOrderTransactionService {
         User user = loadUser(request.getUserId());
         Theater theater = loadTheater(request.getTheaterId());
 
-        int totalPrice = calculateTotalPrice(request);
+        Map<Long, Item> itemMap = loadItemMap(request);
+        int totalPrice = calculateTotalPrice(request, itemMap);
 
         ItemOrder itemOrder = ItemOrder.of(user, theater, totalPrice);
         ItemOrder savedOrder = itemOrderRepository.saveAndFlush(itemOrder);
 
-        addOrderDetailsAndDecreaseStock(savedOrder, request);
+        addOrderDetailsAndDecreaseStock(savedOrder, request, itemMap);
 
         return savedOrder;
     }
@@ -85,18 +86,22 @@ public class ItemOrderTransactionService {
         return itemOrder;
     }
 
-    private int calculateTotalPrice(ItemOrderRequest request) {
+    private int calculateTotalPrice(ItemOrderRequest request, Map<Long, Item> itemMap) {
         int totalPrice = 0;
 
         for (OrderItemRequest orderItemRequest : request.getItems()) {
-            Item item = loadItem(orderItemRequest.getItemId());
+            Item item = getItemFromMap(itemMap, orderItemRequest.getItemId());
             totalPrice += item.getPrice() * orderItemRequest.getCount();
         }
 
         return totalPrice;
     }
 
-    private void addOrderDetailsAndDecreaseStock(ItemOrder savedOrder, ItemOrderRequest request) {
+    private void addOrderDetailsAndDecreaseStock(
+            ItemOrder savedOrder,
+            ItemOrderRequest request,
+            Map<Long, Item> itemMap
+    ) {
         List<OrderItemRequest> sortedOrderItems = request.getItems().stream()
                 .sorted(Comparator.comparing(OrderItemRequest::getItemId))
                 .toList();
@@ -114,7 +119,7 @@ public class ItemOrderTransactionService {
                 ));
 
         for (OrderItemRequest orderItemRequest : sortedOrderItems) {
-            Item item = loadItem(orderItemRequest.getItemId());
+            Item item = getItemFromMap(itemMap, orderItemRequest.getItemId());
             TheaterItemStock stock = stockMap.get(orderItemRequest.getItemId());
 
             if (stock == null) {
@@ -150,9 +155,33 @@ public class ItemOrderTransactionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
     }
 
-    private Item loadItem(Long itemId) {
-        return itemRepository.findById(itemId)
-                .orElseThrow(() -> new CustomException(ErrorCode.ITEM_NOT_FOUND));
+    private Map<Long, Item> loadItemMap(ItemOrderRequest request) {
+        List<Long> itemIds = request.getItems().stream()
+                .map(OrderItemRequest::getItemId)
+                .distinct()
+                .toList();
+
+        Map<Long, Item> itemMap = itemRepository.findAllById(itemIds).stream()
+                .collect(Collectors.toMap(
+                        Item::getId,
+                        Function.identity()
+                ));
+
+        if (itemMap.size() != itemIds.size()) {
+            throw new CustomException(ErrorCode.ITEM_NOT_FOUND);
+        }
+
+        return itemMap;
+    }
+
+    private Item getItemFromMap(Map<Long, Item> itemMap, Long itemId) {
+        Item item = itemMap.get(itemId);
+
+        if (item == null) {
+            throw new CustomException(ErrorCode.ITEM_NOT_FOUND);
+        }
+
+        return item;
     }
 
     private TheaterItemStock loadStock(Long theaterId, Long itemId) {

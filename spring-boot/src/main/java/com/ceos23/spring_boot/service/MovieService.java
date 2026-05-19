@@ -18,19 +18,19 @@ public class MovieService {
     private final MovieRepository movieRepository;
 
     // 영화 생성
-    @CacheEvict(value = "movies", allEntries = true)
+    @CacheEvict(value = "movieAll", allEntries = true)
     public Movie create(String title, String director) {
         return movieRepository.save(new Movie(title, director));
     }
 
     // 전체 조회
-    @Cacheable(value = "movies", key = "'all'")
+    @Cacheable(value = "movieAll", key = "'all'")
     public List<Movie> findAll() {
         return movieRepository.findAll();
     }
 
     // 단건 조회
-    @Cacheable(value = "movies", key = "#id")
+    @Cacheable(value = "movie", key = "#id")
     public Movie findById(Long id) {
         return movieRepository.findById(id)
                 .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
