@@ -105,7 +105,7 @@ public class ItemOrderService {
     public ItemOrderResponse getOrder(Long orderId) {
         validateId(orderId);
 
-        ItemOrder itemOrder = itemOrderRepository.findById(orderId)
+        ItemOrder itemOrder = itemOrderRepository.findWithDetailsById(orderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ITEM_ORDER_NOT_FOUND));
 
         return ItemOrderResponse.from(itemOrder);
@@ -116,7 +116,7 @@ public class ItemOrderService {
         validateId(userId);
         validateUserExists(userId);
 
-        return itemOrderRepository.findAllByUserId(userId).stream()
+        return itemOrderRepository.findAllWithDetailsByUserId(userId).stream()
                 .map(ItemOrderResponse::from)
                 .toList();
     }

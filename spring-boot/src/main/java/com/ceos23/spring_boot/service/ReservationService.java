@@ -85,7 +85,6 @@ public class ReservationService {
         }
     }
 
-    @Transactional
     public void cancel(Long reservationId) {
         Reservation reservation = loadReservation(reservationId);
 
@@ -93,7 +92,7 @@ public class ReservationService {
             paymentGateway.cancel(reservation.getPaymentId());
         }
 
-        reservationRepository.delete(reservation);
+        reservationTransactionService.deleteReservation(reservationId);
     }
 
     private Reservation handlePaymentException(

@@ -13,6 +13,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,6 +27,14 @@ import java.util.List;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Table(
+        indexes = {
+                @Index(
+                        name = "idx_item_order_user_ordered_at",
+                        columnList = "user_id, ordered_at"
+                )
+        }
+)
 public class ItemOrder {
 
     @Id
